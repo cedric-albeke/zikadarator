@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components/StepGrid.h"
+#include "../components/WaveformDisplay.h"
 
 namespace zikada {
 
@@ -12,8 +13,11 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    WaveformDisplay& getWaveformDisplay() { return waveformDisplay; }
+
 private:
     StepGrid stepGrid;
+    WaveformDisplay waveformDisplay;
 };
 
 }

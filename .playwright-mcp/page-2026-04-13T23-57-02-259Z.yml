@@ -1,0 +1,482 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: Signal Transmission Active
+      - generic [ref=e6]: Free shipping above 80 EUR
+    - generic [ref=e8]:
+      - link "ZIKADA Records ZIKADA" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img "ZIKADA Records" [ref=e11]
+        - generic [ref=e12]: ZIKADA
+      - navigation [ref=e13]:
+        - link "Home" [ref=e14] [cursor=pointer]:
+          - /url: /
+        - link "Music" [ref=e15] [cursor=pointer]:
+          - /url: /releases
+        - link "Artists" [ref=e16] [cursor=pointer]:
+          - /url: /artists
+        - link "Market" [ref=e17] [cursor=pointer]:
+          - /url: /store
+        - link "Community" [ref=e18] [cursor=pointer]:
+          - /url: /community
+      - generic [ref=e19]:
+        - button "Search ⌘K" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+          - generic [ref=e24]: Search
+          - generic [ref=e25]: ⌘K
+        - button "Open cart" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+        - button "Login" [ref=e31] [cursor=pointer]
+  - main [ref=e32]:
+    - main [ref=e39]:
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e49]: SYSTEM ONLINE
+          - heading "ZIKADA RECORDS" [level=1] [ref=e51]:
+            - text: ZIKADA
+            - text: RECORDS
+          - paragraph [ref=e53]:
+            - text: Forward-facing collective shaping underground sound, arts, culture, technology and
+            - link "wizdom" [ref=e54] [cursor=pointer]:
+              - /url: https://wizdom.one
+            - text: . A digital and physical hive, co-created by artists, visionaries, scientists and wizards of all kind.
+          - generic [ref=e56]:
+            - link "Explore Music" [ref=e57] [cursor=pointer]:
+              - /url: /releases
+              - text: Explore Music
+              - img [ref=e58]
+            - button "Listen Live SOON" [disabled] [ref=e60] [cursor=pointer]:
+              - img [ref=e61]
+              - text: Listen Live
+              - generic [ref=e67]: SOON
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - img "WISHLIST EP" [ref=e76]
+              - generic [ref=e78]: New Drop
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - generic [ref=e82]:
+                  - generic [ref=e83]: ZIK0001
+                  - generic [ref=e84]: "|"
+                  - generic [ref=e85]: Jan 30, 2026
+                - generic [ref=e86]:
+                  - button "Follow artist" [ref=e87] [cursor=pointer]:
+                    - img [ref=e89]
+                  - button "Like" [ref=e92] [cursor=pointer]:
+                    - img [ref=e94]
+                    - generic [ref=e96]: "2"
+                  - button "Save to library" [ref=e97] [cursor=pointer]:
+                    - img [ref=e99]
+              - heading "WISHLIST EP" [level=3] [ref=e101]
+              - generic [ref=e102]:
+                - img "ZADY" [ref=e104]
+                - link "ZADY" [ref=e105] [cursor=pointer]:
+                  - /url: /artists/zady
+                - generic [ref=e106]: "|"
+                - generic [ref=e107]:
+                  - img [ref=e108]
+                  - generic [ref=e113]: ep
+              - generic [ref=e115]:
+                - generic [ref=e116]:
+                  - button "pigeon" [ref=e117] [cursor=pointer]
+                  - generic [ref=e118]:
+                    - generic [ref=e119]: "+1"
+                    - generic [ref=e121]:
+                      - button "Upvote tag" [ref=e122] [cursor=pointer]: +
+                      - button "Downvote tag" [ref=e123] [cursor=pointer]: "-"
+                - generic [ref=e124]:
+                  - button "gpz" [ref=e125] [cursor=pointer]
+                  - generic [ref=e126]:
+                    - generic [ref=e127]: "+1"
+                    - generic [ref=e129]:
+                      - button "Upvote tag" [ref=e130] [cursor=pointer]: +
+                      - button "Downvote tag" [ref=e131] [cursor=pointer]: "-"
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - generic [ref=e134]: WISHLIST (Original Mix)
+              - generic [ref=e135]:
+                - generic [ref=e591]: WAVEFORM
+                - generic [ref=e136]: 5:23
+            - slider "Hero waveform seek" [ref=e137] [cursor=pointer]
+          - generic [ref=e139]:
+            - generic [ref=e140]:
+              - generic [ref=e141]:
+                - button "Play" [ref=e142] [cursor=pointer]:
+                  - img [ref=e143]
+                - generic [ref=e145]:
+                  - paragraph [ref=e146]: WISHLIST (Original Mix)
+                  - paragraph [ref=e147]: ZADY
+              - generic [ref=e149]: 5:23
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - button "Play" [ref=e152] [cursor=pointer]:
+                  - img [ref=e153]
+                - generic [ref=e155]:
+                  - paragraph [ref=e156]: CUSHAT (Original Mix)
+                  - paragraph [ref=e157]: ZADY
+              - generic [ref=e159]: 3:48
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - button "Listen" [ref=e162] [cursor=pointer]:
+                - img [ref=e163]
+                - text: Listen
+              - button "Add to Cart" [ref=e165] [cursor=pointer]:
+                - img [ref=e166]
+                - generic [ref=e170]: Add to Cart
+            - link "Details →" [ref=e171] [cursor=pointer]:
+              - /url: /releases/wishlist-ep
+      - generic [ref=e173]:
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - img "SESH VOL. 1" [ref=e180]
+            - generic [ref=e182]: radio
+          - generic [ref=e183]:
+            - generic [ref=e185]: FEATURED SET
+            - heading "SESH VOL. 1" [level=2] [ref=e187]
+            - paragraph [ref=e188]: ALUINN MARS, MOODWITCH
+            - generic [ref=e189]:
+              - generic [ref=e190]:
+                - img [ref=e191]
+                - generic [ref=e194]: WOHNZIMMER
+              - generic [ref=e195]:
+                - img [ref=e196]
+                - generic [ref=e202]: 1/10/2026
+            - link "Listen Set" [ref=e204] [cursor=pointer]:
+              - /url: /sets/sesh-1
+              - img [ref=e205]
+              - text: Listen Set
+        - generic [ref=e209]:
+          - generic [ref=e210]:
+            - paragraph [ref=e211]: SIGNAL LOG
+            - heading "Activity" [level=3] [ref=e212]
+          - generic [ref=e214]:
+            - link "WISHLIST EP release • 2mo ago WISHLIST EP ZADY" [ref=e216] [cursor=pointer]:
+              - /url: /releases/wishlist-ep
+              - img "WISHLIST EP" [ref=e218]
+              - generic [ref=e219]:
+                - generic [ref=e220]:
+                  - generic [ref=e221]: release
+                  - generic [ref=e222]: • 2mo ago
+                - heading "WISHLIST EP" [level=4] [ref=e223]
+                - paragraph [ref=e224]: ZADY
+            - link "SESH VOL. 1 set • 3mo ago SESH VOL. 1 radio" [ref=e226] [cursor=pointer]:
+              - /url: /sets/sesh-1
+              - img "SESH VOL. 1" [ref=e228]
+              - generic [ref=e229]:
+                - generic [ref=e230]:
+                  - generic [ref=e231]: set
+                  - generic [ref=e232]: • 3mo ago
+                - heading "SESH VOL. 1" [level=4] [ref=e233]
+                - paragraph [ref=e234]: radio
+        - generic [ref=e237]:
+          - generic [ref=e239]:
+            - paragraph [ref=e240]: CATALOG
+            - heading "Latest Transmissions" [level=2] [ref=e241]
+          - link "View Full Catalog" [ref=e243] [cursor=pointer]:
+            - /url: /releases
+            - text: View Full Catalog
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - generic [ref=e250]:
+              - paragraph [ref=e251]: MARKETPLACE
+              - heading "From the Artist Stores" [level=2] [ref=e252]
+              - paragraph [ref=e253]: Exclusive merch, digital art, prints, and limited drops — directly from ZIKADA artists.
+            - link "Browse Marketplace" [ref=e255] [cursor=pointer]:
+              - /url: /store
+              - text: Browse Marketplace
+          - generic [ref=e257]:
+            - link "FRAGMENTED SELF — Tee Physical Clothing & Apparel FRAGMENTED SELF — Tee VOIDGAZE 39,00 €" [ref=e260] [cursor=pointer]:
+              - /url: /products/fragmented-self-tee
+              - generic [ref=e261]:
+                - img "FRAGMENTED SELF — Tee" [ref=e262]
+                - generic [ref=e264]:
+                  - img [ref=e265]
+                  - text: Physical
+              - generic [ref=e269]:
+                - text: Clothing & Apparel
+                - heading "FRAGMENTED SELF — Tee" [level=4] [ref=e270]
+                - paragraph [ref=e271]: VOIDGAZE
+                - generic [ref=e273]: 39,00 €
+            - link "NEURAL DRIFT Hoodie Physical Clothing & Apparel NEURAL DRIFT Hoodie VOIDGAZE 79,00 €" [ref=e276] [cursor=pointer]:
+              - /url: /products/neural-drift-hoodie
+              - generic [ref=e277]:
+                - img "NEURAL DRIFT Hoodie" [ref=e278]
+                - generic [ref=e280]:
+                  - img [ref=e281]
+                  - text: Physical
+              - generic [ref=e285]:
+                - text: Clothing & Apparel
+                - heading "NEURAL DRIFT Hoodie" [level=4] [ref=e286]
+                - paragraph [ref=e287]: VOIDGAZE
+                - generic [ref=e289]: 79,00 €
+            - link "SYNAPTIC BLOOM — Limited Print Made to Order Visual Art & Prints SYNAPTIC BLOOM — Limited Print VOIDGAZE 45,00 € – 120,00 €" [ref=e292] [cursor=pointer]:
+              - /url: /products/synaptic-bloom-print
+              - generic [ref=e293]:
+                - img "SYNAPTIC BLOOM — Limited Print" [ref=e294]
+                - generic [ref=e296]:
+                  - img [ref=e297]
+                  - text: Made to Order
+              - generic [ref=e300]:
+                - text: Visual Art & Prints
+                - heading "SYNAPTIC BLOOM — Limited Print" [level=4] [ref=e301]
+                - paragraph [ref=e302]: VOIDGAZE
+                - generic [ref=e304]: 45,00 € – 120,00 €
+            - link "VOID::PACK — Sample Pack Vol. 1 Digital Digital Art & Design VOID::PACK — Sample Pack Vol. 1 VOIDGAZE 24,00 € – 49,00 €" [ref=e307] [cursor=pointer]:
+              - /url: /products/void-pack-samples-v1
+              - generic [ref=e308]:
+                - img "VOID::PACK — Sample Pack Vol. 1" [ref=e309]
+                - generic [ref=e311]:
+                  - img [ref=e312]
+                  - text: Digital
+              - generic [ref=e314]:
+                - text: Digital Art & Design
+                - heading "VOID::PACK — Sample Pack Vol. 1" [level=4] [ref=e315]
+                - paragraph [ref=e316]: VOIDGAZE
+                - generic [ref=e318]: 24,00 € – 49,00 €
+            - link "DECODE Ring — Matte Black Physical Accessories DECODE Ring — Matte Black VOIDGAZE 35,00 €" [ref=e321] [cursor=pointer]:
+              - /url: /products/decode-ring-matte-black
+              - generic [ref=e322]:
+                - img "DECODE Ring — Matte Black" [ref=e323]
+                - generic [ref=e325]:
+                  - img [ref=e326]
+                  - text: Physical
+              - generic [ref=e330]:
+                - text: Accessories
+                - heading "DECODE Ring — Matte Black" [level=4] [ref=e331]
+                - paragraph [ref=e332]: VOIDGAZE
+                - generic [ref=e334]: 35,00 €
+            - link "SIGNAL PATCH — Embroidered Cap Physical Accessories SIGNAL PATCH — Embroidered Cap ZADY 29,00 €" [ref=e337] [cursor=pointer]:
+              - /url: /products/signal-patch-cap
+              - generic [ref=e338]:
+                - img "SIGNAL PATCH — Embroidered Cap" [ref=e339]
+                - generic [ref=e341]:
+                  - img [ref=e342]
+                  - text: Physical
+              - generic [ref=e346]:
+                - text: Accessories
+                - heading "SIGNAL PATCH — Embroidered Cap" [level=4] [ref=e347]
+                - paragraph [ref=e348]: ZADY
+                - generic [ref=e350]: 29,00 €
+            - link "ZIKADA UI Kit — Figma Template Digital Digital Art & Design ZIKADA UI Kit — Figma Template ZADY 19,00 € – 49,00 €" [ref=e353] [cursor=pointer]:
+              - /url: /products/zikada-ui-kit-figma
+              - generic [ref=e354]:
+                - img "ZIKADA UI Kit — Figma Template" [ref=e355]
+                - generic [ref=e357]:
+                  - img [ref=e358]
+                  - text: Digital
+              - generic [ref=e360]:
+                - text: Digital Art & Design
+                - heading "ZIKADA UI Kit — Figma Template" [level=4] [ref=e361]
+                - paragraph [ref=e362]: ZADY
+                - generic [ref=e364]: 19,00 € – 49,00 €
+            - link "CARRIER WAVE — Poster Set Physical Visual Art & Prints CARRIER WAVE — Poster Set ZADY 35,00 €" [ref=e367] [cursor=pointer]:
+              - /url: /products/carrier-wave-poster-set
+              - generic [ref=e368]:
+                - img "CARRIER WAVE — Poster Set" [ref=e369]
+                - generic [ref=e371]:
+                  - img [ref=e372]
+                  - text: Physical
+              - generic [ref=e376]:
+                - text: Visual Art & Prints
+                - heading "CARRIER WAVE — Poster Set" [level=4] [ref=e377]
+                - paragraph [ref=e378]: ZADY
+                - generic [ref=e380]: 35,00 €
+        - generic [ref=e382]:
+          - generic [ref=e384]:
+            - paragraph [ref=e385]: NETWORK
+            - heading "Operatives" [level=2] [ref=e386]
+          - generic [ref=e387]:
+            - link "VOIDGAZE VOIDGAZE Berlin, Germany" [ref=e389] [cursor=pointer]:
+              - /url: /artists/voidgaze
+              - img "VOIDGAZE" [ref=e391]
+              - heading "VOIDGAZE" [level=3] [ref=e392]
+              - paragraph [ref=e393]: Berlin, Germany
+            - link "ZADY ZADY Underground, Germany" [ref=e395] [cursor=pointer]:
+              - /url: /artists/zady
+              - img "ZADY" [ref=e397]
+              - heading "ZADY" [level=3] [ref=e398]
+              - paragraph [ref=e399]: Underground, Germany
+            - link "MOODWITCH MOODWITCH Underground, Germany" [ref=e401] [cursor=pointer]:
+              - /url: /artists/moodwitch
+              - img "MOODWITCH" [ref=e403]
+              - heading "MOODWITCH" [level=3] [ref=e404]
+              - paragraph [ref=e405]: Underground, Germany
+            - link "ALUINN MARS ALUINN MARS Underground, Germany" [ref=e407] [cursor=pointer]:
+              - /url: /artists/aluinn-mars
+              - img "ALUINN MARS" [ref=e409]
+              - heading "ALUINN MARS" [level=3] [ref=e410]
+              - paragraph [ref=e411]: Underground, Germany
+          - link "View All Artists" [ref=e413] [cursor=pointer]:
+            - /url: /artists
+            - text: View All Artists
+            - img [ref=e414]
+        - generic [ref=e422]:
+          - generic [ref=e423]:
+            - paragraph [ref=e424]: OPEN CALL
+            - heading "Join the Hive" [level=2] [ref=e425]
+            - paragraph [ref=e426]: ZIKADA is an open collective. Sell your music, merch, and digital art through your own storefront. Zero upfront costs. Full creative control. Direct artist-to-fan connection.
+            - generic [ref=e427]:
+              - link "Apply as Artist" [ref=e428] [cursor=pointer]:
+                - /url: /apply
+                - text: Apply as Artist
+                - img [ref=e429]
+              - link "Meet the Artists" [ref=e431] [cursor=pointer]:
+                - /url: /artists
+          - generic [ref=e433]:
+            - generic [ref=e434]:
+              - generic [ref=e435]:
+                - paragraph [ref=e436]: 0%
+                - paragraph [ref=e437]: Platform Fees
+              - generic [ref=e438]:
+                - paragraph [ref=e439]: 4+
+                - paragraph [ref=e440]: Active Artists
+            - generic [ref=e441]:
+              - generic [ref=e442]:
+                - paragraph [ref=e443]: ∞
+                - paragraph [ref=e444]: Creative Freedom
+              - generic [ref=e445]:
+                - paragraph [ref=e446]: 24h
+                - paragraph [ref=e447]: Store Setup
+        - generic [ref=e454]:
+          - paragraph [ref=e455]: MISSION
+          - generic [ref=e458]: Forward-Facing Sound
+          - paragraph [ref=e459]: ZIKADA Records is a Berlin-rooted electronic music collective pushing the boundaries of techno, psy, drum & bass, and experimental sound. We exist to amplify underground artists, host immersive events, and build a decentralized network of creators who refuse to compromise.
+          - link "Read Manifesto" [ref=e461] [cursor=pointer]:
+            - /url: /imprint
+        - generic [ref=e464]:
+          - generic [ref=e465]:
+            - paragraph [ref=e466]: STAY CONNECTED
+            - heading "Never Miss a Drop" [level=2] [ref=e467]
+            - paragraph [ref=e468]: Get notified about new releases, events, and exclusive drops. No spam, just signal.
+          - generic [ref=e470]:
+            - generic [ref=e471]:
+              - textbox "Email address" [ref=e472]:
+                - /placeholder: your@email.com
+              - button "Subscribe" [ref=e473] [cursor=pointer]
+            - paragraph [ref=e474]: Unsubscribe anytime. We respect your inbox.
+  - contentinfo [ref=e476]:
+    - generic [ref=e478]:
+      - generic [ref=e479]:
+        - generic [ref=e480]:
+          - heading "Platform" [level=3] [ref=e481]
+          - list [ref=e482]:
+            - listitem [ref=e483]:
+              - link "Music" [ref=e484] [cursor=pointer]:
+                - /url: /releases
+            - listitem [ref=e485]:
+              - link "Artists" [ref=e486] [cursor=pointer]:
+                - /url: /artists
+            - listitem [ref=e487]:
+              - link "Community" [ref=e488] [cursor=pointer]:
+                - /url: /community
+            - listitem [ref=e489]:
+              - link "Events" [ref=e490] [cursor=pointer]:
+                - /url: /events
+            - listitem [ref=e491]:
+              - link "Radio" [ref=e492] [cursor=pointer]:
+                - /url: /radio
+        - generic [ref=e493]:
+          - heading "Store" [level=3] [ref=e494]
+          - list [ref=e495]:
+            - listitem [ref=e496]:
+              - link "Marketplace" [ref=e497] [cursor=pointer]:
+                - /url: /browse
+            - listitem [ref=e498]:
+              - link "Apply as Artist" [ref=e499] [cursor=pointer]:
+                - /url: /apply
+            - listitem [ref=e500]:
+              - link "Artist Portal" [ref=e501] [cursor=pointer]:
+                - /url: /artist-portal
+            - listitem [ref=e502]:
+              - link "All Products" [ref=e503] [cursor=pointer]:
+                - /url: /store
+            - listitem [ref=e504]:
+              - link "Digital Downloads" [ref=e505] [cursor=pointer]:
+                - /url: /store?type=digital
+            - listitem [ref=e506]:
+              - link "Market" [ref=e507] [cursor=pointer]:
+                - /url: /store?type=physical
+        - generic [ref=e508]:
+          - heading "Support" [level=3] [ref=e509]
+          - list [ref=e510]:
+            - listitem [ref=e511]:
+              - link "Contact" [ref=e512] [cursor=pointer]:
+                - /url: /contact
+            - listitem [ref=e513]:
+              - link "FAQ" [ref=e514] [cursor=pointer]:
+                - /url: /faq
+            - listitem [ref=e515]:
+              - link "Privacy Policy" [ref=e516] [cursor=pointer]:
+                - /url: /privacy
+            - listitem [ref=e517]:
+              - link "Imprint" [ref=e518] [cursor=pointer]:
+                - /url: /imprint
+        - generic [ref=e519]:
+          - heading "Connect" [level=3] [ref=e520]
+          - list [ref=e521]:
+            - listitem [ref=e522]:
+              - link "SoundCloud" [ref=e523] [cursor=pointer]:
+                - /url: https://soundcloud.com/3886records
+            - listitem [ref=e524]:
+              - link "Instagram" [ref=e525] [cursor=pointer]:
+                - /url: https://instagram.com/zikada.io
+            - listitem [ref=e526]:
+              - link "YouTube" [ref=e527] [cursor=pointer]:
+                - /url: https://youtube.com/@3886.io
+            - listitem [ref=e528]:
+              - link "Email" [ref=e529] [cursor=pointer]:
+                - /url: mailto:info@zikada.io
+      - generic [ref=e530]:
+        - link "ZIKADA Records ZIKADA" [ref=e531] [cursor=pointer]:
+          - /url: /
+          - img "ZIKADA Records" [ref=e533]
+          - generic [ref=e534]: ZIKADA
+        - paragraph [ref=e535]: © 2026 ZIKADA Records. All rights reserved.
+  - generic [ref=e537]:
+    - generic [ref=e538]:
+      - generic [ref=e539]:
+        - link "SESH VOL. 1 artwork" [ref=e541] [cursor=pointer]:
+          - /url: /releases/sesh-1
+          - img "SESH VOL. 1 artwork" [ref=e542]
+        - generic [ref=e543]:
+          - link "SESH VOL. 1" [ref=e544] [cursor=pointer]:
+            - /url: /releases/sesh-1
+          - paragraph [ref=e545]: ALUINN MARS, MOODWITCH
+      - generic [ref=e546]:
+        - button "Previous track" [disabled]:
+          - img
+        - button "Play" [ref=e547] [cursor=pointer]:
+          - img
+        - button "Next track" [disabled]:
+          - img
+    - generic [ref=e548]:
+      - generic [ref=e549]: 0:00
+      - slider "Seek" [ref=e550] [cursor=pointer]
+      - generic [ref=e552]: 0:00
+    - generic [ref=e554]:
+      - button "Mute" [ref=e555] [cursor=pointer]:
+        - img
+      - slider "Volume" [ref=e556] [cursor=pointer]: "100"
+  - generic:
+    - link "SoundCloud" [ref=e557] [cursor=pointer]:
+      - /url: https://soundcloud.com/3886records
+      - img [ref=e558]
+    - link "Instagram" [ref=e560] [cursor=pointer]:
+      - /url: https://instagram.com/zikada.io
+      - img [ref=e561]
+    - link "YouTube" [ref=e564] [cursor=pointer]:
+      - /url: https://youtube.com/@3886.io
+      - img [ref=e565]
+    - link "Email" [ref=e568] [cursor=pointer]:
+      - /url: mailto:info@zikada.io
+      - img [ref=e569]
+  - generic [ref=e572]:
+    - paragraph [ref=e573]: We use essential cookies to keep the site running. By continuing, you agree to our privacy policy.
+    - generic [ref=e574]:
+      - button "OK" [ref=e575] [cursor=pointer]
+      - link "Privacy" [ref=e576] [cursor=pointer]:
+        - /url: /privacy
+  - iframe [ref=e577]:
+    
+  - alert [ref=e578]

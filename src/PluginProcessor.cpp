@@ -54,6 +54,15 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         }
     }
 
+    if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
+    {
+        if (auto* waveform = editor->getWaveformDisplay())
+        {
+            waveform->pushSamples(buffer.getReadPointer(0), buffer.getNumSamples());
+            waveform->setPlayheadPosition(static_cast<float>(currentStep) / 16.0f);
+        }
+    }
+
     for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
     {
         auto* channelData = buffer.getWritePointer(channel);

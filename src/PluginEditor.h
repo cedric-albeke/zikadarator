@@ -6,6 +6,7 @@
 #include "ui/panels/HeaderPanel.h"
 #include "ui/panels/SequencerPanel.h"
 #include "ui/panels/FooterPanel.h"
+#include "ui/components/WaveformDisplay.h"
 
 namespace zikada {
 
@@ -17,6 +18,8 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
+
+    WaveformDisplay* getWaveformDisplay();
 
 private:
     PluginProcessor& processorRef;

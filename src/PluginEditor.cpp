@@ -34,10 +34,15 @@ void PluginEditor::paint(juce::Graphics& g)
 void PluginEditor::resized()
 {
     auto bounds = getLocalBounds();
-    
+
     headerPanel.setBounds(bounds.removeFromTop(60));
     footerPanel.setBounds(bounds.removeFromBottom(60));
     sequencerPanel.setBounds(bounds);
+}
+
+WaveformDisplay* PluginEditor::getWaveformDisplay()
+{
+    return &sequencerPanel.getWaveformDisplay();
 }
 
 }
