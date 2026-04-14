@@ -100,6 +100,9 @@ void FooterPanel::setupModulationControls()
         amountSlider->setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         amountSlider->setRange(0.0, 100.0, 1.0);
         amountSlider->setValue(0.0);
+        amountSlider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
+        amountSlider->setColour(juce::Slider::trackColourId, Colours::white50);
+        amountSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface);
         amountSlider->onValueChange = [this] { notifyStepDataChanged(); };
         addChildComponent(amountSlider.get());
         modAmountSliders[i] = std::move(amountSlider);
@@ -109,6 +112,9 @@ void FooterPanel::setupModulationControls()
         paramSlider->setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         paramSlider->setRange(0.0, 7.0, 1.0);
         paramSlider->setValue(0.0);
+        paramSlider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
+        paramSlider->setColour(juce::Slider::trackColourId, Colours::white50);
+        paramSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface);
         paramSlider->onValueChange = [this] { notifyStepDataChanged(); };
         addChildComponent(paramSlider.get());
         modParamSliders[i] = std::move(paramSlider);
@@ -303,34 +309,43 @@ void FooterPanel::resized()
     {
         auto inner = detailZone.reduced(kInnerPad, 4);
         auto labelRow = inner.removeFromTop(kLabelH);
-        modModeButton.setBounds(labelRow.removeFromRight(46).withSizeKeepingCentre(46, 18));
+        modModeButton.setBounds(labelRow.removeFromRight(50).withSizeKeepingCentre(50, 18));
 
         constexpr int numKnobs = 7;
         const int     totalGaps = (numKnobs - 1) * kKnobGap;
         const int     knobW     = (inner.getWidth() - totalGaps) / numKnobs;
 
-        auto knobRow = inner.removeFromTop(inner.getHeight() * 55 / 100);
-        for (int i = 0; i < numKnobs; ++i)
+        if (!modModeActive)
         {
-            const int kx = inner.getX() + i * (knobW + kKnobGap);
-            stepKnobs[i]->setBounds(kx, knobRow.getY(), knobW, knobRow.getHeight());
+            for (int i = 0; i < numKnobs; ++i)
+            {
+                const int kx = inner.getX() + i * (knobW + kKnobGap);
+                stepKnobs[i]->setBounds(kx, inner.getY(), knobW, inner.getHeight());
+            }
         }
-
-        auto modRow = inner;
-        const int slotW = (modRow.getWidth() - (kNumModSlots - 1) * 6) / kNumModSlots;
-        const int btnH  = modRow.getHeight() * 28 / 100;
-        const int sldH  = modRow.getHeight() * 20 / 100;
-
-        for (int i = 0; i < kNumModSlots; ++i)
+        else
         {
-            auto slotArea = modRow.removeFromLeft(slotW);
-            modRow.removeFromLeft(6);
+            const int slotGap = 8;
+            const int slotW = (inner.getWidth() - (kNumModSlots - 1) * slotGap) / kNumModSlots;
+            const int btnH = 20;
+            const int sldH = 18;
+            const int lblH = 12;
+            const int gap = 3;
 
-            modTargetButtons[i]->setBounds(slotArea.removeFromTop(btnH));
-            modSourceButtons[i]->setBounds(slotArea.removeFromTop(btnH));
-            modAmountSliders[i]->setBounds(slotArea.removeFromTop(sldH));
-            modParamLabels[i]->setBounds(slotArea.removeFromTop(10));
-            modParamSliders[i]->setBounds(slotArea);
+            for (int i = 0; i < kNumModSlots; ++i)
+            {
+                int sx = inner.getX() + i * (slotW + slotGap);
+                int sy = inner.getY();
+                modTargetButtons[i]->setBounds(sx, sy, slotW, btnH);
+                sy += btnH + gap;
+                modSourceButtons[i]->setBounds(sx, sy, slotW, btnH);
+                sy += btnH + gap;
+                modAmountSliders[i]->setBounds(sx, sy, slotW, sldH);
+                sy += sldH + gap;
+                modParamLabels[i]->setBounds(sx, sy, slotW, lblH);
+                sy += lblH + gap;
+                modParamSliders[i]->setBounds(sx, sy, slotW, std::max(4, inner.getBottom() - sy));
+            }
         }
     }
 }
@@ -408,9 +423,9 @@ void FooterPanel::cycleModTarget(int slot)
         return;
 
     int current = static_cast<int>(targetFromString(modTargetButtons[slot]->getButtonText()));
-    current = (current + 1) % (static_cast<int>(ModulationTarget::NumTargets) + 1) - 1;
-    if (current < -1)
-        current = static_cast<int>(ModulationTarget::NumTargets) - 1;
+    int mapped = current + 1;
+    mapped = (mapped + 1) % (static_cast<int>(ModulationTarget::NumTargets) + 1);
+    current = mapped - 1;
 
     auto t = static_cast<ModulationTarget>(current);
     modTargetButtons[slot]->setButtonText(targetToString(t));
