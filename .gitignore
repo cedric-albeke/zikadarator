@@ -1,0 +1,39 @@
+# Build artifacts
+/build/
+/cmake-build-*/
+/out/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.xcodeproj/
+*.xcworkspace/
+*.sln
+*.vcxproj*
+CMakeSettings.json
+
+# JUCE
+/JUCE/
+/JUCE_modules/
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# Windows
+Thumbs.db
+*.pdb
+
+# Generated
+src/BinaryData.h
+src/BinaryData.cpp
+
+# User-specific
+*.user
+*.userprefs
