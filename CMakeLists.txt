@@ -87,3 +87,12 @@ target_compile_options(ZikadaFX PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
 )
+
+# Linux: Add GTK3, WebKit includes and link libraries
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    pkg_check_modules(WEBKIT2 REQUIRED webkit2gtk-4.1)
+    target_include_directories(ZikadaFX PRIVATE ${GTK3_INCLUDE_DIRS} ${WEBKIT2_INCLUDE_DIRS})
+    target_link_libraries(ZikadaFX PRIVATE curl)
+endif()

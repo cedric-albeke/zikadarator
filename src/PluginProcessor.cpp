@@ -38,23 +38,19 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
 
-    auto playHead = getPlayHead();
-    if (playHead != nullptr)
+    auto currentPlayHead = getPlayHead();
+    if (currentPlayHead != nullptr)
     {
         juce::AudioPlayHead::CurrentPositionInfo posInfo;
-        playHead->getCurrentPosition(posInfo);
+        currentPlayHead->getCurrentPosition(posInfo);
         
         isPlayingFlag = posInfo.isPlaying;
         currentBPM = posInfo.bpm;
         
-        if (posInfo.isPlaying)
+        if (posInfo.isPlaying && posInfo.ppqPosition >= 0.0)
         {
-            auto ppq = posInfo.ppqPosition;
-            if (ppq.hasValue())
-            {
-                ppqPosition = *ppq;
-                currentStep = static_cast<int>(ppqPosition / ppqPerStep) % 16;
-            }
+            ppqPosition = posInfo.ppqPosition;
+            currentStep = static_cast<int>(ppqPosition / ppqPerStep) % 16;
         }
     }
 
