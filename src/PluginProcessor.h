@@ -2,6 +2,9 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "state/PluginState.h"
+#include "engine/SequencerEngine.h"
+#include "engine/SliceEngine.h"
+#include "engine/FilterEngine.h"
 
 namespace zikada {
 
@@ -49,9 +52,13 @@ public:
 
 private:
     PluginState state;
+    SequencerEngine sequencerEngine;
+    SliceEngine sliceEngine;
+    FilterEngine filterEngine;
     std::atomic<bool> isPlayingFlag{false};
     std::atomic<double> currentBPM{120.0};
     std::atomic<int> currentStep{0};
+    int lastStep{-1};
     double sampleRate{44100.0};
     juce::AudioPlayHead::CurrentPositionInfo lastPosInfo;
     double ppqPosition{0.0};

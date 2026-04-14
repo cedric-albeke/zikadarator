@@ -16,6 +16,16 @@ public:
     static inline const juce::String bypass{"bypass"};
 };
 
+inline juce::String getStepActiveID(int lane, int step)
+{
+    return "stepActive_L" + juce::String(lane) + "_S" + juce::String(step);
+}
+
+inline juce::String getLaneMixID(int lane)
+{
+    return "laneMix_L" + juce::String(lane);
+}
+
 inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
@@ -44,6 +54,23 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
 
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         ParameterIDs::bypass, "Bypass", false));
+
+    for (int lane = 0; lane < 6; ++lane)
+    {
+        for (int step = 0; step < 16; ++step)
+        {
+            auto id = getStepActiveID(lane, step);
+            auto name = "Step L" + juce::String(lane + 1) + " S" + juce::String(step + 1);
+            params.push_back(std::make_unique<juce::AudioParameterBool>(id, name, false));
+        }
+    }
+
+    for (int lane = 0; lane < 6; ++lane)
+    {
+        auto id = getLaneMixID(lane);
+        auto name = "Mix L" + juce::String(lane + 1);
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(id, name, 0.0f, 100.0f, 100.0f));
+    }
 
     return {params.begin(), params.end()};
 }

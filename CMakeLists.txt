@@ -61,6 +61,9 @@ target_sources(ZikadaFX
         src/ui/panels/FooterPanel.cpp
         src/state/PluginState.cpp
         src/engine/SequencerEngine.cpp
+        src/engine/CircularAudioBuffer.cpp
+        src/engine/SliceEngine.cpp
+        src/engine/FilterEngine.cpp
 )
 
 target_include_directories(ZikadaFX

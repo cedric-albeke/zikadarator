@@ -2,7 +2,8 @@
 
 namespace zikada {
 
-SequencerPanel::SequencerPanel()
+SequencerPanel::SequencerPanel(juce::AudioProcessorValueTreeState& apvts)
+    : stepGrid(apvts)
 {
     addAndMakeVisible(stepGrid);
     addAndMakeVisible(waveformDisplay);
@@ -11,7 +12,7 @@ SequencerPanel::SequencerPanel()
 void SequencerPanel::paint(juce::Graphics& g)
 {
     g.fillAll(Colours::bgPrimary);
-    
+
     auto bounds = getLocalBounds().reduced(12, 8);
     auto inputBounds = bounds.removeFromTop(56);
     g.setColour(Colours::bgSurface);

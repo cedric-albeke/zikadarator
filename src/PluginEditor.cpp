@@ -7,7 +7,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
       processorRef(p),
       lookAndFeel(),
       headerPanel(),
-      sequencerPanel(),
+      sequencerPanel(p.getPluginState().getValueTreeState()),
       footerPanel()
 {
     setLookAndFeel(&lookAndFeel);
