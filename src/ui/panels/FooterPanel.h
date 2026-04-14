@@ -17,12 +17,14 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void refreshGlobalControlLabels();
 
     void setSelectedSlot(int lane, int slot, const UserSlotData& data, const juce::String& laneName);
 
     std::function<void(int lane, int slot, const UserSlotData& data)> onSlotDataChanged;
 
 private:
+    juce::AudioProcessorValueTreeState& apvts;
     juce::Slider     dryWetSlider;
     juce::TextButton bypassButton  { "BYPASS" };
     juce::Label      mixModeLabel;

@@ -6,6 +6,14 @@ namespace zikada {
 
 namespace {
 
+void debugWorkspaceLog(const juce::String& message)
+{
+    juce::Logger::writeToLog("[ZIKADARATOR] WorkspacePanel " + message);
+#if JUCE_DEBUG
+    DBG("[ZIKADARATOR] WorkspacePanel " + message);
+#endif
+}
+
 void configureLabel(juce::Label& label, float size, juce::Colour colour, juce::Justification justification, bool bold = false)
 {
     label.setJustificationType(justification);
@@ -286,11 +294,11 @@ void WorkspacePanel::bindToParameters(juce::AudioProcessorValueTreeState& apvts)
 
 void WorkspacePanel::setMode(Mode newMode)
 {
-    if (mode == newMode)
-        return;
-
     mode = newMode;
+    debugWorkspaceLog("setMode=" + juce::String(mode == Mode::Presets ? "Presets" : "Settings")
+                      + ", bounds=" + getBounds().toString());
     refreshCopy();
+    resized();
     repaint();
 }
 
@@ -351,6 +359,9 @@ void WorkspacePanel::refreshCopy()
 void WorkspacePanel::applyVisibility()
 {
     const bool showPresets = mode == Mode::Presets;
+    debugWorkspaceLog("applyVisibility showPresets=" + juce::String(showPresets ? 1 : 0)
+                      + ", presetItems=" + juce::String(static_cast<int>(presetItems.size()))
+                      + ", selector=" + juce::String(standaloneDeviceSelector != nullptr ? 1 : 0));
 
     presetHintLabel.setVisible(showPresets);
     presetDetailTitle.setVisible(showPresets);

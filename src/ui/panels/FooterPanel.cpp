@@ -20,7 +20,8 @@ namespace {
     };
 }
 
-FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& apvts)
+FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
+    : apvts(valueTreeState)
 {
     dryWetSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     dryWetSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
@@ -32,13 +33,13 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& apvts)
     mixModeLabel.setText("LINEAR", juce::dontSendNotification);
     mixModeLabel.setJustificationType(juce::Justification::centred);
     mixModeLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
-    mixModeLabel.setJustificationType(juce::Justification::centred);
     mixModeLabel.setColour(juce::Label::textColourId, Colours::neonGreen);
     addAndMakeVisible(mixModeLabel);
 
     outputGainLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f)));
     outputGainLabel.setJustificationType(juce::Justification::centred);
     outputGainLabel.setColour(juce::Label::textColourId, Colours::white85);
+    outputGainLabel.setText("0.0 dB", juce::dontSendNotification);
     addAndMakeVisible(outputGainLabel);
 
     bypassButton.setClickingTogglesState(true);
@@ -93,6 +94,20 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible(modModeButton);
 
     setupModulationControls();
+    refreshGlobalControlLabels();
+}
+
+void FooterPanel::refreshGlobalControlLabels()
+{
+    if (auto* mixMode = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter(ParameterIDs::mixMode)))
+        mixModeLabel.setText(mixMode->getCurrentChoiceName().toUpperCase(), juce::dontSendNotification);
+
+    if (auto* outputGain = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter(ParameterIDs::outputGain)))
+    {
+        const auto value = outputGain->get();
+        const auto text = juce::String(value, 1) + " dB";
+        outputGainLabel.setText(text, juce::dontSendNotification);
+    }
 }
 
 void FooterPanel::setupModulationControls()
@@ -389,6 +404,12 @@ void FooterPanel::resized()
 
 void FooterPanel::setSelectedSlot(int lane, int slot, const UserSlotData& data, const juce::String& laneName)
 {
+#if JUCE_DEBUG
+    DBG("[ZIKADARATOR] FooterPanel::setSelectedSlot lane=" + juce::String(lane)
+        + " slot=" + juce::String(slot)
+        + " modMode=" + juce::String(modModeActive ? 1 : 0));
+#endif
+
     hasSelection     = true;
     selectedLane     = lane;
     selectedSlot     = slot;
@@ -414,9 +435,6 @@ void FooterPanel::setSelectedSlot(int lane, int slot, const UserSlotData& data, 
 
     updateModulationControlsFromData(data.modulation);
     updatingFromState = false;
-
-    for (auto& knob : stepKnobs)
-        knob->setVisible(!modModeActive);
 
     applyModModeVisibility();
     repaint();
