@@ -15,10 +15,18 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    void setPlayingStep(int step);
+    void setSelectedStep(int lane, int step);
+
+    std::function<void(int lane, int step)> onStepSelected;
+
     static constexpr int numLanes = 6;
     static constexpr int numSteps = 16;
 
 private:
+    int lastPlayingStep{-1};
+    int selectedLane{-1};
+    int selectedStep{-1};
     juce::AudioProcessorValueTreeState& apvts;
     std::array<std::array<std::unique_ptr<StepCell>, numSteps>, numLanes> cells;
     std::array<std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numSteps>, numLanes> attachments;

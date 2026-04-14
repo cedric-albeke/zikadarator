@@ -65,6 +65,10 @@ target_sources(ZikadaFX
         src/engine/CircularAudioBuffer.cpp
         src/engine/SliceEngine.cpp
         src/engine/FilterEngine.cpp
+        src/engine/DelayEngine.cpp
+        src/engine/ReverbEngine.cpp
+        src/engine/BitcrushEngine.cpp
+        src/engine/PitchEngine.cpp
 )
 
 target_include_directories(ZikadaFX

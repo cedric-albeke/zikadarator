@@ -10,7 +10,8 @@
 
 namespace zikada {
 
-class PluginEditor : public juce::AudioProcessorEditor
+class PluginEditor : public juce::AudioProcessorEditor,
+                     private juce::Timer
 {
 public:
     explicit PluginEditor(PluginProcessor&);
@@ -22,11 +23,15 @@ public:
     WaveformDisplay* getWaveformDisplay();
 
 private:
+    void timerCallback() override;
+
     PluginProcessor& processorRef;
     ZikadaLookAndFeel lookAndFeel;
     HeaderPanel headerPanel;
     SequencerPanel sequencerPanel;
     FooterPanel footerPanel;
+
+    int lastPlayingStep{-1};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

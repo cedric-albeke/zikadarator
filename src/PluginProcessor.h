@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "state/PluginState.h"
+#include "state/SequencerState.h"
 #include "engine/SequencerEngine.h"
 #include "engine/SliceEngine.h"
 #include "engine/FilterEngine.h"
@@ -46,12 +47,16 @@ public:
     PluginState& getPluginState() { return state; }
     const PluginState& getPluginState() const { return state; }
 
+    SequencerState& getSequencerState() { return sequencerState; }
+    const SequencerState& getSequencerState() const { return sequencerState; }
+
     bool isPlaying() const { return isPlayingFlag; }
     double getCurrentBPM() const { return currentBPM; }
     int getCurrentStep() const { return currentStep; }
 
 private:
     PluginState state;
+    SequencerState sequencerState;
     SequencerEngine sequencerEngine;
     SliceEngine sliceEngine;
     FilterEngine filterEngine;

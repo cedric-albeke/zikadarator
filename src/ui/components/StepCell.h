@@ -23,12 +23,18 @@ public:
     void setPlaying(bool isPlaying);
     bool isPlaying() const { return playing; }
 
+    void setSelected(bool isSelected);
+    bool isSelected() const { return selected; }
+
+    std::function<void()> onSelected;
+
 private:
     int laneIndex{0};
     int stepIndex{0};
     bool active{false};
     bool tied{false};
     bool playing{false};
+    bool selected{false};
 };
 
 }

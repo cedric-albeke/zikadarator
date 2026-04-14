@@ -15,6 +15,7 @@ public:
     void resized() override;
 
     WaveformDisplay& getWaveformDisplay() { return waveformDisplay; }
+    StepGrid& getStepGrid() { return stepGrid; }
 
 private:
     StepGrid stepGrid;

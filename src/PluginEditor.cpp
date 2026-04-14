@@ -11,19 +11,58 @@ PluginEditor::PluginEditor(PluginProcessor& p)
       footerPanel()
 {
     setLookAndFeel(&lookAndFeel);
-    
+
     addAndMakeVisible(headerPanel);
     addAndMakeVisible(sequencerPanel);
     addAndMakeVisible(footerPanel);
+
+    sequencerPanel.getStepGrid().onStepSelected = [this](int lane, int step)
+    {
+        const auto& data     = processorRef.getSequencerState().getStepData(lane, step);
+        const auto  laneName = juce::String(laneInfos[lane].name);
+        footerPanel.setSelectedStep(lane, step, data, laneName);
+    };
+
+    footerPanel.onStepDataChanged = [this](int lane, int step, const StepData& data)
+    {
+        StepData updated      = data;
+        updated.active        = processorRef.getSequencerState().getStepData(lane, step).active;
+        processorRef.getSequencerState().setStepData(lane, step, updated);
+    };
     
     setSize(1200, 800);
     setResizable(true, true);
     setResizeLimits(900, 600, 2400, 1600);
+
+    startTimerHz(30);
 }
 
 PluginEditor::~PluginEditor()
 {
+    stopTimer();
     setLookAndFeel(nullptr);
+}
+
+void PluginEditor::timerCallback()
+{
+    const bool isPlaying = processorRef.isPlaying();
+    const int  step      = processorRef.getCurrentStep();
+
+    if (!isPlaying)
+    {
+        if (lastPlayingStep >= 0)
+        {
+            sequencerPanel.getStepGrid().setPlayingStep(-1);
+            lastPlayingStep = -1;
+        }
+        return;
+    }
+
+    if (step != lastPlayingStep)
+    {
+        sequencerPanel.getStepGrid().setPlayingStep(step);
+        lastPlayingStep = step;
+    }
 }
 
 void PluginEditor::paint(juce::Graphics& g)
@@ -45,7 +84,7 @@ void PluginEditor::resized()
 
     headerPanel.setBounds(bounds.removeFromTop(72));
     bounds.removeFromTop(PM::kModuleGap);
-    footerPanel.setBounds(bounds.removeFromBottom(64));
+    footerPanel.setBounds(bounds.removeFromBottom(80));
     bounds.removeFromBottom(PM::kModuleGap);
     sequencerPanel.setBounds(bounds);
 }

@@ -6,6 +6,7 @@ StepCell::StepCell(int lane, int step)
     : Button(""), laneIndex(lane), stepIndex(step)
 {
     setClickingTogglesState(true);
+    onClick = [this]() { if (onSelected) onSelected(); };
 }
 
 void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
@@ -92,6 +93,14 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.setColour(Colours::white.withAlpha(0.75f));
         g.drawRoundedRectangle(bounds, corner, 2.0f);
     }
+
+    if (selected)
+    {
+        g.setColour(Colours::neonGreen);
+        g.drawRoundedRectangle(bounds, corner, 2.5f);
+        g.setColour(Colours::neonGreen.withAlpha(0.85f));
+        g.fillEllipse(bounds.getRight() - 6.0f, bounds.getY() + 1.5f, 4.5f, 4.5f);
+    }
 }
 
 void StepCell::setActive(bool a)
@@ -109,6 +118,12 @@ void StepCell::setTied(bool t)
 void StepCell::setPlaying(bool p)
 {
     playing = p;
+    repaint();
+}
+
+void StepCell::setSelected(bool s)
+{
+    selected = s;
     repaint();
 }
 

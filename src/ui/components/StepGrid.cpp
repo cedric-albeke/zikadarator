@@ -25,6 +25,13 @@ void StepGrid::setupGrid()
                     *param, *cell, nullptr);
             }
 
+            cell->onSelected = [this, lane, step]()
+            {
+                setSelectedStep(lane, step);
+                if (onStepSelected)
+                    onStepSelected(lane, step);
+            };
+
             cells[lane][step] = std::move(cell);
         }
 
@@ -224,6 +231,37 @@ void StepGrid::resized()
 
         mixKnobs[lane]->setBounds(knobBounds.reduced(2, 3));
     }
+}
+
+void StepGrid::setPlayingStep(int step)
+{
+    if (lastPlayingStep >= 0 && lastPlayingStep < numSteps)
+    {
+        for (int lane = 0; lane < numLanes; ++lane)
+            cells[lane][lastPlayingStep]->setPlaying(false);
+    }
+
+    if (step >= 0 && step < numSteps)
+    {
+        for (int lane = 0; lane < numLanes; ++lane)
+            cells[lane][step]->setPlaying(true);
+    }
+
+    lastPlayingStep = step;
+}
+
+void StepGrid::setSelectedStep(int lane, int step)
+{
+    if (selectedLane >= 0 && selectedStep >= 0
+        && selectedLane < numLanes && selectedStep < numSteps)
+        cells[selectedLane][selectedStep]->setSelected(false);
+
+    selectedLane = lane;
+    selectedStep = step;
+
+    if (selectedLane >= 0 && selectedStep >= 0
+        && selectedLane < numLanes && selectedStep < numSteps)
+        cells[selectedLane][selectedStep]->setSelected(true);
 }
 
 }

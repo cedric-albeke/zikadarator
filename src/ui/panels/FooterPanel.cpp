@@ -10,6 +10,14 @@ namespace {
     constexpr int kVPad     = 4;
     constexpr int kLabelH   = 12;
     constexpr int kInnerPad = 8;
+    constexpr int kKnobGap  = 4;
+
+    constexpr std::array<double, 7> kKnobMin  = { 20.0, 0.1,   0.0, 0.0, 0.0, 0.0, -1.0 };
+    constexpr std::array<double, 7> kKnobMax  = { 20000.0, 10.0, 1.0, 1.0, 1.0, 2.0,  1.0 };
+    constexpr std::array<double, 7> kKnobDef  = { 2000.0, 0.707, 0.25, 0.3, 0.5, 1.0,  0.0 };
+    constexpr std::array<const char*, 7> kKnobLabel = {
+        "CUTOFF", "RESON", "DELAY", "FEEDBK", "MIX", "VOL", "PAN"
+    };
 }
 
 FooterPanel::FooterPanel()
@@ -39,6 +47,19 @@ FooterPanel::FooterPanel()
     bypassButton.setColour(juce::TextButton::textColourOffId,   Colours::white85);
     bypassButton.setColour(juce::TextButton::textColourOnId,    Colours::bgPrimary);
     addAndMakeVisible(bypassButton);
+
+    for (int i = 0; i < 7; ++i)
+    {
+        auto knob = std::make_unique<Knob>();
+        knob->setRange(kKnobMin[i], kKnobMax[i]);
+        knob->setDefaultValue(kKnobDef[i]);
+        knob->setValue(kKnobDef[i]);
+        knob->setLabel(kKnobLabel[i]);
+        knob->setColour(Colours::neonGreen);
+        knob->onValueChange = [this] { notifyStepDataChanged(); };
+        addChildComponent(knob.get());
+        stepKnobs[i] = std::move(knob);
+    }
 }
 
 void FooterPanel::paint(juce::Graphics& g)
@@ -94,36 +115,47 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
 
     const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
 
-    auto inner   = detailZone.reduced(kInnerPad, 4);
+    auto inner    = detailZone.reduced(kInnerPad, 4);
     auto labelRow = inner.removeFromTop(kLabelH).toFloat();
 
     g.setFont(laf != nullptr ? laf->getVcrFont(9.0f)
                               : juce::Font(juce::FontOptions().withHeight(9.0f)));
     g.setColour(Colours::neonGreen.withAlpha(0.55f));
     g.drawText("STEP DETAIL", labelRow, juce::Justification::centredLeft, false);
-    g.setColour(Colours::white.withAlpha(0.20f));
-    g.drawText("SELECT A STEP TO EDIT", labelRow, juce::Justification::centredRight, false);
 
-    inner.removeFromBottom(3);
-
-    constexpr int numCells  = 16;
-    constexpr int cellGap   = 2;
-    const int     totalGaps = (numCells - 1) * cellGap;
-    const int     cellW     = juce::jmax(4, (inner.getWidth() - totalGaps) / numCells);
-    const int     startX    = inner.getX() + (inner.getWidth() - (cellW * numCells + totalGaps)) / 2;
-
-    for (int i = 0; i < numCells; ++i)
+    if (hasSelection)
     {
-        const juce::Rectangle<float> cell(
-            static_cast<float>(startX + i * (cellW + cellGap)),
-            inner.getY() + 2.0f,
-            static_cast<float>(cellW),
-            inner.getHeight() - 4.0f);
+        const auto infoStr = selectedLaneName + "  /  STEP " + juce::String(selectedStep + 1);
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(10.0f, true)
+                                  : juce::Font(juce::FontOptions().withHeight(10.0f).withStyle("Bold")));
+        g.setColour(Colours::neonGreen.withAlpha(0.90f));
+        g.drawText(infoStr, labelRow, juce::Justification::centredRight, false);
+    }
+    else
+    {
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(9.0f)
+                                  : juce::Font(juce::FontOptions().withHeight(9.0f)));
+        g.setColour(Colours::white.withAlpha(0.20f));
+        g.drawText("SELECT A STEP TO EDIT", labelRow, juce::Justification::centredRight, false);
 
-        g.setColour(Colours::neonGreen.withAlpha((i % 4 == 0) ? 0.22f : 0.10f));
-        g.fillRoundedRectangle(cell, 2.0f);
-        g.setColour(Colours::neonGreen.withAlpha(0.28f));
-        g.drawRoundedRectangle(cell, 2.0f, 0.8f);
+        inner.removeFromBottom(3);
+        constexpr int numHints  = 7;
+        const int     totalGaps = (numHints - 1) * kKnobGap;
+        const int     cellW     = juce::jmax(4, (inner.getWidth() - totalGaps) / numHints);
+
+        for (int i = 0; i < numHints; ++i)
+        {
+            const juce::Rectangle<float> cell(
+                static_cast<float>(inner.getX() + i * (cellW + kKnobGap)),
+                inner.getY() + 2.0f,
+                static_cast<float>(cellW),
+                inner.getHeight() - 4.0f);
+
+            g.setColour(Colours::neonGreen.withAlpha(0.08f));
+            g.fillRoundedRectangle(cell, 3.0f);
+            g.setColour(Colours::neonGreen.withAlpha(0.15f));
+            g.drawRoundedRectangle(cell, 3.0f, 0.8f);
+        }
     }
 }
 
@@ -185,6 +217,71 @@ void FooterPanel::resized()
         mixModeLabel.setBounds(mixCol.withSizeKeepingCentre(mixCol.getWidth(), 20));
         outputGainLabel.setBounds(gainCol.withSizeKeepingCentre(gainCol.getWidth(), 20));
     }
+
+    {
+        auto inner = detailZone.reduced(kInnerPad, 4);
+        inner.removeFromTop(kLabelH);
+        inner.removeFromBottom(3);
+
+        constexpr int numKnobs  = 7;
+        const int     totalGaps = (numKnobs - 1) * kKnobGap;
+        const int     knobW     = (inner.getWidth() - totalGaps) / numKnobs;
+
+        for (int i = 0; i < numKnobs; ++i)
+        {
+            const int kx = inner.getX() + i * (knobW + kKnobGap);
+            stepKnobs[i]->setBounds(kx, inner.getY(), knobW, inner.getHeight());
+        }
+    }
 }
 
+void FooterPanel::setSelectedStep(int lane, int step, const StepData& data, const juce::String& laneName)
+{
+    hasSelection     = true;
+    selectedLane     = lane;
+    selectedStep     = step;
+    selectedLaneName = laneName;
+
+    const auto laneColour = laneInfos[lane].colour;
+
+    updatingFromState = true;
+    stepKnobs[0]->setColour(laneColour);
+    stepKnobs[0]->setValue(static_cast<double>(data.filterCutoff));
+    stepKnobs[1]->setColour(laneColour);
+    stepKnobs[1]->setValue(static_cast<double>(data.filterResonance));
+    stepKnobs[2]->setColour(laneColour.withAlpha(0.80f).brighter(0.15f));
+    stepKnobs[2]->setValue(static_cast<double>(data.delayTime));
+    stepKnobs[3]->setColour(laneColour.withAlpha(0.80f).brighter(0.15f));
+    stepKnobs[3]->setValue(static_cast<double>(data.delayFeedback));
+    stepKnobs[4]->setColour(Colours::neonGreen);
+    stepKnobs[4]->setValue(static_cast<double>(data.delayMix));
+    stepKnobs[5]->setColour(Colours::neonGreen);
+    stepKnobs[5]->setValue(static_cast<double>(data.volume));
+    stepKnobs[6]->setColour(Colours::neonGreen.withAlpha(0.80f));
+    stepKnobs[6]->setValue(static_cast<double>(data.pan));
+    updatingFromState = false;
+
+    for (auto& knob : stepKnobs)
+        knob->setVisible(true);
+
+    repaint();
 }
+
+void FooterPanel::notifyStepDataChanged()
+{
+    if (updatingFromState || !hasSelection || !onStepDataChanged)
+        return;
+
+    StepData data;
+    data.filterCutoff    = static_cast<float>(stepKnobs[0]->getValue());
+    data.filterResonance = static_cast<float>(stepKnobs[1]->getValue());
+    data.delayTime       = static_cast<float>(stepKnobs[2]->getValue());
+    data.delayFeedback   = static_cast<float>(stepKnobs[3]->getValue());
+    data.delayMix        = static_cast<float>(stepKnobs[4]->getValue());
+    data.volume          = static_cast<float>(stepKnobs[5]->getValue());
+    data.pan             = static_cast<float>(stepKnobs[6]->getValue());
+
+    onStepDataChanged(selectedLane, selectedStep, data);
+}
+
+} // namespace zikada

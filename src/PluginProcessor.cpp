@@ -72,6 +72,11 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         currentStep = sequencerStep;
         lastStep = sequencerStep;
         sliceEngine.triggerSlice(currentStep);
+
+        static constexpr int kFilterLane = 4;
+        const auto& stepData = sequencerState.getStepData(kFilterLane, currentStep);
+        filterEngine.setCutoff(stepData.filterCutoff);
+        filterEngine.setResonance(stepData.filterResonance);
     }
     
     sliceEngine.writeToBuffer(leftChannel, rightChannel, numSamples);
@@ -161,16 +166,33 @@ void PluginProcessor::changeProgramName(int index, const juce::String& newName)
 void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto stateTree = state.getValueTreeState().copyState();
-    std::unique_ptr<juce::XmlElement> xml(stateTree.createXml());
-    copyXmlToBinary(*xml, destData);
+    stateTree.addChild (sequencerState.toValueTree(), -1, nullptr);
+    std::unique_ptr<juce::XmlElement> xml (stateTree.createXml());
+    copyXmlToBinary (*xml, destData);
 }
 
 void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-    if (xmlState.get() != nullptr)
-        if (xmlState->hasTagName(state.getValueTreeState().state.getType()))
-            state.getValueTreeState().replaceState(juce::ValueTree::fromXml(*xmlState));
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+    if (xmlState == nullptr)
+        return;
+
+    auto fullTree = juce::ValueTree::fromXml (*xmlState);
+
+    if (! fullTree.isValid())
+        return;
+
+    auto seqChild = fullTree.getChildWithName ("SequencerState");
+
+    if (seqChild.isValid())
+        fullTree.removeChild (seqChild, nullptr);
+
+    if (fullTree.hasType (state.getValueTreeState().state.getType()))
+        state.getValueTreeState().replaceState (fullTree);
+
+    if (seqChild.isValid())
+        sequencerState.fromValueTree (seqChild);
 }
 
 }
