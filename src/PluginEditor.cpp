@@ -33,11 +33,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     headerPanel.onUndoRequested = [this] { undoLastChange(); };
     headerPanel.onRedoRequested = [this] { redoLastChange(); };
-    headerPanel.onPresetBrowserRequested = [this]
-    {
-        headerPanel.setSelectedPage(HeaderPanel::Page::Presets);
-        setPage(Page::Presets);
-    };
+    headerPanel.onPresetMenuRequested = [this] { showHeaderPresetMenu(); };
     headerPanel.onPresetPreviousRequested = [this]
     {
         const auto& items = processorRef.getPresetManager().getItems();
@@ -88,6 +84,23 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     {
         if (processorRef.getPresetManager().deleteUserPreset(index))
             refreshPresetBrowser();
+    };
+
+    workspacePanel.onToggleFavoritePreset = [this](int index)
+    {
+        const auto& items = processorRef.getPresetManager().getItems();
+        if (index < 0 || index >= static_cast<int>(items.size()))
+            return;
+
+        const auto presetName = items[static_cast<size_t>(index)].name;
+        processorRef.getPresetManager().toggleFavorite(presetName);
+        refreshPresetBrowser();
+        const auto& refreshedItems = processorRef.getPresetManager().getItems();
+        for (int i = 0; i < static_cast<int>(refreshedItems.size()); ++i)
+            if (refreshedItems[static_cast<size_t>(i)].name == presetName)
+                return setCurrentPresetIndex(i, currentPresetDirty);
+
+        syncHeaderPresetDisplay();
     };
 
     sequencerPanel.getStepGrid().onStepSelected = [this](int lane, int step)
@@ -273,8 +286,93 @@ void PluginEditor::refreshPresetBrowser()
     syncHeaderPresetDisplay();
 }
 
+void PluginEditor::showHeaderPresetMenu()
+{
+    const auto& items = processorRef.getPresetManager().getItems();
+    if (items.empty())
+        return;
+
+    juce::PopupMenu menu;
+    std::vector<int> favoriteIndices;
+    std::vector<int> recentIndices;
+
+    for (int i = 0; i < static_cast<int>(items.size()); ++i)
+    {
+        const auto& item = items[static_cast<size_t>(i)];
+        if (item.isFavorite)
+            favoriteIndices.push_back(i);
+        if (item.recentRank >= 0)
+            recentIndices.push_back(i);
+    }
+
+    std::sort(recentIndices.begin(), recentIndices.end(), [&items](int a, int b)
+    {
+        return items[static_cast<size_t>(a)].recentRank < items[static_cast<size_t>(b)].recentRank;
+    });
+
+    if (!favoriteIndices.empty())
+    {
+        menu.addSectionHeader("Favorites");
+        for (const int index : favoriteIndices)
+        {
+            const auto& item = items[static_cast<size_t>(index)];
+            menu.addItem(1000 + index, item.name + "   /   " + item.category.toUpperCase(), true, index == currentPresetIndex);
+        }
+        menu.addSeparator();
+    }
+
+    if (!recentIndices.empty())
+    {
+        menu.addSectionHeader("Recent");
+        const int recentCount = juce::jmin(5, static_cast<int>(recentIndices.size()));
+        for (int i = 0; i < recentCount; ++i)
+        {
+            const int index = recentIndices[static_cast<size_t>(i)];
+            const auto& item = items[static_cast<size_t>(index)];
+            menu.addItem(1000 + index, item.name + "   /   " + item.category.toUpperCase(), true, index == currentPresetIndex);
+        }
+        menu.addSeparator();
+    }
+
+    menu.addSectionHeader("All Presets");
+    for (int i = 0; i < static_cast<int>(items.size()); ++i)
+    {
+        const auto& item = items[static_cast<size_t>(i)];
+        const juce::String label = item.name + (item.isFavorite ? "   *" : "")
+                                 + "   /   " + item.category.toUpperCase()
+                                 + "   /   " + (item.isFactory ? "FACTORY" : "USER");
+        menu.addItem(1000 + i, label, true, i == currentPresetIndex);
+    }
+
+    menu.addSeparator();
+    menu.addItem(1, "Open preset browser");
+
+    auto handleSelection = [this](int result)
+    {
+        if (result == 1)
+        {
+            headerPanel.setSelectedPage(HeaderPanel::Page::Presets);
+            setPage(Page::Presets);
+            return;
+        }
+
+        if (result >= 1000)
+            loadPresetByIndex(result - 1000, true);
+    };
+
+    auto options = juce::PopupMenu::Options().withTargetComponent(headerPanel.getPresetMenuTarget())
+                                           .withMinimumWidth(360);
+
+    menu.showMenuAsync(options, [handleSelection](int result) mutable { handleSelection(result); });
+}
+
 void PluginEditor::loadPresetByIndex(int index, bool pushToHistory)
 {
+    const auto& currentItems = processorRef.getPresetManager().getItems();
+    if (index < 0 || index >= static_cast<int>(currentItems.size()))
+        return;
+
+    const auto presetName = currentItems[static_cast<size_t>(index)].name;
     juce::ValueTree stateTree;
     if (!processorRef.getPresetManager().loadPreset(index, stateTree))
         return;
@@ -283,7 +381,14 @@ void PluginEditor::loadPresetByIndex(int index, bool pushToHistory)
         pushUndoSnapshot();
 
     applyHistoryState(stateTree);
-    setCurrentPresetIndex(index, false);
+    processorRef.getPresetManager().markPresetUsed(presetName);
+    refreshPresetBrowser();
+    const auto& refreshedItems = processorRef.getPresetManager().getItems();
+    for (int i = 0; i < static_cast<int>(refreshedItems.size()); ++i)
+        if (refreshedItems[static_cast<size_t>(i)].name == presetName)
+            return setCurrentPresetIndex(i, false);
+
+    syncHeaderPresetDisplay();
 }
 
 void PluginEditor::setCurrentPresetIndex(int index, bool dirty)
@@ -315,7 +420,9 @@ void PluginEditor::syncHeaderPresetDisplay()
     if (currentPresetIndex >= 0 && currentPresetIndex < static_cast<int>(items.size()))
     {
         const auto& item = items[static_cast<size_t>(currentPresetIndex)];
-        const auto meta = item.category.toUpperCase() + juce::String(" / ") + (item.isFactory ? "FACTORY" : "USER");
+        const auto meta = (item.isFavorite ? juce::String("FAV / ") : juce::String())
+                        + item.category.toUpperCase() + juce::String(" / ")
+                        + (item.isFactory ? "FACTORY" : "USER");
         headerPanel.setPresetDisplay(item.name, meta, currentPresetDirty);
     }
     else

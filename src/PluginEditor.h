@@ -38,6 +38,7 @@ private:
     void setPage(Page page);
     void refreshSequencerFromState();
     void refreshPresetBrowser();
+    void showHeaderPresetMenu();
     void loadPresetByIndex(int index, bool pushToHistory);
     void setCurrentPresetIndex(int index, bool dirty);
     void markCurrentPresetDirty();

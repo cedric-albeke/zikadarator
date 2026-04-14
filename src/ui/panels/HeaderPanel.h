@@ -28,13 +28,14 @@ public:
     void setRedoEnabled(bool enabled);
     void setPresetDisplay(const juce::String& presetName, const juce::String& presetMeta, bool dirty);
     void setPresetStepEnabled(bool previousEnabled, bool nextEnabled);
+    juce::Component* getPresetMenuTarget() { return &presetSelectButton; }
 
     std::function<void(Page)> onPageSelected;
     std::function<void()> onUndoRequested;
     std::function<void()> onRedoRequested;
     std::function<void()> onPresetPreviousRequested;
     std::function<void()> onPresetNextRequested;
-    std::function<void()> onPresetBrowserRequested;
+    std::function<void()> onPresetMenuRequested;
 
 private:
     juce::Image logoImage;

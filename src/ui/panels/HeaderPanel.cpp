@@ -69,8 +69,8 @@ HeaderPanel::HeaderPanel()
     presetSelectButton.setColour(juce::TextButton::textColourOnId, Colours::white);
     presetSelectButton.onClick = [this]
     {
-        if (onPresetBrowserRequested)
-            onPresetBrowserRequested();
+        if (onPresetMenuRequested)
+            onPresetMenuRequested();
     };
     addAndMakeVisible(presetSelectButton);
 
