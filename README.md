@@ -1,4 +1,4 @@
-# ZIKARATOR
+# ZIKADARATOR
 
 A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zikada brand identity.
 
@@ -6,7 +6,7 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 
 **"Sequence the signal."**
 
-ZIKARATOR is a 16-step multi-FX sequencer that transforms incoming audio in real-time. Chop, stutter, filter, and reshape loops through 6 independent lanes, each with per-step preset assignment, footer-based user-slot editing, and an integrated preset/settings workspace.
+ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in real-time. Chop, stutter, filter, and reshape loops through 6 independent lanes, each with per-step preset assignment, footer-based user-slot editing, and an integrated preset/settings workspace.
 
 ## Features
 

@@ -33,6 +33,6 @@ jobs:
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ZIKARATOR-windows-vst3
+          name: ZIKADARATOR-windows-vst3
           path: build/ZikadaFX_artefacts/Release/VST3
           if-no-files-found: error
