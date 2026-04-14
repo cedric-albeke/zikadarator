@@ -112,7 +112,7 @@ Each user parameter can be driven by:
 ### Layout (Top → Bottom)
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ HEADER: Logo | Sequencer | Presets | Settings | Preset | Undo/Redo │
+│ HEADER (single 80px row): Logo | Tabs | Preset Strip | Undo/Redo   │
 ├─────────────────────────────────────────────────────────────────────┤
 │ PAGE A — SEQUENCER                                                 │
 │   Signal display                                                   │
@@ -128,6 +128,22 @@ Each user parameter can be driven by:
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### HeaderPanel Architecture
+The header is implemented as a single 80px row (`HeaderPanel`) with a custom paint split:
+
+- **`paint()`** — draws background, logo, wordmark (`ZIKADA RATOR V1`), and subline (`SEQUENCE THE SIGNAL`). The logo uses the pre-scaled `zikadacicada128_png` (256×256) asset to avoid pixelation, with a subtle neon-green brightness overlay.
+- **`paintOverChildren()`** — draws tab cells (borders, dot indicators, text), the preset strip container, nav chevrons, and undo/redo SVG icons *on top* of the button hit-zones. This prevents JUCE's default `TextButton` look-and-feel from interfering with custom styling.
+
+**Layout flow (left → right):**
+1. **Logo block** — cicada logo + wordmark + subline
+2. **Tabs** — `SEQUENCER`, `PRESETS`, `SETTINGS` (radio group, custom drawn)
+3. **Flexible spacer**
+4. **Preset strip** — prev/next chevrons, save icon, preset name, dropdown triangle
+5. **Undo / Redo** — SVG action icons
+
+**SVG loading pattern:**
+Inline SVG strings are parsed via `juce::parseXML()` → `juce::Drawable::createFromSVG()`. Stroke/fill attributes are placed directly on each `<path>` element because JUCE's SVG renderer does not reliably inherit presentation attributes from parent `<svg>` elements.
+
 ### Design Principles
 - **Vector-based**: All UI drawn via `juce::Graphics` (no raster assets needed)
 - **60fps animations**: Smooth playhead, waveform updates, parameter transitions
@@ -135,7 +151,7 @@ Each user parameter can be driven by:
 - **Keyboard + mouse**: Scroll wheel cycles presets, drag-to-paint, shift+tie, right-click delete
 - **Resizable**: Editor scales from 75% to 200%
 - **Standalone integration**: Audio device, sample rate, buffer size, and MIDI routing are embedded inside the Settings tab via JUCE standalone host APIs
-- **Preset access**: Header preset strip opens a popup menu for favorites, recents, full list access, and browser navigation
+- **Preset access**: Header dropdown and browser both read from the same metadata-backed preset ordering
 
 ### Color Mapping to Lanes (Zikada Palette)
 | Lane | Color | Hex |

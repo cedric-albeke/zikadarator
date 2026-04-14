@@ -247,7 +247,7 @@ Six modes that intelligently fill the entire grid:
 ## UI/UX Features
 
 ### Navigation
-- **Header tabs** switch between Sequencer, Presets, and Settings pages
+- **Single-row header** with tabs (Sequencer / Presets / Settings), preset strip, and undo/redo icons
 - **Header preset dropdown** opens favorites, recents, full preset list, and direct browser access
 - **Scroll wheel** over step cells cycles presets without opening popup
 - **Drag horizontally** across cells to paint/copy
