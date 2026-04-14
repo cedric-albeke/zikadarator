@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace zikada {
 
@@ -69,18 +70,16 @@ void applyGainPan(float* left, float* right, int numSamples, float volume, float
     }
 }
 
-void reverseBlock(float* left, float* right, int numSamples)
+void applyTremolo(float* left, float* right, int numSamples, float depth, double phaseStart, double phaseDelta)
 {
-    for (int i = 0; i < numSamples / 2; ++i)
+    const float clampedDepth = juce::jlimit(0.0f, 1.0f, depth);
+    for (int i = 0; i < numSamples; ++i)
     {
-        const int j = numSamples - 1 - i;
-        const float leftSample = left[i];
-        left[i] = left[j];
-        left[j] = leftSample;
-
-        const float rightSample = right[i];
-        right[i] = right[j];
-        right[j] = rightSample;
+        const float phase = static_cast<float>(std::fmod(phaseStart + phaseDelta * static_cast<double>(i), 1.0));
+        const float lfo = 0.5f + 0.5f * std::sin(phase * 6.2831853f);
+        const float gain = (1.0f - clampedDepth) + clampedDepth * lfo;
+        left[i] *= gain;
+        right[i] *= gain;
     }
 }
 
@@ -163,7 +162,7 @@ void processFxLane(float* left, float* right, int numSamples, int presetIndex, c
         case 7:
             delayEngine.setDelayTime(0.012f + 0.01f * (0.5f + 0.5f * std::sin(phase * 6.2831853f)));
             delayEngine.setFeedback(juce::jlimit(0.0f, 0.35f, slotData.delayFeedback * 0.4f));
-            delayEngine.setMix(juce::jlimit(0.0f, 1.0f, slotData.delayMix * 0.45f));
+            delayEngine.setMix(juce::jlimit(0.15f, 0.65f, slotData.delayMix * 0.65f));
             delayEngine.setEnabled(true);
             delayEngine.process(left, right, numSamples);
             break;
@@ -181,20 +180,21 @@ void processFxLane(float* left, float* right, int numSamples, int presetIndex, c
             break;
         case 10:
             delayEngine.setDelayTime(0.0035f + 0.004f * (0.5f + 0.5f * std::sin(phase * 6.2831853f)));
-            delayEngine.setFeedback(juce::jlimit(0.15f, 0.92f, slotData.delayFeedback));
-            delayEngine.setMix(juce::jlimit(0.0f, 1.0f, slotData.delayMix * 0.5f));
+            delayEngine.setFeedback(juce::jlimit(0.25f, 0.92f, slotData.delayFeedback));
+            delayEngine.setMix(juce::jlimit(0.15f, 0.72f, slotData.delayMix * 0.65f));
             delayEngine.setEnabled(true);
             delayEngine.process(left, right, numSamples);
             break;
         case 11:
-            toneFilter.setFilterType(FilterEngine::FilterType::BandPass);
+            toneFilter.setFilterType(FilterEngine::FilterType::BandReject);
             toneFilter.setCutoff(juce::jlimit(180.0f, 6200.0f, 280.0f + 4200.0f * (0.5f + 0.5f * std::sin(phase * 6.2831853f))));
-            toneFilter.setResonance(juce::jlimit(0.3f, 8.0f, slotData.filterResonance));
+            toneFilter.setResonance(juce::jlimit(0.8f, 8.0f, slotData.filterResonance));
             toneFilter.setEnabled(true);
             toneFilter.process(left, right, numSamples);
             break;
         case 12:
-            applyEnvelopeShape(left, right, numSamples, 12, phaseStart, phaseDelta, slotData.volume, slotData.pan);
+            applyTremolo(left, right, numSamples, juce::jlimit(0.2f, 1.0f, slotData.delayMix), phaseStart, phaseDelta);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
             return;
         case 5:
         default:
@@ -209,69 +209,40 @@ void processFxLane(float* left, float* right, int numSamples, int presetIndex, c
     applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
 }
 
-void applyLoopLane(float* left, float* right, int numSamples, int presetIndex, const UserSlotData& slotData,
-                   DelayEngine& delayEngine, double stepDurationSeconds)
+void configureLoopEngineForPreset(LoopEngine& loopEngine, int presetIndex, const UserSlotData& slotData,
+                                  double stepDurationSeconds)
 {
+    juce::ignoreUnused(slotData);
+    loopEngine.setEnabled(true);
+
     switch (presetIndex)
     {
         case 5:
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 1.0f, false, 0.75f);
             break;
         case 6:
-            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.12f, static_cast<float>(stepDurationSeconds * 0.125)));
-            delayEngine.setFeedback(juce::jlimit(0.15f, 0.65f, slotData.delayFeedback * 0.5f));
-            delayEngine.setMix(juce::jlimit(0.15f, 0.55f, slotData.delayMix * 0.4f));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 2.0f, false, 0.80f);
             break;
         case 7:
-            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.35f, static_cast<float>(stepDurationSeconds * 0.5)));
-            delayEngine.setFeedback(juce::jlimit(0.25f, 0.95f, slotData.delayFeedback));
-            delayEngine.setMix(juce::jlimit(0.25f, 1.0f, slotData.delayMix));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 2.0), 1.0f, false, 0.92f);
             break;
         case 8:
-            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.3f, static_cast<float>(stepDurationSeconds * 0.25)));
-            delayEngine.setFeedback(juce::jlimit(0.25f, 0.95f, slotData.delayFeedback));
-            delayEngine.setMix(juce::jlimit(0.25f, 1.0f, slotData.delayMix));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 4.0), 1.0f, false, 1.0f);
             break;
         case 9:
-            reverseBlock(left, right, numSamples);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 1.0f, true, 1.0f);
             break;
         case 10:
-            reverseBlock(left, right, numSamples);
-            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.08f, static_cast<float>(stepDurationSeconds * 0.125)));
-            delayEngine.setFeedback(juce::jlimit(0.2f, 0.75f, slotData.delayFeedback * 0.6f));
-            delayEngine.setMix(juce::jlimit(0.2f, 0.65f, slotData.delayMix * 0.5f));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 2.0f, true, 1.0f);
             break;
         case 11:
-            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.2f, static_cast<float>(stepDurationSeconds * 0.125)));
-            delayEngine.setFeedback(juce::jlimit(0.3f, 0.95f, slotData.delayFeedback));
-            delayEngine.setMix(juce::jlimit(0.35f, 1.0f, slotData.delayMix));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 8.0), 1.0f, false, 1.0f);
             break;
         case 12:
-            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.1f, static_cast<float>(stepDurationSeconds * 0.0625)));
-            delayEngine.setFeedback(juce::jlimit(0.4f, 0.95f, slotData.delayFeedback));
-            delayEngine.setMix(juce::jlimit(0.45f, 1.0f, slotData.delayMix));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 16.0), 1.0f, false, 1.0f);
             break;
         default:
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 1.0f, false, 0.0f);
             break;
     }
 }
@@ -293,7 +264,7 @@ void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
     sampleRate = newSampleRate;
     sequencerEngine.prepare(newSampleRate, samplesPerBlock);
     sliceEngine.prepare(newSampleRate, samplesPerBlock);
-    loopDelayEngine.prepare(newSampleRate, samplesPerBlock);
+    loopEngine.prepare(newSampleRate, samplesPerBlock);
     filterEngine.prepare(newSampleRate, samplesPerBlock);
     fx1DelayEngine.prepare(newSampleRate, samplesPerBlock);
     fx1ReverbEngine.prepare(newSampleRate, samplesPerBlock);
@@ -383,6 +354,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         if (sliceStep.active && sliceStep.presetIndex > 0)
             sliceEngine.triggerSlice(getSliceIndexForPreset(sliceStep.presetIndex, currentStep));
 
+        if (loopStep.active && loopStep.presetIndex > 0)
+        {
+            configureLoopEngineForPreset(loopEngine, loopStep.presetIndex, loopSlot, stepDurationSeconds);
+            loopEngine.trigger();
+        }
+        else
+        {
+            loopEngine.setEnabled(false);
+        }
+
         if (filterStep.active && filterStep.presetIndex > 0)
         {
             configureFilterForStep(filterEngine, filterStep.presetIndex, filterSlot);
@@ -410,8 +391,13 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         applyGainPan(wetLeft.data(), wetRight.data(), numSamples, sliceSlot.volume, sliceSlot.pan);
     }
 
+    loopEngine.captureInput(wetLeft.data(), wetRight.data(), numSamples);
+
     if (loopStep.active && loopStep.presetIndex > 0)
-        applyLoopLane(wetLeft.data(), wetRight.data(), numSamples, loopStep.presetIndex, loopSlot, loopDelayEngine, stepDurationSeconds);
+    {
+        loopEngine.process(wetLeft.data(), wetRight.data(), numSamples);
+        applyGainPan(wetLeft.data(), wetRight.data(), numSamples, loopSlot.volume, loopSlot.pan);
+    }
 
     if (envelopeStep.active && envelopeStep.presetIndex > 0)
         applyEnvelopeShape(wetLeft.data(), wetRight.data(), numSamples, envelopeStep.presetIndex,
