@@ -2,10 +2,13 @@
 
 namespace zikada {
 
-VcrLabel::VcrLabel() = default;
+VcrLabel::VcrLabel()
+    : font(juce::FontOptions().withHeight(12.0f))
+{
+}
 
 VcrLabel::VcrLabel(const juce::String& t)
-    : text(t)
+    : text(t), font(juce::FontOptions().withHeight(12.0f))
 {
 }
 

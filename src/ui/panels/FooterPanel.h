@@ -16,6 +16,7 @@ private:
     juce::Slider dryWetSlider;
     juce::TextButton bypassButton{"BYPASS"};
     juce::Label mixModeLabel;
+    juce::Label outputGainLabel;
 };
 
 }
