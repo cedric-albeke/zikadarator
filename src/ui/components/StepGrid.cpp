@@ -345,6 +345,32 @@ void StepGrid::applyPaintToCell(int lane, int step)
 
 void StepGrid::mouseDown(const juce::MouseEvent& e)
 {
+    for (int l = 0; l < numLanes; ++l)
+    {
+        for (int s = 0; s < numSteps; ++s)
+        {
+            const auto& stepData = sequencerState.getStepData(l, s);
+            bool canExtend = stepData.active && stepData.presetIndex > 0
+                             && !isStepConsumedByChain(l, s)
+                             && stepData.chainLength < (numSteps - s);
+            if (!canExtend)
+                continue;
+
+            auto cellBounds = cells[l][s]->getBounds();
+            juce::Rectangle<int> plusBounds(cellBounds.getRight() - 8, cellBounds.getCentreY() - 11, 22, 22);
+            if (plusBounds.contains(e.getPosition()))
+            {
+                auto data = stepData;
+                data.chainLength++;
+                sequencerState.setStepData(l, s, data);
+                refreshChainVisuals(l);
+                if (onChainChanged)
+                    onChainChanged(l, s, data.chainLength);
+                return;
+            }
+        }
+    }
+
     auto [lane, step] = hitTestCell(e.getPosition());
     if (lane < 0)
         return;
@@ -353,35 +379,25 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
     {
         removeChainAt(lane, step);
         paintMode = false;
+        applyPaintToCell(lane, step);
     }
     else
     {
-        const auto& s = sequencerState.getStepData(lane, step);
-        bool canExtend = s.active && s.presetIndex > 0 && !isStepConsumedByChain(lane, step);
-        if (canExtend && s.chainLength < (numSteps - step))
+        auto* cell = cells[lane][step].get();
+        if (cell->getToggleState())
         {
-            auto cellBounds = cells[lane][step]->getBounds();
-            juce::Rectangle<int> plusBounds(cellBounds.getRight() - 20, cellBounds.getY() + 2, 20, 20);
-            if (plusBounds.contains(e.getPosition()))
-            {
-                auto data = s;
-                data.chainLength++;
-                sequencerState.setStepData(lane, step, data);
-                refreshChainVisuals(lane);
-                if (onChainChanged)
-                    onChainChanged(lane, step, data.chainLength);
-                return;
-            }
+            paintMode = false;
+            applyPaintToCell(lane, step);
         }
-
-        paintMode = true;
+        else
+        {
+            paintMode = true;
+        }
     }
 
     isPainting = true;
     lastPaintedLane = lane;
     lastPaintedStep = step;
-
-    applyPaintToCell(lane, step);
 
     setSelectedStep(lane, step);
     if (onStepSelected)
@@ -401,7 +417,8 @@ void StepGrid::mouseDrag(const juce::MouseEvent& e)
     {
         lastPaintedLane = lane;
         lastPaintedStep = step;
-        applyPaintToCell(lane, step);
+        if (!paintMode)
+            applyPaintToCell(lane, step);
     }
 }
 
