@@ -39,6 +39,14 @@ void configureActionButton(juce::TextButton& button, juce::Colour colour)
     button.setColour(juce::TextButton::textColourOnId, Colours::bgPrimary);
 }
 
+void configureInlineChoiceButton(juce::TextButton& button)
+{
+    button.setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
+    button.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
+    button.setColour(juce::TextButton::textColourOffId, Colours::white85);
+    button.setColour(juce::TextButton::textColourOnId, Colours::white);
+}
+
 void configureSlider(juce::Slider& slider)
 {
     slider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -150,7 +158,13 @@ WorkspacePanel::WorkspacePanel()
     presetCategoryBox.addItem("ALL CATEGORIES", 1);
     presetCategoryBox.setSelectedId(1, juce::dontSendNotification);
     configureCombo(presetCategoryBox);
-    presetCategoryBox.onChange = [this] { rebuildPresetFilter(); };
+    presetCategoryBox.onChange = [this]
+    {
+        syncInlineChoiceButtons();
+        rebuildPresetFilter();
+    };
+    configureInlineChoiceButton(presetCategoryButton);
+    presetCategoryButton.onClick = [this] { cyclePresetCategory(); };
 
     presetNameEditor.setTextToShowWhenEmpty("New user preset name", Colours::white50);
     presetNameEditor.setColour(juce::TextEditor::backgroundColourId, Colours::bgSurface);
@@ -223,10 +237,19 @@ WorkspacePanel::WorkspacePanel()
 
     configureCombo(mixModeBox);
     mixModeBox.addItemList({"Linear", "Ducking", "Sidechain", "Multiply", "Screen", "Difference"}, 1);
+    mixModeBox.onChange = [this] { syncInlineChoiceButtons(); };
     configureCombo(clockSourceBox);
     clockSourceBox.addItemList({"Host", "Free"}, 1);
+    clockSourceBox.onChange = [this] { syncInlineChoiceButtons(); };
     configureCombo(stepResolutionBox);
     stepResolutionBox.addItemList({"1/8", "1/4", "1/2"}, 1);
+    stepResolutionBox.onChange = [this] { syncInlineChoiceButtons(); };
+    configureInlineChoiceButton(mixModeButton);
+    configureInlineChoiceButton(clockSourceButton);
+    configureInlineChoiceButton(stepResolutionButton);
+    mixModeButton.onClick = [this] { cycleSettingsChoice(mixModeBox); };
+    clockSourceButton.onClick = [this] { cycleSettingsChoice(clockSourceBox); };
+    stepResolutionButton.onClick = [this] { cycleSettingsChoice(stepResolutionBox); };
 
     bypassToggle.setColour(juce::ToggleButton::textColourId, Colours::white85);
 
@@ -244,7 +267,8 @@ WorkspacePanel::WorkspacePanel()
     addAndMakeVisible(presetInfoTitleB);
     addAndMakeVisible(presetInfoBodyB);
     addAndMakeVisible(presetSearchEditor);
-    addAndMakeVisible(presetCategoryBox);
+    addAndMakeVisible(presetCategoryButton);
+    addChildComponent(presetCategoryBox);
     addAndMakeVisible(presetList);
     addAndMakeVisible(presetNameEditor);
     addAndMakeVisible(allFilterButton);
@@ -273,11 +297,15 @@ WorkspacePanel::WorkspacePanel()
     addAndMakeVisible(dryWetSlider);
     addAndMakeVisible(outputGainSlider);
     addAndMakeVisible(tempoSlider);
-    addAndMakeVisible(mixModeBox);
-    addAndMakeVisible(clockSourceBox);
-    addAndMakeVisible(stepResolutionBox);
+    addAndMakeVisible(mixModeButton);
+    addAndMakeVisible(clockSourceButton);
+    addAndMakeVisible(stepResolutionButton);
+    addChildComponent(mixModeBox);
+    addChildComponent(clockSourceBox);
+    addChildComponent(stepResolutionBox);
 
     refreshCopy();
+    syncInlineChoiceButtons();
 }
 
 void WorkspacePanel::bindToParameters(juce::AudioProcessorValueTreeState& apvts)
@@ -290,6 +318,7 @@ void WorkspacePanel::bindToParameters(juce::AudioProcessorValueTreeState& apvts)
     stepResolutionAttachment = std::make_unique<ComboBoxAttachment>(apvts, ParameterIDs::stepResolution, stepResolutionBox);
     bypassAttachment = std::make_unique<ButtonAttachment>(apvts, ParameterIDs::bypass, bypassToggle);
     rebuildStandaloneSettingsComponent();
+    syncInlineChoiceButtons();
 }
 
 void WorkspacePanel::setMode(Mode newMode)
@@ -305,6 +334,7 @@ void WorkspacePanel::setMode(Mode newMode)
 void WorkspacePanel::setPresetItems(std::vector<PresetManager::PresetItem> newItems)
 {
     presetItems = std::move(newItems);
+    debugWorkspaceLog("setPresetItems count=" + juce::String(static_cast<int>(presetItems.size())));
 
     const auto previousCategory = presetCategoryBox.getText();
     presetCategoryBox.clear(juce::dontSendNotification);
@@ -330,6 +360,7 @@ void WorkspacePanel::setPresetItems(std::vector<PresetManager::PresetItem> newIt
         }
     }
     presetCategoryBox.setSelectedId(restoredId > 0 ? restoredId : 1, juce::dontSendNotification);
+    syncInlineChoiceButtons();
 
     rebuildPresetFilter();
 }
@@ -373,7 +404,7 @@ void WorkspacePanel::applyVisibility()
     presetInfoTitleB.setVisible(showPresets);
     presetInfoBodyB.setVisible(showPresets);
     presetSearchEditor.setVisible(showPresets);
-    presetCategoryBox.setVisible(showPresets);
+    presetCategoryButton.setVisible(showPresets);
     presetList.setVisible(showPresets);
     presetNameEditor.setVisible(showPresets);
     allFilterButton.setVisible(showPresets);
@@ -402,11 +433,48 @@ void WorkspacePanel::applyVisibility()
     dryWetSlider.setVisible(!showPresets);
     outputGainSlider.setVisible(!showPresets);
     tempoSlider.setVisible(!showPresets);
-    mixModeBox.setVisible(!showPresets);
-    clockSourceBox.setVisible(!showPresets);
-    stepResolutionBox.setVisible(!showPresets);
+    mixModeButton.setVisible(!showPresets);
+    clockSourceButton.setVisible(!showPresets);
+    stepResolutionButton.setVisible(!showPresets);
     if (standaloneDeviceSelector != nullptr)
         standaloneDeviceSelector->setVisible(!showPresets);
+}
+
+void WorkspacePanel::cyclePresetCategory()
+{
+    const auto numItems = presetCategoryBox.getNumItems();
+    if (numItems <= 0)
+        return;
+
+    const auto currentIndex = juce::jmax(0, presetCategoryBox.getSelectedItemIndex());
+    const auto nextIndex = (currentIndex + 1) % numItems;
+    presetCategoryBox.setSelectedItemIndex(nextIndex, juce::sendNotificationSync);
+    debugWorkspaceLog("cyclePresetCategory -> " + presetCategoryBox.getText());
+}
+
+void WorkspacePanel::cycleSettingsChoice(juce::ComboBox& comboBox)
+{
+    const auto numItems = comboBox.getNumItems();
+    if (numItems <= 0)
+        return;
+
+    const auto currentIndex = juce::jmax(0, comboBox.getSelectedItemIndex());
+    const auto nextIndex = (currentIndex + 1) % numItems;
+    comboBox.setSelectedItemIndex(nextIndex, juce::sendNotificationSync);
+    debugWorkspaceLog("cycleSettingsChoice -> " + comboBox.getText());
+}
+
+void WorkspacePanel::syncInlineChoiceButtons()
+{
+    const auto categoryText = presetCategoryBox.getText().isNotEmpty() ? presetCategoryBox.getText() : juce::String("ALL CATEGORIES");
+    const auto mixModeText = mixModeBox.getText().isNotEmpty() ? mixModeBox.getText() : juce::String("Linear");
+    const auto clockSourceText = clockSourceBox.getText().isNotEmpty() ? clockSourceBox.getText() : juce::String("Host");
+    const auto stepResolutionText = stepResolutionBox.getText().isNotEmpty() ? stepResolutionBox.getText() : juce::String("1/8");
+
+    presetCategoryButton.setButtonText(categoryText.toUpperCase());
+    mixModeButton.setButtonText(mixModeText.toUpperCase());
+    clockSourceButton.setButtonText(clockSourceText.toUpperCase());
+    stepResolutionButton.setButtonText(stepResolutionText.toUpperCase());
 }
 
 void WorkspacePanel::rebuildStandaloneSettingsComponent()
@@ -508,6 +576,8 @@ void WorkspacePanel::rebuildPresetFilter()
 
     const auto query = presetSearchEditor.getText().trim().toLowerCase();
     const auto category = presetCategoryBox.getSelectedId() > 1 ? presetCategoryBox.getText() : juce::String();
+    debugWorkspaceLog("rebuildPresetFilter query='" + query + "' category='" + category
+                      + "' sourceFilter=" + juce::String(static_cast<int>(presetSourceFilter)));
 
     for (int i = 0; i < static_cast<int>(presetItems.size()); ++i)
     {
@@ -554,12 +624,15 @@ void WorkspacePanel::rebuildPresetFilter()
 
     updatePresetDetail();
     updatePresetInfoPanels();
+    debugWorkspaceLog("rebuildPresetFilter visibleRows=" + juce::String(static_cast<int>(filteredPresetIndices.size()))
+                      + " selectedPresetRow=" + juce::String(selectedPresetRow));
 }
 
 void WorkspacePanel::updatePresetDetail()
 {
     if (selectedPresetRow < 0 || selectedPresetRow >= static_cast<int>(presetItems.size()))
     {
+        debugWorkspaceLog("updatePresetDetail no selection");
         presetDetailTitle.setText("NO PRESET SELECTED", juce::dontSendNotification);
         presetDetailMeta.setText("Choose a preset from the browser", juce::dontSendNotification);
         presetDetailBody.setText("The detail panel shows the selected preset's source, category, and storage location. It also hosts the main load and delete actions so the browser stays readable.", juce::dontSendNotification);
@@ -571,6 +644,7 @@ void WorkspacePanel::updatePresetDetail()
     }
 
     const auto& item = presetItems[static_cast<size_t>(selectedPresetRow)];
+    debugWorkspaceLog("updatePresetDetail selected='" + item.name + "' factory=" + juce::String(item.isFactory ? 1 : 0));
     presetDetailTitle.setText(item.name, juce::dontSendNotification);
     presetDetailMeta.setText((item.isFactory ? "FACTORY" : "USER") + juce::String(" / ") + item.category, juce::dontSendNotification);
 
@@ -646,7 +720,7 @@ void WorkspacePanel::resized()
         auto filterRow = browserInner.removeFromTop(30);
         presetSearchEditor.setBounds(filterRow.removeFromLeft(162));
         filterRow.removeFromLeft(8);
-        presetCategoryBox.setBounds(filterRow.removeFromLeft(132));
+        presetCategoryButton.setBounds(filterRow.removeFromLeft(132));
         filterRow.removeFromLeft(8);
         allFilterButton.setBounds(filterRow.removeFromLeft(46));
         filterRow.removeFromLeft(6);
@@ -718,12 +792,12 @@ void WorkspacePanel::resized()
 
         auto row1 = productInner.removeFromTop(28);
         clockSourceLabel.setBounds(row1.removeFromLeft(130));
-        clockSourceBox.setBounds(row1);
+        clockSourceButton.setBounds(row1);
         productInner.removeFromTop(10);
 
         auto row2 = productInner.removeFromTop(28);
         stepResolutionLabel.setBounds(row2.removeFromLeft(130));
-        stepResolutionBox.setBounds(row2);
+        stepResolutionButton.setBounds(row2);
         productInner.removeFromTop(10);
 
         auto row3 = productInner.removeFromTop(28);
@@ -743,9 +817,14 @@ void WorkspacePanel::resized()
 
         auto row6 = productInner.removeFromTop(28);
         mixModeLabel.setBounds(row6.removeFromLeft(130));
-        mixModeBox.setBounds(row6);
+        mixModeButton.setBounds(row6);
         productInner.removeFromTop(12);
         bypassToggle.setBounds(productInner.removeFromTop(24));
+
+        presetCategoryBox.setBounds(0, 0, 0, 0);
+        mixModeBox.setBounds(0, 0, 0, 0);
+        clockSourceBox.setBounds(0, 0, 0, 0);
+        stepResolutionBox.setBounds(0, 0, 0, 0);
 
         auto notesInner = settingsNotesZone.reduced(18, 16);
         settingsNotesTitle.setBounds(notesInner.removeFromTop(20));
@@ -797,6 +876,9 @@ void WorkspacePanel::selectedRowsChanged(int lastRowSelected)
         selectedPresetRow = -1;
     else
         selectedPresetRow = filteredPresetIndices[static_cast<size_t>(lastRowSelected)];
+
+    debugWorkspaceLog("selectedRowsChanged row=" + juce::String(lastRowSelected)
+                      + " selectedPresetRow=" + juce::String(selectedPresetRow));
 
     updatePresetDetail();
 }

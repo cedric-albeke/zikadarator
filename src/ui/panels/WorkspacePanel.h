@@ -69,6 +69,7 @@ private:
 
     juce::TextEditor presetSearchEditor;
     juce::ComboBox presetCategoryBox;
+    juce::TextButton presetCategoryButton{"ALL CATEGORIES"};
     juce::ListBox presetList;
     juce::TextEditor presetNameEditor;
     juce::TextButton allFilterButton{"ALL"};
@@ -100,6 +101,9 @@ private:
     juce::ComboBox mixModeBox;
     juce::ComboBox clockSourceBox;
     juce::ComboBox stepResolutionBox;
+    juce::TextButton mixModeButton{"LINEAR"};
+    juce::TextButton clockSourceButton{"HOST"};
+    juce::TextButton stepResolutionButton{"1/8"};
     std::unique_ptr<juce::AudioDeviceSelectorComponent> standaloneDeviceSelector;
     juce::Value muteInputValue;
 
@@ -130,6 +134,9 @@ private:
     void updatePresetDetail();
     void updatePresetInfoPanels();
     void setPresetSourceFilter(PresetSourceFilter filter);
+    void cyclePresetCategory();
+    void cycleSettingsChoice(juce::ComboBox& comboBox);
+    void syncInlineChoiceButtons();
     void rebuildStandaloneSettingsComponent();
     void styleStandaloneSettingsComponent();
 
