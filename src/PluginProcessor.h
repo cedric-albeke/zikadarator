@@ -2,10 +2,15 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "state/PluginState.h"
+#include "state/PresetManager.h"
 #include "state/SequencerState.h"
 #include "engine/SequencerEngine.h"
 #include "engine/SliceEngine.h"
 #include "engine/FilterEngine.h"
+#include "engine/DelayEngine.h"
+#include "engine/ReverbEngine.h"
+#include "engine/BitcrushEngine.h"
+#include "engine/PitchEngine.h"
 #include "engine/ModulationEngine.h"
 #include "engine/GainPanEngine.h"
 
@@ -51,6 +56,11 @@ public:
 
     SequencerState& getSequencerState() { return sequencerState; }
     const SequencerState& getSequencerState() const { return sequencerState; }
+    PresetManager& getPresetManager() { return presetManager; }
+    const PresetManager& getPresetManager() const { return presetManager; }
+
+    juce::ValueTree exportFullState();
+    void applyFullState(const juce::ValueTree& stateTree);
 
     bool isPlaying() const { return isPlayingFlag; }
     double getCurrentBPM() const { return currentBPM; }
@@ -58,10 +68,22 @@ public:
 
 private:
     PluginState state;
+    PresetManager presetManager;
     SequencerState sequencerState;
     SequencerEngine sequencerEngine;
     SliceEngine sliceEngine;
+    DelayEngine loopDelayEngine;
     FilterEngine filterEngine;
+    DelayEngine fx1DelayEngine;
+    ReverbEngine fx1ReverbEngine;
+    BitcrushEngine fx1BitcrushEngine;
+    PitchEngine fx1PitchEngine;
+    FilterEngine fx1ToneFilter;
+    DelayEngine fx2DelayEngine;
+    ReverbEngine fx2ReverbEngine;
+    BitcrushEngine fx2BitcrushEngine;
+    PitchEngine fx2PitchEngine;
+    FilterEngine fx2ToneFilter;
     ModulationEngine modulationEngine;
     GainPanEngine gainPanEngine;
     std::atomic<bool> isPlayingFlag{false};
@@ -77,4 +99,3 @@ private:
 };
 
 }
-

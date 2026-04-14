@@ -1,8 +1,282 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+
+#include <algorithm>
 #include <cmath>
 
 namespace zikada {
+
+namespace {
+
+constexpr int kSliceLane = 0;
+constexpr int kLoopLane = 1;
+constexpr int kEnvelopeLane = 2;
+constexpr int kFX1Lane = 3;
+constexpr int kFilterLane = 4;
+constexpr int kFX2Lane = 5;
+
+bool isUserSlotPreset(int presetIndex)
+{
+    return presetIndex >= 1 && presetIndex <= 4;
+}
+
+UserSlotData getSlotDataForStep(const SequencerState& sequencerState, int lane, const StepData& stepData)
+{
+    const int slotIndex = isUserSlotPreset(stepData.presetIndex) ? stepData.presetIndex - 1 : 0;
+    return sequencerState.getUserSlot(lane, slotIndex);
+}
+
+double getBeatSeconds(double bpm)
+{
+    return bpm > 0.0 ? 60.0 / bpm : 0.5;
+}
+
+int getSliceIndexForPreset(int presetIndex, int currentStep)
+{
+    int divisions = 16;
+
+    switch (presetIndex)
+    {
+        case 5: divisions = 1; break;
+        case 6: divisions = 2; break;
+        case 7: divisions = 3; break;
+        case 8: divisions = 4; break;
+        case 9: divisions = 6; break;
+        case 10: divisions = 8; break;
+        case 11: divisions = 12; break;
+        case 12: divisions = 16; break;
+        default: break;
+    }
+
+    const int divisionStep = currentStep % juce::jmax(1, divisions);
+    return juce::jlimit(0, 15,
+                        static_cast<int>(std::floor(static_cast<double>(divisionStep) * 16.0 / static_cast<double>(divisions))));
+}
+
+void applyGainPan(float* left, float* right, int numSamples, float volume, float pan)
+{
+    const float clampedVolume = juce::jlimit(0.0f, 2.0f, volume);
+    const float clampedPan = juce::jlimit(-1.0f, 1.0f, pan);
+    constexpr float panLaw = 0.70710678f;
+    const float angle = (clampedPan + 1.0f) * 0.25f * 3.14159265f;
+    const float leftGain = clampedVolume * panLaw * std::cos(angle) * 2.0f;
+    const float rightGain = clampedVolume * panLaw * std::sin(angle) * 2.0f;
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        left[i] *= leftGain;
+        right[i] *= rightGain;
+    }
+}
+
+void reverseBlock(float* left, float* right, int numSamples)
+{
+    for (int i = 0; i < numSamples / 2; ++i)
+    {
+        const int j = numSamples - 1 - i;
+        const float leftSample = left[i];
+        left[i] = left[j];
+        left[j] = leftSample;
+
+        const float rightSample = right[i];
+        right[i] = right[j];
+        right[j] = rightSample;
+    }
+}
+
+void applyEnvelopeShape(float* left, float* right, int numSamples, int presetIndex,
+                        double phaseStart, double phaseDelta, float volume, float pan)
+{
+    const float clampedPan = juce::jlimit(-1.0f, 1.0f, pan);
+    constexpr float panLaw = 0.70710678f;
+    const float angle = (clampedPan + 1.0f) * 0.25f * 3.14159265f;
+    const float leftPanGain = panLaw * std::cos(angle) * 2.0f;
+    const float rightPanGain = panLaw * std::sin(angle) * 2.0f;
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        const float phase = static_cast<float>(std::fmod(phaseStart + phaseDelta * static_cast<double>(i), 1.0));
+        float shape = 1.0f;
+
+        switch (presetIndex)
+        {
+            case 5: shape = phase; break;
+            case 6: shape = 1.0f - phase; break;
+            case 7: shape = 0.75f; break;
+            case 8: shape = phase < 0.65f ? 1.0f : 0.0f; break;
+            case 9: shape = std::exp(-6.0f * phase); break;
+            case 10: shape = 0.35f + 0.65f * std::sin(phase * 3.14159265f); break;
+            case 11: shape = phase * phase; break;
+            case 12: shape = std::sin(phase * 6.2831853f) > 0.0f ? 1.0f : 0.25f; break;
+            default: break;
+        }
+
+        const float gain = juce::jlimit(0.0f, 2.0f, volume * shape);
+        left[i] *= gain * leftPanGain;
+        right[i] *= gain * rightPanGain;
+    }
+}
+
+void configureFilterForStep(FilterEngine& filterEngine, int presetIndex, const UserSlotData& slotData)
+{
+    switch (presetIndex)
+    {
+        case 5: filterEngine.setFilterType(FilterEngine::FilterType::LowPass12); break;
+        case 6: filterEngine.setFilterType(FilterEngine::FilterType::HighPass12); break;
+        case 7: filterEngine.setFilterType(FilterEngine::FilterType::BandPass); break;
+        case 8: filterEngine.setFilterType(FilterEngine::FilterType::BandReject); break;
+        case 9: filterEngine.setFilterType(FilterEngine::FilterType::Comb); break;
+        case 10: filterEngine.setFilterType(FilterEngine::FilterType::Comb); break;
+        case 11: filterEngine.setFilterType(FilterEngine::FilterType::BandPass); break;
+        case 12: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
+        default: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
+    }
+
+    filterEngine.setCutoff(slotData.filterCutoff);
+    filterEngine.setResonance(slotData.filterResonance);
+    filterEngine.setEnabled(true);
+}
+
+void processFxLane(float* left, float* right, int numSamples, int presetIndex, const UserSlotData& slotData,
+                   DelayEngine& delayEngine, ReverbEngine& reverbEngine,
+                   BitcrushEngine& bitcrushEngine, PitchEngine& pitchEngine, FilterEngine& toneFilter,
+                   double bpm, double phaseStart, double phaseDelta)
+{
+    delayEngine.setEnabled(false);
+    reverbEngine.setEnabled(false);
+    bitcrushEngine.setEnabled(false);
+    pitchEngine.setEnabled(false);
+
+    const double beatSeconds = getBeatSeconds(bpm);
+    const float phase = static_cast<float>(std::fmod(phaseStart, 1.0));
+
+    switch (presetIndex)
+    {
+        case 6:
+            reverbEngine.setRoomSize(juce::jlimit(0.1f, 1.0f, slotData.delayFeedback));
+            reverbEngine.setDamping(juce::jlimit(0.0f, 1.0f, 1.0f - slotData.filterResonance * 0.1f));
+            reverbEngine.setWidth(juce::jlimit(0.0f, 1.0f, 0.5f + slotData.pan * 0.5f));
+            reverbEngine.setMix(slotData.delayMix);
+            reverbEngine.setEnabled(true);
+            reverbEngine.process(left, right, numSamples);
+            break;
+        case 7:
+            delayEngine.setDelayTime(0.012f + 0.01f * (0.5f + 0.5f * std::sin(phase * 6.2831853f)));
+            delayEngine.setFeedback(juce::jlimit(0.0f, 0.35f, slotData.delayFeedback * 0.4f));
+            delayEngine.setMix(juce::jlimit(0.0f, 1.0f, slotData.delayMix * 0.45f));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            break;
+        case 8:
+            bitcrushEngine.setBitDepth(juce::jmap(slotData.filterResonance, 0.1f, 10.0f, 12.0f, 3.0f));
+            bitcrushEngine.setSampleRateReduction(juce::jmap(slotData.delayTime, 0.0f, 1.0f, 16000.0f, 1800.0f));
+            bitcrushEngine.setEnabled(true);
+            bitcrushEngine.process(left, right, numSamples);
+            break;
+        case 9:
+            pitchEngine.setSemitones(juce::jmap(slotData.pan, -1.0f, 1.0f, -12.0f, 12.0f));
+            pitchEngine.setMix(slotData.delayMix);
+            pitchEngine.setEnabled(true);
+            pitchEngine.process(left, right, numSamples);
+            break;
+        case 10:
+            delayEngine.setDelayTime(0.0035f + 0.004f * (0.5f + 0.5f * std::sin(phase * 6.2831853f)));
+            delayEngine.setFeedback(juce::jlimit(0.15f, 0.92f, slotData.delayFeedback));
+            delayEngine.setMix(juce::jlimit(0.0f, 1.0f, slotData.delayMix * 0.5f));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            break;
+        case 11:
+            toneFilter.setFilterType(FilterEngine::FilterType::BandPass);
+            toneFilter.setCutoff(juce::jlimit(180.0f, 6200.0f, 280.0f + 4200.0f * (0.5f + 0.5f * std::sin(phase * 6.2831853f))));
+            toneFilter.setResonance(juce::jlimit(0.3f, 8.0f, slotData.filterResonance));
+            toneFilter.setEnabled(true);
+            toneFilter.process(left, right, numSamples);
+            break;
+        case 12:
+            applyEnvelopeShape(left, right, numSamples, 12, phaseStart, phaseDelta, slotData.volume, slotData.pan);
+            return;
+        case 5:
+        default:
+            delayEngine.setDelayTime(juce::jlimit(0.01f, 1.0f, slotData.delayTime * static_cast<float>(beatSeconds)));
+            delayEngine.setFeedback(slotData.delayFeedback);
+            delayEngine.setMix(slotData.delayMix);
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            break;
+    }
+
+    applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+}
+
+void applyLoopLane(float* left, float* right, int numSamples, int presetIndex, const UserSlotData& slotData,
+                   DelayEngine& delayEngine, double stepDurationSeconds)
+{
+    switch (presetIndex)
+    {
+        case 5:
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        case 6:
+            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.12f, static_cast<float>(stepDurationSeconds * 0.125)));
+            delayEngine.setFeedback(juce::jlimit(0.15f, 0.65f, slotData.delayFeedback * 0.5f));
+            delayEngine.setMix(juce::jlimit(0.15f, 0.55f, slotData.delayMix * 0.4f));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        case 7:
+            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.35f, static_cast<float>(stepDurationSeconds * 0.5)));
+            delayEngine.setFeedback(juce::jlimit(0.25f, 0.95f, slotData.delayFeedback));
+            delayEngine.setMix(juce::jlimit(0.25f, 1.0f, slotData.delayMix));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        case 8:
+            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.3f, static_cast<float>(stepDurationSeconds * 0.25)));
+            delayEngine.setFeedback(juce::jlimit(0.25f, 0.95f, slotData.delayFeedback));
+            delayEngine.setMix(juce::jlimit(0.25f, 1.0f, slotData.delayMix));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        case 9:
+            reverseBlock(left, right, numSamples);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        case 10:
+            reverseBlock(left, right, numSamples);
+            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.08f, static_cast<float>(stepDurationSeconds * 0.125)));
+            delayEngine.setFeedback(juce::jlimit(0.2f, 0.75f, slotData.delayFeedback * 0.6f));
+            delayEngine.setMix(juce::jlimit(0.2f, 0.65f, slotData.delayMix * 0.5f));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        case 11:
+            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.2f, static_cast<float>(stepDurationSeconds * 0.125)));
+            delayEngine.setFeedback(juce::jlimit(0.3f, 0.95f, slotData.delayFeedback));
+            delayEngine.setMix(juce::jlimit(0.35f, 1.0f, slotData.delayMix));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        case 12:
+            delayEngine.setDelayTime(juce::jlimit(0.005f, 0.1f, static_cast<float>(stepDurationSeconds * 0.0625)));
+            delayEngine.setFeedback(juce::jlimit(0.4f, 0.95f, slotData.delayFeedback));
+            delayEngine.setMix(juce::jlimit(0.45f, 1.0f, slotData.delayMix));
+            delayEngine.setEnabled(true);
+            delayEngine.process(left, right, numSamples);
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+        default:
+            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+            break;
+    }
+}
+
+} // namespace
 
 PluginProcessor::PluginProcessor()
     : AudioProcessor(BusesProperties()
@@ -19,7 +293,18 @@ void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
     sampleRate = newSampleRate;
     sequencerEngine.prepare(newSampleRate, samplesPerBlock);
     sliceEngine.prepare(newSampleRate, samplesPerBlock);
+    loopDelayEngine.prepare(newSampleRate, samplesPerBlock);
     filterEngine.prepare(newSampleRate, samplesPerBlock);
+    fx1DelayEngine.prepare(newSampleRate, samplesPerBlock);
+    fx1ReverbEngine.prepare(newSampleRate, samplesPerBlock);
+    fx1BitcrushEngine.prepare(newSampleRate, samplesPerBlock);
+    fx1PitchEngine.prepare(newSampleRate, samplesPerBlock);
+    fx1ToneFilter.prepare(newSampleRate, samplesPerBlock);
+    fx2DelayEngine.prepare(newSampleRate, samplesPerBlock);
+    fx2ReverbEngine.prepare(newSampleRate, samplesPerBlock);
+    fx2BitcrushEngine.prepare(newSampleRate, samplesPerBlock);
+    fx2PitchEngine.prepare(newSampleRate, samplesPerBlock);
+    fx2ToneFilter.prepare(newSampleRate, samplesPerBlock);
     modulationEngine.prepare(newSampleRate);
     gainPanEngine.prepare(newSampleRate, samplesPerBlock);
     lastStep = -1;
@@ -44,7 +329,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
 
-    auto numSamples = buffer.getNumSamples();
+    const int numSamples = buffer.getNumSamples();
     auto* leftChannel = buffer.getWritePointer(0);
     auto* rightChannel = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : leftChannel;
 
@@ -68,67 +353,103 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     }
 
     sequencerEngine.advance(numSamples);
-    auto sequencerStep = sequencerEngine.getCurrentStep();
+    const int sequencerStep = sequencerEngine.getCurrentStep();
 
-    static constexpr int kFilterLane = 4;
+    const auto& sliceStep = sequencerState.getStepData(kSliceLane, sequencerStep);
+    const auto& loopStep = sequencerState.getStepData(kLoopLane, sequencerStep);
+    const auto& envelopeStep = sequencerState.getStepData(kEnvelopeLane, sequencerStep);
+    const auto& fx1Step = sequencerState.getStepData(kFX1Lane, sequencerStep);
+    const auto& filterStep = sequencerState.getStepData(kFilterLane, sequencerStep);
+    const auto& fx2Step = sequencerState.getStepData(kFX2Lane, sequencerStep);
+
+    const auto sliceSlot = getSlotDataForStep(sequencerState, kSliceLane, sliceStep);
+    const auto loopSlot = getSlotDataForStep(sequencerState, kLoopLane, loopStep);
+    const auto envelopeSlot = getSlotDataForStep(sequencerState, kEnvelopeLane, envelopeStep);
+    const auto fx1Slot = getSlotDataForStep(sequencerState, kFX1Lane, fx1Step);
+    const auto filterSlot = getSlotDataForStep(sequencerState, kFilterLane, filterStep);
+    const auto fx2Slot = getSlotDataForStep(sequencerState, kFX2Lane, fx2Step);
+
+    const double bpm = currentBPM.load();
+    const double stepDurationSeconds = getBeatSeconds(bpm) * ppqPerStep;
+    const double samplesPerStep = juce::jmax(1.0, stepDurationSeconds * sampleRate);
+    const double stepPhaseStart = std::fmod(ppqPosition / ppqPerStep, 1.0);
+    const double phaseDelta = 1.0 / samplesPerStep;
 
     if (sequencerStep != lastStep)
     {
         currentStep = sequencerStep;
         lastStep = currentStep;
-        sliceEngine.triggerSlice(currentStep);
 
-        const auto& stepData = sequencerState.getStepData(kFilterLane, currentStep);
-        if (stepData.presetIndex > 0)
+        if (sliceStep.active && sliceStep.presetIndex > 0)
+            sliceEngine.triggerSlice(getSliceIndexForPreset(sliceStep.presetIndex, currentStep));
+
+        if (filterStep.active && filterStep.presetIndex > 0)
         {
-            UserSlotData slotData;
-            if (stepData.presetIndex >= 1 && stepData.presetIndex <= 4)
-                slotData = sequencerState.getUserSlot(kFilterLane, stepData.presetIndex - 1);
-
-            filterEngine.setCutoff(slotData.filterCutoff);
-            filterEngine.setResonance(slotData.filterResonance);
-
-            double stepDuration = (currentBPM > 0.0) ? (60.0 / currentBPM * ppqPerStep) : 0.125;
-            modulationEngine.setStepData(slotData.modulation, currentBPM, stepDuration);
+            configureFilterForStep(filterEngine, filterStep.presetIndex, filterSlot);
+            modulationEngine.setStepData(filterSlot.modulation, bpm, stepDurationSeconds);
         }
     }
 
     sliceEngine.writeToBuffer(leftChannel, rightChannel, numSamples);
 
-    std::vector<float> sliceLeft(static_cast<size_t>(numSamples), 0.0f);
-    std::vector<float> sliceRight(static_cast<size_t>(numSamples), 0.0f);
-    sliceEngine.process(sliceLeft.data(), sliceRight.data(), numSamples);
+    std::vector<float> wetLeft(static_cast<size_t>(numSamples), 0.0f);
+    std::vector<float> wetRight(static_cast<size_t>(numSamples), 0.0f);
+    for (int i = 0; i < numSamples; ++i)
+    {
+        wetLeft[static_cast<size_t>(i)] = leftChannel[i];
+        wetRight[static_cast<size_t>(i)] = rightChannel[i];
+    }
 
-    const auto& stepData = sequencerState.getStepData(kFilterLane, currentStep);
-    UserSlotData currentSlotData;
-    if (stepData.presetIndex >= 1 && stepData.presetIndex <= 4)
-        currentSlotData = sequencerState.getUserSlot(kFilterLane, stepData.presetIndex - 1);
+    if (sliceStep.active && sliceStep.presetIndex > 0)
+    {
+        std::vector<float> sliceLeft(static_cast<size_t>(numSamples), 0.0f);
+        std::vector<float> sliceRight(static_cast<size_t>(numSamples), 0.0f);
+        sliceEngine.process(sliceLeft.data(), sliceRight.data(), numSamples);
+        wetLeft = std::move(sliceLeft);
+        wetRight = std::move(sliceRight);
+        applyGainPan(wetLeft.data(), wetRight.data(), numSamples, sliceSlot.volume, sliceSlot.pan);
+    }
+
+    if (loopStep.active && loopStep.presetIndex > 0)
+        applyLoopLane(wetLeft.data(), wetRight.data(), numSamples, loopStep.presetIndex, loopSlot, loopDelayEngine, stepDurationSeconds);
+
+    if (envelopeStep.active && envelopeStep.presetIndex > 0)
+        applyEnvelopeShape(wetLeft.data(), wetRight.data(), numSamples, envelopeStep.presetIndex,
+                           stepPhaseStart, phaseDelta, envelopeSlot.volume, envelopeSlot.pan);
+
+    if (fx1Step.active && fx1Step.presetIndex > 0)
+        processFxLane(wetLeft.data(), wetRight.data(), numSamples, fx1Step.presetIndex, fx1Slot,
+                      fx1DelayEngine, fx1ReverbEngine, fx1BitcrushEngine, fx1PitchEngine, fx1ToneFilter,
+                      bpm, stepPhaseStart, phaseDelta);
+
+    if (filterStep.active && filterStep.presetIndex > 0)
+    {
+        for (int i = 0; i < numSamples; ++i)
+        {
+            float modValues[ModulationEngine::NumTargets]{};
+            modulationEngine.processSample(wetLeft[static_cast<size_t>(i)], wetRight[static_cast<size_t>(i)], modValues);
+
+            const float cutoffMod = modValues[static_cast<int>(ModulationTarget::FilterCutoff)];
+            const float modCutoff = filterSlot.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
+            filterEngine.setCutoff(modCutoff);
+            filterEngine.setResonance(filterSlot.filterResonance);
+
+            wetLeft[static_cast<size_t>(i)] = filterEngine.processSampleLeft(wetLeft[static_cast<size_t>(i)]);
+            wetRight[static_cast<size_t>(i)] = filterEngine.processSampleRight(wetRight[static_cast<size_t>(i)]);
+        }
+
+        applyGainPan(wetLeft.data(), wetRight.data(), numSamples, filterSlot.volume, filterSlot.pan);
+    }
+
+    if (fx2Step.active && fx2Step.presetIndex > 0)
+        processFxLane(wetLeft.data(), wetRight.data(), numSamples, fx2Step.presetIndex, fx2Slot,
+                      fx2DelayEngine, fx2ReverbEngine, fx2BitcrushEngine, fx2PitchEngine, fx2ToneFilter,
+                      bpm, stepPhaseStart, phaseDelta);
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float modValues[ModulationEngine::NumTargets];
-        modulationEngine.processSample(sliceLeft[i], sliceRight[i], modValues);
-
-        float cutoffMod = modValues[static_cast<int>(ModulationTarget::FilterCutoff)];
-        float modCutoff = currentSlotData.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
-        filterEngine.setCutoff(modCutoff);
-
-        float left  = filterEngine.processSampleLeft(sliceLeft[i]);
-        float right = filterEngine.processSampleRight(sliceRight[i]);
-
-        float volMod = modValues[static_cast<int>(ModulationTarget::Volume)];
-        float panMod = modValues[static_cast<int>(ModulationTarget::Pan)];
-
-        float vol = currentSlotData.volume * (1.0f + volMod);
-        float pan = juce::jlimit(-1.0f, 1.0f, currentSlotData.pan + panMod);
-
-        constexpr float panLaw = 0.70710678f;
-        float angle = (pan + 1.0f) * 0.25f * 3.14159265f;
-        float leftGain  = vol * panLaw * std::cos(angle) * 2.0f;
-        float rightGain = vol * panLaw * std::sin(angle) * 2.0f;
-
-        leftChannel[i]  = left  * leftGain;
-        rightChannel[i] = right * rightGain;
+        leftChannel[i] = wetLeft[static_cast<size_t>(i)];
+        rightChannel[i] = wetRight[static_cast<size_t>(i)];
     }
 
     if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
@@ -193,6 +514,7 @@ void PluginProcessor::setCurrentProgram(int index)
 
 const juce::String PluginProcessor::getProgramName(int index)
 {
+    juce::ignoreUnused(index);
     return {};
 }
 
@@ -203,37 +525,53 @@ void PluginProcessor::changeProgramName(int index, const juce::String& newName)
 
 void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
+    auto stateTree = exportFullState();
+    std::unique_ptr<juce::XmlElement> xml(stateTree.createXml());
+    copyXmlToBinary(*xml, destData);
+}
+
+juce::ValueTree PluginProcessor::exportFullState()
+{
     auto stateTree = state.getValueTreeState().copyState();
-    stateTree.addChild (sequencerState.toValueTree(), -1, nullptr);
-    std::unique_ptr<juce::XmlElement> xml (stateTree.createXml());
-    copyXmlToBinary (*xml, destData);
+    auto existingSequencer = stateTree.getChildWithName("SequencerState");
+    if (existingSequencer.isValid())
+        stateTree.removeChild(existingSequencer, nullptr);
+    stateTree.addChild(sequencerState.toValueTree(), -1, nullptr);
+    return stateTree;
+}
+
+void PluginProcessor::applyFullState(const juce::ValueTree& stateTree)
+{
+    if (!stateTree.isValid())
+        return;
+
+    auto fullTree = stateTree.createCopy();
+    auto seqChild = fullTree.getChildWithName("SequencerState");
+
+    if (seqChild.isValid())
+        fullTree.removeChild(seqChild, nullptr);
+
+    if (fullTree.hasType(state.getValueTreeState().state.getType()))
+        state.getValueTreeState().replaceState(fullTree);
+
+    if (seqChild.isValid())
+        sequencerState.fromValueTree(seqChild);
+
+    lastStep = -1;
 }
 
 void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
     if (xmlState == nullptr)
         return;
 
-    auto fullTree = juce::ValueTree::fromXml (*xmlState);
-
-    if (! fullTree.isValid())
-        return;
-
-    auto seqChild = fullTree.getChildWithName ("SequencerState");
-
-    if (seqChild.isValid())
-        fullTree.removeChild (seqChild, nullptr);
-
-    if (fullTree.hasType (state.getValueTreeState().state.getType()))
-        state.getValueTreeState().replaceState (fullTree);
-
-    if (seqChild.isValid())
-        sequencerState.fromValueTree (seqChild);
+    auto fullTree = juce::ValueTree::fromXml(*xmlState);
+    applyFullState(fullTree);
 }
 
-}
+} // namespace zikada
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
