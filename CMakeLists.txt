@@ -61,7 +61,9 @@ target_sources(ZikadaFX
         src/ui/panels/SequencerPanel.cpp
         src/ui/panels/FooterPanel.cpp
         src/ui/panels/SidebarPanel.cpp
+        src/ui/panels/WorkspacePanel.cpp
         src/state/PluginState.cpp
+        src/state/PresetManager.cpp
         src/engine/SequencerEngine.cpp
         src/engine/CircularAudioBuffer.cpp
         src/engine/SliceEngine.cpp
