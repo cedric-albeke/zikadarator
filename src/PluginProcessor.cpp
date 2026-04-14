@@ -71,7 +71,6 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     auto sequencerStep = sequencerEngine.getCurrentStep();
 
     static constexpr int kFilterLane = 4;
-    const StepData* stepDataPtr = nullptr;
 
     if (sequencerStep != lastStep)
     {
@@ -80,13 +79,18 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         sliceEngine.triggerSlice(currentStep);
 
         const auto& stepData = sequencerState.getStepData(kFilterLane, currentStep);
-        stepDataPtr = &stepData;
+        if (stepData.presetIndex > 0)
+        {
+            UserSlotData slotData;
+            if (stepData.presetIndex >= 1 && stepData.presetIndex <= 4)
+                slotData = sequencerState.getUserSlot(kFilterLane, stepData.presetIndex - 1);
 
-        filterEngine.setCutoff(stepData.filterCutoff);
-        filterEngine.setResonance(stepData.filterResonance);
+            filterEngine.setCutoff(slotData.filterCutoff);
+            filterEngine.setResonance(slotData.filterResonance);
 
-        double stepDuration = (currentBPM > 0.0) ? (60.0 / currentBPM * ppqPerStep) : 0.125;
-        modulationEngine.setStepData(stepData.modulation, currentBPM, stepDuration);
+            double stepDuration = (currentBPM > 0.0) ? (60.0 / currentBPM * ppqPerStep) : 0.125;
+            modulationEngine.setStepData(slotData.modulation, currentBPM, stepDuration);
+        }
     }
 
     sliceEngine.writeToBuffer(leftChannel, rightChannel, numSamples);
@@ -95,9 +99,10 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     std::vector<float> sliceRight(static_cast<size_t>(numSamples), 0.0f);
     sliceEngine.process(sliceLeft.data(), sliceRight.data(), numSamples);
 
-    const StepData& currentStepData = stepDataPtr != nullptr
-                                          ? *stepDataPtr
-                                          : sequencerState.getStepData(kFilterLane, currentStep);
+    const auto& stepData = sequencerState.getStepData(kFilterLane, currentStep);
+    UserSlotData currentSlotData;
+    if (stepData.presetIndex >= 1 && stepData.presetIndex <= 4)
+        currentSlotData = sequencerState.getUserSlot(kFilterLane, stepData.presetIndex - 1);
 
     for (int i = 0; i < numSamples; ++i)
     {
@@ -105,7 +110,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         modulationEngine.processSample(sliceLeft[i], sliceRight[i], modValues);
 
         float cutoffMod = modValues[static_cast<int>(ModulationTarget::FilterCutoff)];
-        float modCutoff = currentStepData.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
+        float modCutoff = currentSlotData.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
         filterEngine.setCutoff(modCutoff);
 
         float left  = filterEngine.processSampleLeft(sliceLeft[i]);
@@ -114,8 +119,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         float volMod = modValues[static_cast<int>(ModulationTarget::Volume)];
         float panMod = modValues[static_cast<int>(ModulationTarget::Pan)];
 
-        float vol = currentStepData.volume * (1.0f + volMod);
-        float pan = juce::jlimit(-1.0f, 1.0f, currentStepData.pan + panMod);
+        float vol = currentSlotData.volume * (1.0f + volMod);
+        float pan = juce::jlimit(-1.0f, 1.0f, currentSlotData.pan + panMod);
 
         constexpr float panLaw = 0.70710678f;
         float angle = (pan + 1.0f) * 0.25f * 3.14159265f;

@@ -21,6 +21,11 @@ public:
 
     void setPlayingStep(int step);
     void setSelectedStep(int lane, int step);
+    void refreshLane(int lane);
+    void setStepActive(int lane, int step, bool active);
+    StepCell* getCell(int lane, int step);
+
+    juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
 
     std::function<void(int lane, int step)> onStepSelected;
 

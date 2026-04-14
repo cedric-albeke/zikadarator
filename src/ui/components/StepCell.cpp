@@ -54,6 +54,15 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
                                  : juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
         g.drawText(juce::String(stepIndex + 1), bounds, juce::Justification::centred, false);
+
+        if (presetLabel.isNotEmpty())
+        {
+            g.setColour(Colours::white.withAlpha(0.90f));
+            g.setFont(laf != nullptr ? laf->getSpaceMonoFont(9.0f, true)
+                                     : juce::Font(juce::FontOptions().withHeight(9.0f).withStyle("Bold")));
+            auto labelBounds = bounds.withTrimmedTop(bounds.getHeight() * 0.65f);
+            g.drawText(presetLabel, labelBounds, juce::Justification::centred, false);
+        }
     }
     else
     {
@@ -124,6 +133,12 @@ void StepCell::setPlaying(bool p)
 void StepCell::setSelected(bool s)
 {
     selected = s;
+    repaint();
+}
+
+void StepCell::setPresetLabel(const juce::String& label)
+{
+    presetLabel = label;
     repaint();
 }
 

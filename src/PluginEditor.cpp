@@ -8,28 +8,61 @@ PluginEditor::PluginEditor(PluginProcessor& p)
       lookAndFeel(),
       headerPanel(),
       sequencerPanel(p.getPluginState().getValueTreeState()),
-      footerPanel()
+      footerPanel(),
+      sidebarPanel()
 {
     setLookAndFeel(&lookAndFeel);
 
     addAndMakeVisible(headerPanel);
     addAndMakeVisible(sequencerPanel);
     addAndMakeVisible(footerPanel);
+    addAndMakeVisible(sidebarPanel);
 
     sequencerPanel.getStepGrid().onStepSelected = [this](int lane, int step)
     {
-        const auto& data     = processorRef.getSequencerState().getStepData(lane, step);
-        const auto  laneName = juce::String(laneInfos[lane].name);
-        footerPanel.setSelectedStep(lane, step, data, laneName);
+        const auto& stepData = processorRef.getSequencerState().getStepData(lane, step);
+        sidebarPanel.setSelectedStep(lane, step, stepData);
+
+        int slotIndex = stepData.presetIndex >= 1 && stepData.presetIndex <= 4
+                          ? stepData.presetIndex - 1
+                          : 0;
+        const auto& userSlot = processorRef.getSequencerState().getUserSlot(lane, slotIndex);
+        sidebarPanel.setUserSlotData(lane, slotIndex, userSlot);
     };
 
-    footerPanel.onStepDataChanged = [this](int lane, int step, const StepData& data)
+    sidebarPanel.onPresetAssigned = [this](int lane, int step, int presetIndex)
     {
-        StepData updated      = data;
-        updated.active        = processorRef.getSequencerState().getStepData(lane, step).active;
-        processorRef.getSequencerState().setStepData(lane, step, updated);
+        auto stepData = processorRef.getSequencerState().getStepData(lane, step);
+        stepData.active = true;
+        stepData.presetIndex = presetIndex;
+        processorRef.getSequencerState().setStepData(lane, step, stepData);
+
+        sequencerPanel.getStepGrid().setStepActive(lane, step, true);
+
+        auto* cell = sequencerPanel.getStepGrid().getCell(lane, step);
+        if (cell != nullptr)
+            cell->setPresetLabel("U" + juce::String(presetIndex));
+
+        sequencerPanel.getStepGrid().refreshLane(lane);
     };
-    
+
+    sidebarPanel.onUserSlotChanged = [this](int lane, int slotIndex, const UserSlotData& data)
+    {
+        processorRef.getSequencerState().setUserSlot(lane, slotIndex, data);
+        sequencerPanel.getStepGrid().refreshLane(lane);
+    };
+
+    for (int lane = 0; lane < StepGrid::numLanes; ++lane)
+    {
+        for (int step = 0; step < StepGrid::numSteps; ++step)
+        {
+            const auto& stepData = processorRef.getSequencerState().getStepData(lane, step);
+            auto* cell = sequencerPanel.getStepGrid().getCell(lane, step);
+            if (cell != nullptr && stepData.active && stepData.presetIndex >= 1 && stepData.presetIndex <= 4)
+                cell->setPresetLabel("U" + juce::String(stepData.presetIndex));
+        }
+    }
+
     setSize(1200, 800);
     setResizable(true, true);
     setResizeLimits(900, 600, 2400, 1600);
@@ -86,6 +119,8 @@ void PluginEditor::resized()
     bounds.removeFromTop(PM::kModuleGap);
     footerPanel.setBounds(bounds.removeFromBottom(140));
     bounds.removeFromBottom(PM::kModuleGap);
+    sidebarPanel.setBounds(bounds.removeFromRight(260));
+    bounds.removeFromRight(PM::kModuleGap);
     sequencerPanel.setBounds(bounds);
 }
 

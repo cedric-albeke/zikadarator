@@ -49,12 +49,12 @@ void HeaderPanel::paint(juce::Graphics& g)
 
     const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
 
-    auto wordmarkFont = laf != nullptr ? laf->getAntaFont(26.0f)
-                                       : juce::Font(juce::FontOptions().withHeight(26.0f));
+    auto wordmarkFont = laf != nullptr ? laf->getAntaFont(42.0f)
+                                       : juce::Font(juce::FontOptions().withHeight(42.0f));
     auto monoSmallFont = laf != nullptr ? laf->getSpaceMonoFont(10.0f, true)
                                         : juce::Font(juce::FontOptions().withHeight(10.0f).withStyle("Bold"));
 
-    auto logoBounds = brandArea.removeFromLeft(52).reduced(2, 4);
+    auto logoBounds = brandArea.removeFromLeft(64).reduced(2, 2);
     if (logoImage.isValid())
     {
         g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
@@ -66,32 +66,27 @@ void HeaderPanel::paint(juce::Graphics& g)
     }
 
     auto textArea = brandArea.reduced(6, 0).toFloat();
-    auto wordmarkRow = textArea.removeFromTop(30.0f);
+    auto wordmarkRow = textArea.removeFromTop(46.0f);
 
     g.setFont(wordmarkFont);
 
-    juce::GlyphArrangement gaZ, gaFx;
-    gaZ.addLineOfText(wordmarkFont, "ZIKADA", 0.0f, 0.0f);
-    gaFx.addLineOfText(wordmarkFont, " FX", 0.0f, 0.0f);
-    float zikadaWidth = gaZ.getBoundingBox(0, gaZ.getNumGlyphs(), true).getWidth();
-    float fxWidth     = gaFx.getBoundingBox(0, gaFx.getNumGlyphs(), true).getWidth();
+    juce::GlyphArrangement gaMain, gaVer;
+    gaMain.addLineOfText(wordmarkFont, "ZIKADARATOR", 0.0f, 0.0f);
+    gaVer.addLineOfText(wordmarkFont, " v1", 0.0f, 0.0f);
+    float mainWidth = gaMain.getBoundingBox(0, gaMain.getNumGlyphs(), true).getWidth();
+    float verWidth  = gaVer.getBoundingBox(0, gaVer.getNumGlyphs(), true).getWidth();
 
     g.setColour(Colours::white);
-    g.drawText("ZIKADA",
+    g.drawText("ZIKADARATOR",
                juce::Rectangle<float>(wordmarkRow.getX(), wordmarkRow.getY(),
-                                      zikadaWidth + 2.0f, wordmarkRow.getHeight()),
+                                      mainWidth + 2.0f, wordmarkRow.getHeight()),
                juce::Justification::bottomLeft, false);
 
     g.setColour(Colours::neonGreen);
-    g.drawText(" FX",
-               juce::Rectangle<float>(wordmarkRow.getX() + zikadaWidth, wordmarkRow.getY(),
-                                      fxWidth + 4.0f, wordmarkRow.getHeight()),
+    g.drawText(" v1",
+               juce::Rectangle<float>(wordmarkRow.getX() + mainWidth, wordmarkRow.getY(),
+                                      verWidth + 4.0f, wordmarkRow.getHeight()),
                juce::Justification::bottomLeft, false);
-
-    g.setFont(laf != nullptr ? laf->getSpaceMonoFont(13.0f, true) : monoSmallFont);
-    g.setColour(Colours::neonGreen.withAlpha(0.82f));
-    g.drawText("MULTI-FX SEQUENCER  ·  LOOP PERFORMANCE ENGINE",
-               textArea, juce::Justification::topLeft, false);
 
     if (presetButton.getWidth() > 0 && undoButton.getWidth() > 0)
     {
@@ -129,7 +124,7 @@ void HeaderPanel::paint(juce::Graphics& g)
 
 void HeaderPanel::resized()
 {
-    const int brandClearance  = 324;
+    const int brandClearance  = 360;
     const int statusClearance = 172;
 
     auto bounds = getLocalBounds().reduced(16, 14);

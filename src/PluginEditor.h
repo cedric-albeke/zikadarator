@@ -6,6 +6,7 @@
 #include "ui/panels/HeaderPanel.h"
 #include "ui/panels/SequencerPanel.h"
 #include "ui/panels/FooterPanel.h"
+#include "ui/panels/SidebarPanel.h"
 #include "ui/components/WaveformDisplay.h"
 
 namespace zikada {
@@ -30,6 +31,7 @@ private:
     HeaderPanel headerPanel;
     SequencerPanel sequencerPanel;
     FooterPanel footerPanel;
+    SidebarPanel sidebarPanel;
 
     int lastPlayingStep{-1};
 

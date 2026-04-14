@@ -40,7 +40,7 @@ juce_add_plugin(ZikadaFX
     PLUGIN_MANUFACTURER_CODE Zika
     PLUGIN_CODE Zkfx
     FORMATS VST3 AU Standalone
-    PRODUCT_NAME "Zikada FX"
+    PRODUCT_NAME "ZIKADARATOR"
     VERSION "0.1.0"
     BUNDLE_ID "io.zikada.fx"
     MICROPHONE_PERMISSION_ENABLED TRUE
@@ -60,6 +60,7 @@ target_sources(ZikadaFX
         src/ui/panels/HeaderPanel.cpp
         src/ui/panels/SequencerPanel.cpp
         src/ui/panels/FooterPanel.cpp
+        src/ui/panels/SidebarPanel.cpp
         src/state/PluginState.cpp
         src/engine/SequencerEngine.cpp
         src/engine/CircularAudioBuffer.cpp

@@ -348,4 +348,31 @@ void StepGrid::mouseUp(const juce::MouseEvent& /*e*/)
     lastPaintedStep = -1;
 }
 
+void StepGrid::refreshLane(int lane)
+{
+    if (lane < 0 || lane >= numLanes)
+        return;
+
+    for (int step = 0; step < numSteps; ++step)
+        cells[lane][step]->repaint();
+}
+
+void StepGrid::setStepActive(int lane, int step, bool active)
+{
+    if (lane < 0 || lane >= numLanes || step < 0 || step >= numSteps)
+        return;
+
+    auto paramID = getStepActiveID(lane, step);
+    auto* param = apvts.getParameter(paramID);
+    if (param != nullptr)
+        param->setValueNotifyingHost(active ? 1.0f : 0.0f);
+}
+
+StepCell* StepGrid::getCell(int lane, int step)
+{
+    if (lane < 0 || lane >= numLanes || step < 0 || step >= numSteps)
+        return nullptr;
+    return cells[lane][step].get();
+}
+
 }
