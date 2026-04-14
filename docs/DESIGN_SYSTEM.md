@@ -137,31 +137,28 @@ box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
 
 ## Components
 
-### Step Cell
-```cpp
-// Inactive
-background: #0D1F1E;
-border: 1px solid rgba(255, 255, 255, 0.1);
+### Step Cell (v2 — UI Redesign)
 
-// Active (with effect)
-background: {laneColor}; // e.g., #00FF85 for FX1
-border: 1px solid {laneColor};
-box-shadow: 0 0 8px {laneColor}40; // 25% opacity glow
+Five visual states with premium depth:
 
-// Hover
-border-color: {laneColor};
+| State | Background | Border | Number |
+|-------|-----------|--------|--------|
+| **Idle** | Alternating group tint (`displayBezel` / `bgAccent`) + subtle top highlight | `white @ 12-22%` (group-start cells brighter) | `white @ 48-68%`, SpaceMono 12pt |
+| **Hover** | Same as idle | `white @ 38%` | Same |
+| **Active** | Lane-color gradient (bright top → dark bottom) + glow halo + top accent stripe | `{laneColor} @ 82%` | `bgPrimary @ 90%`, SpaceMono 12pt Bold |
+| **Playing** | White overlay @ 18% on top of any state | `white @ 75%`, 2px | Same as underlying |
+| **Selected** | Via JUCE toggle state → maps to Active | Same as Active | Same |
 
-// Selected (editing)
-outline: 2px solid #FFFFFF;
-outline-offset: 2px;
-```
+Group rhythm: steps grouped in fours with alternating idle backgrounds and beat-boundary dividers.
 
-### Knob
-- Size: 48px diameter
-- Track: `#333333` (background arc)
-- Fill: `{laneColor}` (value arc)
-- Indicator: `#FFFFFF` line
-- Center dot: `#00FF85` (when active)
+### Knob (v2 — UI Redesign)
+- Size: 48×64px (label + arc + value readout)
+- Layout: VCR label top → arc with glow center → SpaceMono value pill bottom
+- Track: `white @ 10%` ghost arc
+- Fill: `{laneColor}` value arc with 7px glow halo behind 3.5px crisp stroke
+- Thumb: white dot tracking arc end
+- Center: `displayBezel` pip with `{laneColor}` inner dot
+- Value readout: `{laneColor}` percentage in SpaceMono Bold on subtle pill background
 
 ### Button (Primary)
 ```cpp
@@ -200,6 +197,31 @@ border: 1px solid rgba(0, 255, 133, 0.2);
 border-radius: 8px;
 padding: 16px;
 ```
+
+### Premium Panel System (v2 — UI Redesign)
+
+The plugin uses a layered panel architecture for visual hierarchy:
+
+| Token | Hex | Role |
+|-------|-----|------|
+| `shellBg` | `#000708` | Outermost chassis — deepest layer |
+| `bgPrimary` | `#000C0D` | Primary canvas |
+| `bgAccent` | `#011C1A` | Elevated module surfaces |
+| `panelRaised` | `#022220` | Lifted gradient highlight on panels |
+| `displayBezel` | `#00100F` | Inset device display frames |
+| `bgSurface` | `#0D1F1E` | Inner glass / content area of displays |
+
+**Drawing utilities** (static methods on `ZikadaLookAndFeel`):
+- `drawPremiumPanel(g, bounds, accentTopEdge)` — rounded module with depth gradient + outline
+- `drawDeviceDisplay(g, bounds)` — bezel + inner glass + neon perimeter accent
+- `drawModuleSeparator(g, x, y, length, horizontal)` — accent separator line
+
+**Layout constants** (`PanelMetrics` namespace):
+- `kCorner = 8` — outer panel radius
+- `kInnerCorner = 5` — inner display / surface radius
+- `kShellInset = 8` — gap from window edge to first module
+- `kModuleGap = 6` — gap between header / sequencer / dock
+- `kPadding = 14` — inner module padding
 
 ### VCR Section Header
 ```cpp
@@ -281,9 +303,11 @@ juce::Easing::easeOut
 ## Brand Assets
 
 ### Cicada Logo
-- **File**: `assets/images/zikada-cicada.png`
-- **Usage**: About dialog, splash screen, preset browser header
+- **Full resolution**: `assets/images/zikada-cicada.png` (1847×1842)
+- **UI-optimized**: `assets/images/zikada-cicada-128.png` (256×256, Lanczos-downscaled)
+- **Usage**: Header branding block, about dialog, preset browser header
 - **Style**: Glowing neon green cicada on dark teal coin
+- **Note**: Always use the pre-scaled version for in-plugin rendering to avoid pixelation from extreme downscaling
 
 ### Fonts (Embedded)
 All fonts located at: `/home/zady/Development/zikada-rec/resources/3886-dev.webflow/fonts/`

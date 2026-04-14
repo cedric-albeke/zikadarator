@@ -20,11 +20,15 @@ public:
     void setTied(bool isTied);
     bool isTied() const { return tied; }
 
+    void setPlaying(bool isPlaying);
+    bool isPlaying() const { return playing; }
+
 private:
     int laneIndex{0};
     int stepIndex{0};
     bool active{false};
     bool tied{false};
+    bool playing{false};
 };
 
 }

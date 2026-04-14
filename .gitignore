@@ -37,3 +37,6 @@ src/BinaryData.cpp
 # User-specific
 *.user
 *.userprefs
+
+# Local worktrees
+.worktrees/

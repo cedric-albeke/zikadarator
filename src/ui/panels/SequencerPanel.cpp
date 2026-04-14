@@ -11,22 +11,59 @@ SequencerPanel::SequencerPanel(juce::AudioProcessorValueTreeState& apvts)
 
 void SequencerPanel::paint(juce::Graphics& g)
 {
-    g.fillAll(Colours::bgPrimary);
+    namespace PM = PanelMetrics;
 
-    auto bounds = getLocalBounds().reduced(12, 8);
-    auto inputBounds = bounds.removeFromTop(56);
-    g.setColour(Colours::bgSurface);
-    g.fillRect(inputBounds);
-    g.setColour(Colours::white10);
-    g.drawRect(inputBounds, 1);
+    ZikadaLookAndFeel::drawPremiumPanel(g, getLocalBounds(), false);
+
+    auto inner = getLocalBounds().reduced(PM::kPadding, 10);
+    auto inputStripBounds = inner.removeFromTop(68);
+
+    ZikadaLookAndFeel::drawDeviceDisplay(g, inputStripBounds);
+
+    const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+    if (laf != nullptr)
+    {
+        auto displayInnerF = inputStripBounds.reduced(3, 3).toFloat();
+        auto labelAreaF    = displayInnerF.withWidth(90.0f);
+
+        g.setFont(laf->getVcrFont(12.0f));
+        g.setColour(Colours::neonGreen.withAlpha(0.82f));
+        g.drawText("SIGNAL",
+                   labelAreaF.withHeight(labelAreaF.getHeight() * 0.5f),
+                   juce::Justification::centred, false);
+
+        g.setColour(Colours::white.withAlpha(0.50f));
+        g.drawText("INPUT",
+                   labelAreaF.withY(labelAreaF.getY() + labelAreaF.getHeight() * 0.5f)
+                             .withHeight(labelAreaF.getHeight() * 0.5f),
+                   juce::Justification::centred, false);
+
+        const float sepX = displayInnerF.getX() + 90.0f;
+        g.setColour(Colours::white.withAlpha(0.08f));
+        g.drawLine(sepX, displayInnerF.getY() + 5.0f,
+                   sepX, displayInnerF.getBottom() - 5.0f, 1.0f);
+    }
+
+    inner.removeFromTop(8);
+    auto gridSurface = inner;
+    g.setColour(Colours::bgSurface.withAlpha(0.42f));
+    g.fillRoundedRectangle(gridSurface.toFloat(), PM::kInnerCorner);
+    g.setColour(Colours::white.withAlpha(0.07f));
+    g.drawRoundedRectangle(gridSurface.toFloat().reduced(0.5f), PM::kInnerCorner, 1.0f);
 }
 
 void SequencerPanel::resized()
 {
-    auto bounds = getLocalBounds().reduced(12, 8);
-    auto inputBounds = bounds.removeFromTop(56);
-    waveformDisplay.setBounds(inputBounds.reduced(80, 4));
-    stepGrid.setBounds(bounds.reduced(0, 4));
+    namespace PM = PanelMetrics;
+    auto inner = getLocalBounds().reduced(PM::kPadding, 10);
+
+    auto inputStripBounds = inner.removeFromTop(68);
+    auto displayInner     = inputStripBounds.reduced(3, 3);
+    displayInner.removeFromLeft(90);
+    waveformDisplay.setBounds(displayInner);
+
+    inner.removeFromTop(8);
+    stepGrid.setBounds(inner.reduced(6, 6));
 }
 
 }

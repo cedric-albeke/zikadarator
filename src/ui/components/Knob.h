@@ -19,6 +19,7 @@ public:
     void setDefaultValue(double newDefault);
     
     void setColour(juce::Colour newColour);
+    void setLabel(const juce::String& lbl);
     
     std::function<void()> onValueChange;
 
@@ -28,6 +29,7 @@ private:
     double maxValue{1.0};
     double defaultValue{0.5};
     juce::Colour accentColour{Colours::neonGreen};
+    juce::String label;
     
     double getNormalizedValue() const;
     void mouseDown(const juce::MouseEvent& event) override;

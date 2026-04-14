@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../ZikadaLookAndFeel.h"
-#include "../components/VcrLabel.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zikada {
 
@@ -14,8 +14,7 @@ public:
     void resized() override;
 
 private:
-    VcrLabel titleLabel;
-    juce::TextButton playButton{"PLAY"};
+    juce::Image logoImage;
     juce::TextButton presetButton{"PRESET"};
     juce::TextButton undoButton{"UNDO"};
     juce::TextButton redoButton{"REDO"};

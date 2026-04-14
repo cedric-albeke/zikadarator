@@ -32,6 +32,7 @@ void StepGrid::setupGrid()
         knob->setRange(0.0, 100.0);
         knob->setDefaultValue(100.0);
         knob->setColour(laneInfos[lane].colour);
+        knob->setLabel("MIX");
 
         auto mixParamID = getLaneMixID(lane);
         auto* mixParam = apvts.getParameter(mixParamID);
@@ -54,47 +55,174 @@ void StepGrid::paint(juce::Graphics& g)
 {
     g.fillAll(Colours::bgPrimary);
 
-    auto bounds = getLocalBounds();
-    int laneHeight = bounds.getHeight() / numLanes;
-    int labelWidth = 72;
-    int gridStartX = labelWidth + 8;
+    const auto  bounds       = getLocalBounds();
+    const int   labelWidth   = 72;
+    const int   labelGap     = 8;
+    const int   knobStripW   = 56;
+    const int   rulerHeight  = 14;
+    const int   totalW       = bounds.getWidth();
+    const int   cellAreaW    = totalW - labelWidth - labelGap - knobStripW;
+    const int   stepWidth    = cellAreaW / numSteps;
+    const int   cellAreaX    = bounds.getX() + labelWidth + labelGap;
+
+    const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+
+    {
+        const auto rulerRect = juce::Rectangle<int>(cellAreaX, bounds.getY(), cellAreaW, rulerHeight);
+
+        g.setColour(Colours::bgPrimary.withAlpha(0.70f));
+        g.fillRect(rulerRect);
+
+        for (int beat = 0; beat < 4; ++beat)
+        {
+            const int bx = cellAreaX + beat * 4 * stepWidth;
+
+            if (beat > 0)
+            {
+                g.setColour(Colours::neonGreen.withAlpha(0.30f));
+                g.drawLine(static_cast<float>(bx),
+                           static_cast<float>(bounds.getY() + 2),
+                           static_cast<float>(bx),
+                           static_cast<float>(bounds.getY() + rulerHeight - 2), 1.0f);
+            }
+
+            g.setColour(beat == 0 ? Colours::neonGreen.withAlpha(0.90f)
+                                  : Colours::white.withAlpha(0.55f));
+            g.setFont(laf != nullptr ? laf->getSpaceMonoFont(11.0f, true)
+                                     : juce::Font(juce::FontOptions().withHeight(11.0f)));
+            g.drawText(juce::String(beat * 4 + 1),
+                       juce::Rectangle<int>(bx + 3, bounds.getY() + 1, 20, rulerHeight - 2),
+                       juce::Justification::centredLeft, false);
+
+            for (int s = 0; s < 4; ++s)
+            {
+                const int tickX = bx + s * stepWidth + stepWidth / 2;
+                g.setColour(Colours::white.withAlpha(0.08f));
+                g.drawLine(static_cast<float>(tickX),
+                           static_cast<float>(bounds.getY() + rulerHeight - 3),
+                           static_cast<float>(tickX),
+                           static_cast<float>(bounds.getY() + rulerHeight - 1), 0.8f);
+            }
+        }
+
+        g.setColour(Colours::neonGreen.withAlpha(0.15f));
+        g.drawLine(static_cast<float>(cellAreaX),
+                   static_cast<float>(bounds.getY() + rulerHeight - 0.5f),
+                   static_cast<float>(cellAreaX + cellAreaW),
+                   static_cast<float>(bounds.getY() + rulerHeight - 0.5f), 1.0f);
+    }
+
+    const int laneAreaH  = bounds.getHeight() - rulerHeight;
+    const int laneHeight = laneAreaH / numLanes;
+    const int laneAreaY  = bounds.getY() + rulerHeight;
 
     for (int lane = 0; lane < numLanes; ++lane)
     {
-        auto laneBounds = bounds.removeFromTop(laneHeight);
-        auto labelBounds = laneBounds.removeFromLeft(labelWidth);
+        const int ly       = laneAreaY + lane * laneHeight;
+        const auto laneCol = laneInfos[lane].colour;
 
-        g.setColour(Colours::bgSurface);
-        g.fillRoundedRectangle(labelBounds.toFloat().reduced(2.0f), 4.0f);
-        g.setColour(laneInfos[lane].colour);
-        g.drawRoundedRectangle(labelBounds.toFloat().reduced(2.0f), 4.0f, 1.5f);
+        if (lane % 2 == 0)
+        {
+            g.setColour(Colours::bgAccent.withAlpha(0.25f));
+            g.fillRect(bounds.getX(), ly, totalW, laneHeight);
+        }
 
-        g.setColour(laneInfos[lane].colour);
-        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f).withStyle("Bold")));
-        g.drawText(juce::String(laneInfos[lane].name), labelBounds, juce::Justification::centred, false);
+        const auto chipBounds = juce::Rectangle<int>(
+            bounds.getX() + 2, ly + 3, labelWidth - 4, laneHeight - 6).toFloat();
+
+        g.setColour(Colours::displayBezel);
+        g.fillRoundedRectangle(chipBounds, 4.0f);
+
+        g.setColour(laneCol.withAlpha(0.90f));
+        g.fillRoundedRectangle(chipBounds.withWidth(3.5f)
+                                          .withTrimmedTop(5.0f)
+                                          .withTrimmedBottom(5.0f), 1.5f);
+
+        g.setColour(laneCol.withAlpha(0.22f));
+        g.drawRoundedRectangle(chipBounds, 4.0f, 1.0f);
+
+        const auto nameZone = chipBounds.withTrimmedLeft(8.0f);
+        g.setColour(laneCol);
+        g.setFont(laf != nullptr ? laf->getVcrFont(13.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(13.0f)));
+        g.drawText(juce::String(laneInfos[lane].name),
+                   nameZone.withHeight(nameZone.getHeight() * 0.54f),
+                   juce::Justification::centredLeft, false);
+
+        g.setColour(Colours::white.withAlpha(0.48f));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(11.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.drawText("ROW " + juce::String(lane + 1),
+                   nameZone.withY(nameZone.getY() + nameZone.getHeight() * 0.54f)
+                            .withHeight(nameZone.getHeight() * 0.46f),
+                   juce::Justification::centredLeft, false);
+
+        for (int grp = 1; grp < 4; ++grp)
+        {
+            const float divX = static_cast<float>(cellAreaX + grp * 4 * stepWidth);
+            g.setColour(Colours::neonGreen.withAlpha(0.10f));
+            g.drawLine(divX, static_cast<float>(ly + 4),
+                       divX, static_cast<float>(ly + laneHeight - 4), 1.0f);
+        }
+
+        {
+            const int   stripX    = bounds.getX() + totalW - knobStripW;
+            const float stripXf   = static_cast<float>(stripX);
+            const float stripYf   = static_cast<float>(ly + 1);
+            const float stripWf   = static_cast<float>(knobStripW);
+            const float stripHf   = static_cast<float>(laneHeight - 2);
+
+            g.setColour(Colours::displayBezel);
+            g.fillRect(stripXf, stripYf, stripWf, stripHf);
+
+            g.setColour(laneCol.withAlpha(0.75f));
+            g.fillRect(stripXf, stripYf + 4.0f, 2.5f, stripHf - 8.0f);
+
+            g.setColour(laneCol.withAlpha(0.20f));
+            g.drawLine(stripXf + 3.0f, stripYf + 0.5f,
+                       stripXf + stripWf, stripYf + 0.5f, 1.0f);
+
+            g.setColour(Colours::white.withAlpha(0.06f));
+            g.drawLine(stripXf + 0.5f, stripYf,
+                       stripXf + 0.5f, stripYf + stripHf, 1.0f);
+        }
+
+        if (lane < numLanes - 1)
+        {
+            const float sepY = static_cast<float>(ly + laneHeight);
+            g.setColour(Colours::white.withAlpha(0.07f));
+            g.drawLine(static_cast<float>(bounds.getX()),     sepY,
+                       static_cast<float>(bounds.getRight()), sepY, 1.0f);
+        }
     }
 }
 
 void StepGrid::resized()
 {
     auto bounds = getLocalBounds();
-    int laneHeight = bounds.getHeight() / numLanes;
-    int labelWidth = 72;
-    int gridStartX = labelWidth + 8;
-    int knobStripWidth = 56;
-    int stepWidth = (bounds.getWidth() - gridStartX - knobStripWidth) / numSteps;
+
+    const int labelWidth     = 72;
+    const int labelGap       = 8;
+    const int knobStripWidth = 56;
+    const int rulerHeight    = 14;
+
+    bounds.removeFromTop(rulerHeight);
+
+    const int laneHeight = bounds.getHeight() / numLanes;
 
     for (int lane = 0; lane < numLanes; ++lane)
     {
         auto laneBounds = bounds.removeFromTop(laneHeight);
-        laneBounds.removeFromLeft(gridStartX);
+        laneBounds.removeFromLeft(labelWidth + labelGap);
+        auto knobBounds = laneBounds.removeFromRight(knobStripWidth);
+        const int stepWidth = laneBounds.getWidth() / numSteps;
 
         for (int step = 0; step < numSteps; ++step)
         {
             cells[lane][step]->setBounds(laneBounds.removeFromLeft(stepWidth).reduced(2));
         }
 
-        mixKnobs[lane]->setBounds(laneBounds.removeFromRight(knobStripWidth).reduced(4, 2));
+        mixKnobs[lane]->setBounds(knobBounds.reduced(2, 3));
     }
 }
 

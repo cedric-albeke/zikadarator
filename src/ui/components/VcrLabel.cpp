@@ -27,7 +27,9 @@ void VcrLabel::setColour(juce::Colour c)
 void VcrLabel::paint(juce::Graphics& g)
 {
     g.setColour(colour);
-    g.setFont(font.withHeight(12.0f));
+    const auto* zikadaLookAndFeel = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+    g.setFont(zikadaLookAndFeel != nullptr ? zikadaLookAndFeel->getVcrFont(font.getHeight())
+                                           : font.withHeight(font.getHeight()));
     g.drawText(text, getLocalBounds(), juce::Justification::centred, true);
 }
 

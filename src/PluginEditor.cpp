@@ -28,15 +28,25 @@ PluginEditor::~PluginEditor()
 
 void PluginEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(Colours::bgPrimary);
+    g.fillAll(Colours::shellBg);
+
+    const auto bf = getLocalBounds().toFloat();
+    juce::ColourGradient bloom(
+        Colours::bgAccent.withAlpha(0.20f), bf.getCentreX(), bf.getCentreY(),
+        Colours::shellBg.withAlpha(0.0f),  bf.getX(),       bf.getY(), true);
+    g.setGradientFill(bloom);
+    g.fillAll();
 }
 
 void PluginEditor::resized()
 {
-    auto bounds = getLocalBounds();
+    namespace PM = PanelMetrics;
+    auto bounds = getLocalBounds().reduced(PM::kShellInset);
 
-    headerPanel.setBounds(bounds.removeFromTop(60));
-    footerPanel.setBounds(bounds.removeFromBottom(60));
+    headerPanel.setBounds(bounds.removeFromTop(72));
+    bounds.removeFromTop(PM::kModuleGap);
+    footerPanel.setBounds(bounds.removeFromBottom(64));
+    bounds.removeFromBottom(PM::kModuleGap);
     sequencerPanel.setBounds(bounds);
 }
 

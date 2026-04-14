@@ -21,6 +21,7 @@ juce_add_binary_data(ZikadaFXAssets SOURCES
     assets/fonts/Anta-Regular.ttf
     assets/fonts/VCR-OSD-MONO.ttf
     assets/images/zikada-cicada.png
+    assets/images/zikada-cicada-128.png
 )
 
 set_target_properties(ZikadaFXAssets PROPERTIES
