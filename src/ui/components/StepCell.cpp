@@ -79,19 +79,22 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 
         if (hovered && chainable)
         {
-            const float plusSize = 20.0f;
-            const float plusX = bounds.getRight() - plusSize + 2.0f;
-            const float plusY = bounds.getY() + 2.0f;
+            const float plusSize = 22.0f;
+            const float plusX = bounds.getRight() - plusSize * 0.35f;
+            const float plusY = bounds.getCentreY() - plusSize * 0.5f;
             juce::Rectangle<float> plusBounds(plusX, plusY, plusSize, plusSize);
 
+            g.setColour(Colours::neonGreen.withAlpha(0.35f));
+            g.fillEllipse(plusBounds.expanded(3.0f));
+
             g.setColour(Colours::neonGreen);
-            g.fillRoundedRectangle(plusBounds, 5.0f);
+            g.fillEllipse(plusBounds);
 
             g.setColour(Colours::white);
-            const float stroke = 2.5f;
+            const float stroke = 2.2f;
             const float cx = plusBounds.getCentreX();
             const float cy = plusBounds.getCentreY();
-            const float half = plusSize * 0.22f;
+            const float half = plusSize * 0.24f;
             g.drawLine(cx - half, cy, cx + half, cy, stroke);
             g.drawLine(cx, cy - half, cx, cy + half, stroke);
         }
