@@ -54,6 +54,7 @@ target_sources(ZikadaFX
         src/ui/components/VcrLabel.cpp
         src/ui/components/StepCell.cpp
         src/ui/components/StepGrid.cpp
+        src/ui/components/Knob.cpp
         src/ui/panels/HeaderPanel.cpp
         src/ui/panels/SequencerPanel.cpp
         src/ui/panels/FooterPanel.cpp
