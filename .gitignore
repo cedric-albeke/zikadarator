@@ -40,3 +40,6 @@ src/BinaryData.cpp
 
 # Local worktrees
 .worktrees/
+
+# Superpowers plugin artifacts
+.superpowers/

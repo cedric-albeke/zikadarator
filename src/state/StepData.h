@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_data_structures/juce_data_structures.h>
+#include "ModulationData.h"
 
 namespace zikada {
 
@@ -18,6 +19,8 @@ struct StepData
     float volume          = 1.0f;
     float pan             = 0.0f;
 
+    ModulationData modulation;
+
     [[nodiscard]] juce::ValueTree toValueTree() const
     {
         juce::ValueTree tree ("Step");
@@ -29,6 +32,7 @@ struct StepData
         tree.setProperty ("delayMix",        delayMix,        nullptr);
         tree.setProperty ("volume",          volume,          nullptr);
         tree.setProperty ("pan",             pan,             nullptr);
+        tree.addChild (modulation.toValueTree(), -1, nullptr);
         return tree;
     }
 
@@ -43,6 +47,11 @@ struct StepData
         d.delayMix        = static_cast<float> (tree.getProperty ("delayMix",        0.5f));
         d.volume          = static_cast<float> (tree.getProperty ("volume",          1.0f));
         d.pan             = static_cast<float> (tree.getProperty ("pan",             0.0f));
+
+        auto modChild = tree.getChildWithName ("Modulation");
+        if (modChild.isValid())
+            d.modulation = ModulationData::fromValueTree (modChild);
+
         return d;
     }
 };

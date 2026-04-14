@@ -6,6 +6,8 @@
 #include "engine/SequencerEngine.h"
 #include "engine/SliceEngine.h"
 #include "engine/FilterEngine.h"
+#include "engine/ModulationEngine.h"
+#include "engine/GainPanEngine.h"
 
 namespace zikada {
 
@@ -60,6 +62,8 @@ private:
     SequencerEngine sequencerEngine;
     SliceEngine sliceEngine;
     FilterEngine filterEngine;
+    ModulationEngine modulationEngine;
+    GainPanEngine gainPanEngine;
     std::atomic<bool> isPlayingFlag{false};
     std::atomic<double> currentBPM{120.0};
     std::atomic<int> currentStep{0};

@@ -69,6 +69,11 @@ target_sources(ZikadaFX
         src/engine/ReverbEngine.cpp
         src/engine/BitcrushEngine.cpp
         src/engine/PitchEngine.cpp
+        src/engine/MotionEngine.cpp
+        src/engine/EnvFollowerEngine.cpp
+        src/engine/RandomEngine.cpp
+        src/engine/ModulationEngine.cpp
+        src/engine/GainPanEngine.cpp
 )
 
 target_include_directories(ZikadaFX

@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <cmath>
 
 namespace zikada {
 
@@ -19,6 +20,8 @@ void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
     sequencerEngine.prepare(newSampleRate, samplesPerBlock);
     sliceEngine.prepare(newSampleRate, samplesPerBlock);
     filterEngine.prepare(newSampleRate, samplesPerBlock);
+    modulationEngine.prepare(newSampleRate);
+    gainPanEngine.prepare(newSampleRate, samplesPerBlock);
     lastStep = -1;
 }
 
@@ -50,49 +53,79 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     {
         juce::AudioPlayHead::CurrentPositionInfo posInfo;
         currentPlayHead->getCurrentPosition(posInfo);
-        
+
         isPlayingFlag = posInfo.isPlaying;
         currentBPM = posInfo.bpm;
-        
+
         if (posInfo.isPlaying && posInfo.ppqPosition >= 0.0)
         {
             ppqPosition = posInfo.ppqPosition;
             currentStep = static_cast<int>(ppqPosition / ppqPerStep) % 16;
         }
-        
+
         sequencerEngine.setTempo(currentBPM);
         sequencerEngine.setPlaying(isPlayingFlag);
     }
-    
+
     sequencerEngine.advance(numSamples);
     auto sequencerStep = sequencerEngine.getCurrentStep();
-    
+
+    static constexpr int kFilterLane = 4;
+    const StepData* stepDataPtr = nullptr;
+
     if (sequencerStep != lastStep)
     {
         currentStep = sequencerStep;
-        lastStep = sequencerStep;
+        lastStep = currentStep;
         sliceEngine.triggerSlice(currentStep);
 
-        static constexpr int kFilterLane = 4;
         const auto& stepData = sequencerState.getStepData(kFilterLane, currentStep);
+        stepDataPtr = &stepData;
+
         filterEngine.setCutoff(stepData.filterCutoff);
         filterEngine.setResonance(stepData.filterResonance);
+
+        double stepDuration = (currentBPM > 0.0) ? (60.0 / currentBPM * ppqPerStep) : 0.125;
+        modulationEngine.setStepData(stepData.modulation, currentBPM, stepDuration);
     }
-    
+
     sliceEngine.writeToBuffer(leftChannel, rightChannel, numSamples);
 
     std::vector<float> sliceLeft(static_cast<size_t>(numSamples), 0.0f);
     std::vector<float> sliceRight(static_cast<size_t>(numSamples), 0.0f);
     sliceEngine.process(sliceLeft.data(), sliceRight.data(), numSamples);
 
-    filterEngine.process(sliceLeft.data(), sliceRight.data(), numSamples);
+    const StepData& currentStepData = stepDataPtr != nullptr
+                                          ? *stepDataPtr
+                                          : sequencerState.getStepData(kFilterLane, currentStep);
 
     for (int i = 0; i < numSamples; ++i)
     {
-        leftChannel[i] = sliceLeft[i];
-        rightChannel[i] = sliceRight[i];
+        float modValues[ModulationEngine::NumTargets];
+        modulationEngine.processSample(sliceLeft[i], sliceRight[i], modValues);
+
+        float cutoffMod = modValues[static_cast<int>(ModulationTarget::FilterCutoff)];
+        float modCutoff = currentStepData.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
+        filterEngine.setCutoff(modCutoff);
+
+        float left  = filterEngine.processSampleLeft(sliceLeft[i]);
+        float right = filterEngine.processSampleRight(sliceRight[i]);
+
+        float volMod = modValues[static_cast<int>(ModulationTarget::Volume)];
+        float panMod = modValues[static_cast<int>(ModulationTarget::Pan)];
+
+        float vol = currentStepData.volume * (1.0f + volMod);
+        float pan = juce::jlimit(-1.0f, 1.0f, currentStepData.pan + panMod);
+
+        constexpr float panLaw = 0.70710678f;
+        float angle = (pan + 1.0f) * 0.25f * 3.14159265f;
+        float leftGain  = vol * panLaw * std::cos(angle) * 2.0f;
+        float rightGain = vol * panLaw * std::sin(angle) * 2.0f;
+
+        leftChannel[i]  = left  * leftGain;
+        rightChannel[i] = right * rightGain;
     }
-    
+
     if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
     {
         if (auto* waveform = editor->getWaveformDisplay())

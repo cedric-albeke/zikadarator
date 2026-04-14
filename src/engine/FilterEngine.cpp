@@ -90,15 +90,35 @@ void FilterEngine::process(float* left, float* right, int numSamples)
 
     for (int i = 0; i < numSamples; ++i)
     {
-        left[i] = filterLeft.processSample(0, left[i]);
-        right[i] = filterRight.processSample(0, right[i]);
-
-        if (currentType == FilterType::BandReject)
-        {
-            left[i] = -left[i];
-            right[i] = -right[i];
-        }
+        left[i] = processSampleLeft(left[i]);
+        right[i] = processSampleRight(right[i]);
     }
+}
+
+float FilterEngine::processSampleLeft(float input)
+{
+    if (!isEnabled)
+        return input;
+
+    float out = filterLeft.processSample(0, input);
+
+    if (currentType == FilterType::BandReject)
+        out = -out;
+
+    return out;
+}
+
+float FilterEngine::processSampleRight(float input)
+{
+    if (!isEnabled)
+        return input;
+
+    float out = filterRight.processSample(0, input);
+
+    if (currentType == FilterType::BandReject)
+        out = -out;
+
+    return out;
 }
 
 }

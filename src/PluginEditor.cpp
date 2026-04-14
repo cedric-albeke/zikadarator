@@ -84,7 +84,7 @@ void PluginEditor::resized()
 
     headerPanel.setBounds(bounds.removeFromTop(72));
     bounds.removeFromTop(PM::kModuleGap);
-    footerPanel.setBounds(bounds.removeFromBottom(80));
+    footerPanel.setBounds(bounds.removeFromBottom(140));
     bounds.removeFromBottom(PM::kModuleGap);
     sequencerPanel.setBounds(bounds);
 }

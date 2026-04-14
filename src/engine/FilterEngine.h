@@ -31,6 +31,9 @@ public:
 
     void process(float* left, float* right, int numSamples);
 
+    float processSampleLeft(float input);
+    float processSampleRight(float input);
+
 private:
     double sampleRate{44100.0};
     bool isEnabled{true};
