@@ -26,6 +26,9 @@ public:
     void setChainable(bool isChainable);
     bool isChainable() const { return chainable; }
 
+    void setHovered(bool isHovered);
+    bool isHovered() const { return hovered; }
+
     void setPlaying(bool isPlaying);
     bool isPlaying() const { return playing; }
 
@@ -44,6 +47,7 @@ private:
     bool tied{false};
     bool chained{false};
     bool chainable{false};
+    bool hovered{false};
     bool playing{false};
     bool selected{false};
     int presetIndex{0};

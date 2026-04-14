@@ -19,6 +19,8 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     void setPlayingStep(int step);
     void setSelectedStep(int lane, int step);
@@ -53,6 +55,9 @@ private:
     std::array<std::unique_ptr<juce::TextButton>, numLanes> soloButtons;
     std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numLanes> muteAttachments;
     std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numLanes> soloAttachments;
+
+    int hoverLane{-1};
+    int hoverStep{-1};
 
     bool paintMode{false};
     bool isPainting{false};

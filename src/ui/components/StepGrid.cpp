@@ -412,6 +412,30 @@ void StepGrid::mouseUp(const juce::MouseEvent& /*e*/)
     lastPaintedStep = -1;
 }
 
+void StepGrid::mouseMove(const juce::MouseEvent& e)
+{
+    auto [lane, step] = hitTestCell(e.getPosition());
+    if (lane != hoverLane || step != hoverStep)
+    {
+        if (hoverLane >= 0 && hoverStep >= 0)
+            cells[hoverLane][hoverStep]->setHovered(false);
+
+        hoverLane = lane;
+        hoverStep = step;
+
+        if (hoverLane >= 0 && hoverStep >= 0)
+            cells[hoverLane][hoverStep]->setHovered(true);
+    }
+}
+
+void StepGrid::mouseExit(const juce::MouseEvent& /*e*/)
+{
+    if (hoverLane >= 0 && hoverStep >= 0)
+        cells[hoverLane][hoverStep]->setHovered(false);
+    hoverLane = -1;
+    hoverStep = -1;
+}
+
 void StepGrid::refreshChainVisuals(int lane)
 {
     if (lane < 0 || lane >= numLanes)
