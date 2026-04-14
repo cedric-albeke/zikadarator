@@ -79,8 +79,8 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 
         if (hovered && chainable)
         {
-            const float plusSize = 22.0f;
-            const float plusX = bounds.getRight() - plusSize * 0.35f;
+            const float plusSize = 18.0f;
+            const float plusX = bounds.getRight() - plusSize - 3.0f;
             const float plusY = bounds.getCentreY() - plusSize * 0.5f;
             juce::Rectangle<float> plusBounds(plusX, plusY, plusSize, plusSize);
 

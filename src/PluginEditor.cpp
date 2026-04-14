@@ -123,6 +123,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     sidebarPanel.onPresetAssigned = [this](int lane, int step, int presetIndex)
     {
         pushUndoSnapshot();
+        sequencerPanel.getStepGrid().removeChainAt(lane, step);
         auto stepData = processorRef.getSequencerState().getStepData(lane, step);
         stepData.active = true;
         stepData.presetIndex = presetIndex;
