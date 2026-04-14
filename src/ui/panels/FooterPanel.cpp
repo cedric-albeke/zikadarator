@@ -18,6 +18,15 @@ namespace {
     constexpr std::array<const char*, 7> kKnobLabel = {
         "CUTOFF", "RESON", "DELAY", "FEEDBK", "MIX", "VOL", "PAN"
     };
+
+    void debugFooterLog(const juce::String& message)
+    {
+        juce::Logger::writeToLog("[ZIKADARATOR] FooterPanel " + message);
+
+#if JUCE_DEBUG
+        DBG("[ZIKADARATOR] FooterPanel " + message);
+#endif
+    }
 }
 
 FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
@@ -61,7 +70,15 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     stepResolutionBox.setColour(juce::ComboBox::outlineColourId,        Colours::white50.withAlpha(0.35f));
     stepResolutionBox.setColour(juce::ComboBox::arrowColourId,          Colours::neonGreen);
     stepResolutionBox.setColour(juce::ComboBox::focusedOutlineColourId, Colours::neonGreen);
-    addAndMakeVisible(stepResolutionBox);
+    stepResolutionBox.onChange = [this] { syncInlineControlState(); };
+    addChildComponent(stepResolutionBox);
+
+    stepResolutionButton.setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
+    stepResolutionButton.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
+    stepResolutionButton.setColour(juce::TextButton::textColourOffId, Colours::neonGreen);
+    stepResolutionButton.setColour(juce::TextButton::textColourOnId, Colours::white);
+    stepResolutionButton.onClick = [this] { cycleStepResolution(); };
+    addAndMakeVisible(stepResolutionButton);
 
     stepResolutionAttachment = std::make_unique<
         juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
@@ -95,6 +112,7 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
 
     setupModulationControls();
     refreshGlobalControlLabels();
+    syncInlineControlState();
 }
 
 void FooterPanel::refreshGlobalControlLabels()
@@ -108,6 +126,26 @@ void FooterPanel::refreshGlobalControlLabels()
         const auto text = juce::String(value, 1) + " dB";
         outputGainLabel.setText(text, juce::dontSendNotification);
     }
+
+    syncInlineControlState();
+}
+
+void FooterPanel::syncInlineControlState()
+{
+    const auto text = stepResolutionBox.getText().isNotEmpty() ? stepResolutionBox.getText() : juce::String("1/8");
+    stepResolutionButton.setButtonText(text.toUpperCase());
+}
+
+void FooterPanel::cycleStepResolution()
+{
+    const auto numItems = stepResolutionBox.getNumItems();
+    if (numItems <= 0)
+        return;
+
+    const auto currentIndex = juce::jmax(0, stepResolutionBox.getSelectedItemIndex());
+    const auto nextIndex = (currentIndex + 1) % numItems;
+    stepResolutionBox.setSelectedItemIndex(nextIndex, juce::sendNotificationSync);
+    debugFooterLog("cycleStepResolution -> " + stepResolutionBox.getText());
 }
 
 void FooterPanel::setupModulationControls()
@@ -360,7 +398,8 @@ void FooterPanel::resized()
         outputGainLabel.setBounds(gainCol.withSizeKeepingCentre(gainCol.getWidth(), 20));
 
         stepResLabel.setBounds(stepResHeaderRect);
-        stepResolutionBox.setBounds(resCol.withSizeKeepingCentre(resCol.getWidth(), 20));
+        stepResolutionButton.setBounds(resCol.withSizeKeepingCentre(resCol.getWidth(), 20));
+        stepResolutionBox.setBounds(0, 0, 0, 0);
     }
 
     {
@@ -404,11 +443,9 @@ void FooterPanel::resized()
 
 void FooterPanel::setSelectedSlot(int lane, int slot, const UserSlotData& data, const juce::String& laneName)
 {
-#if JUCE_DEBUG
-    DBG("[ZIKADARATOR] FooterPanel::setSelectedSlot lane=" + juce::String(lane)
-        + " slot=" + juce::String(slot)
-        + " modMode=" + juce::String(modModeActive ? 1 : 0));
-#endif
+    debugFooterLog("setSelectedSlot lane=" + juce::String(lane)
+                   + " slot=" + juce::String(slot)
+                   + " modMode=" + juce::String(modModeActive ? 1 : 0));
 
     hasSelection     = true;
     selectedLane     = lane;

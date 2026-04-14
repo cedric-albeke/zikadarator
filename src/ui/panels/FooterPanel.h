@@ -40,6 +40,7 @@ private:
 
     juce::Label    stepResLabel;
     juce::ComboBox stepResolutionBox;
+    juce::TextButton stepResolutionButton{"1/8"};
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
         stepResolutionAttachment;
 
@@ -64,6 +65,8 @@ private:
     void drawDetailDock   (juce::Graphics& g) const;
     void drawSignalModule (juce::Graphics& g) const;
     void notifySlotDataChanged();
+    void cycleStepResolution();
+    void syncInlineControlState();
 
     void setupModulationControls();
     void updateModulationControlsFromData(const ModulationData& modData);
