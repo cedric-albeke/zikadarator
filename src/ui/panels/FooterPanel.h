@@ -3,6 +3,8 @@
 #include "../ZikadaLookAndFeel.h"
 #include "../components/Knob.h"
 #include "../../state/UserSlotData.h"
+#include "../../state/ParameterIDs.h"
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <memory>
 
@@ -11,7 +13,7 @@ namespace zikada {
 class FooterPanel : public juce::Component
 {
 public:
-    FooterPanel();
+    explicit FooterPanel(juce::AudioProcessorValueTreeState& apvts);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -32,6 +34,12 @@ private:
 
     juce::Rectangle<int> mixModeHeaderRect;
     juce::Rectangle<int> outputGainHeaderRect;
+    juce::Rectangle<int> stepResHeaderRect;
+
+    juce::Label    stepResLabel;
+    juce::ComboBox stepResolutionBox;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
+        stepResolutionAttachment;
 
     std::array<std::unique_ptr<Knob>, 7> stepKnobs;
 

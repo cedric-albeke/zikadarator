@@ -90,7 +90,7 @@ private:
     std::atomic<bool> isPlayingFlag{false};
     std::atomic<double> currentBPM{120.0};
     std::atomic<int> currentStep{0};
-    int lastStep{-1};
+    std::array<int, 6> lastEffectiveSteps{-1, -1, -1, -1, -1, -1};
     double sampleRate{44100.0};
     juce::AudioPlayHead::CurrentPositionInfo lastPosInfo;
     double ppqPosition{0.0};

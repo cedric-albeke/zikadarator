@@ -4,7 +4,7 @@ namespace zikada {
 
 namespace {
     constexpr int kDryWetW  = 200;
-    constexpr int kSignalW  = 240;
+    constexpr int kSignalW  = 320;
     constexpr int kZoneGap  = 6;
     constexpr int kHPad     = 8;
     constexpr int kVPad     = 4;
@@ -20,7 +20,7 @@ namespace {
     };
 }
 
-FooterPanel::FooterPanel()
+FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& apvts)
 {
     dryWetSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     dryWetSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
@@ -47,6 +47,23 @@ FooterPanel::FooterPanel()
     bypassButton.setColour(juce::TextButton::textColourOffId,   Colours::white85);
     bypassButton.setColour(juce::TextButton::textColourOnId,    Colours::bgPrimary);
     addAndMakeVisible(bypassButton);
+
+    stepResLabel.setText("STEP RES", juce::dontSendNotification);
+    stepResLabel.setJustificationType(juce::Justification::centredLeft);
+    stepResLabel.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+    stepResLabel.setColour(juce::Label::textColourId, Colours::white50);
+    addAndMakeVisible(stepResLabel);
+
+    stepResolutionBox.addItemList({"1/8", "1/4", "1/2"}, 1);
+    stepResolutionBox.setColour(juce::ComboBox::backgroundColourId,  Colours::bgSurface);
+    stepResolutionBox.setColour(juce::ComboBox::textColourId,         Colours::neonGreen);
+    stepResolutionBox.setColour(juce::ComboBox::outlineColourId,      Colours::white50.withAlpha(0.3f));
+    stepResolutionBox.setColour(juce::ComboBox::arrowColourId,        Colours::white50);
+    addAndMakeVisible(stepResolutionBox);
+
+    stepResolutionAttachment = std::make_unique<
+        juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+            apvts, ParameterIDs::stepResolution, stepResolutionBox);
 
     for (int i = 0; i < 7; ++i)
     {
@@ -268,11 +285,20 @@ void FooterPanel::drawSignalModule(juce::Graphics& g) const
     g.setColour(Colours::white50);
     g.drawText("MIX MODE",  mixModeHeaderRect.toFloat(),    juce::Justification::centredLeft, false);
     g.drawText("OUTPUT",    outputGainHeaderRect.toFloat(),  juce::Justification::centredLeft, false);
+    g.drawText("STEP RES",  stepResHeaderRect.toFloat(),    juce::Justification::centredLeft, false);
 
     if (mixModeHeaderRect.getRight() > 0 && outputGainHeaderRect.getX() > 0)
     {
-        const int sepX = (mixModeHeaderRect.getRight() + outputGainHeaderRect.getX()) / 2;
-        ZikadaLookAndFeel::drawModuleSeparator(g, sepX,
+        const int sep1 = (mixModeHeaderRect.getRight() + outputGainHeaderRect.getX()) / 2;
+        ZikadaLookAndFeel::drawModuleSeparator(g, sep1,
+            signalZone.getY() + signalZone.getHeight() / 5,
+            signalZone.getHeight() * 3 / 5, false);
+    }
+
+    if (outputGainHeaderRect.getRight() > 0 && stepResHeaderRect.getX() > 0)
+    {
+        const int sep2 = (outputGainHeaderRect.getRight() + stepResHeaderRect.getX()) / 2;
+        ZikadaLookAndFeel::drawModuleSeparator(g, sep2,
             signalZone.getY() + signalZone.getHeight() / 5,
             signalZone.getHeight() * 3 / 5, false);
     }
@@ -301,16 +327,24 @@ void FooterPanel::resized()
         bypassButton.setBounds(sz.removeFromRight(86).withSizeKeepingCentre(86, 28));
         sz.removeFromRight(8);
 
-        const int halfW  = sz.getWidth() / 2 - 2;
-        auto mixCol  = sz.removeFromLeft(halfW);
-        sz.removeFromLeft(4);
-        auto gainCol = sz;
+        const int colGap = 4;
+        const int colW   = (sz.getWidth() - 2 * colGap) / 3;
+
+        auto mixCol  = sz.removeFromLeft(colW);
+        sz.removeFromLeft(colGap);
+        auto gainCol = sz.removeFromLeft(colW);
+        sz.removeFromLeft(colGap);
+        auto resCol  = sz;
 
         mixModeHeaderRect    = mixCol.removeFromTop(kLabelH);
         outputGainHeaderRect = gainCol.removeFromTop(kLabelH);
+        stepResHeaderRect    = resCol.removeFromTop(kLabelH);
 
         mixModeLabel.setBounds(mixCol.withSizeKeepingCentre(mixCol.getWidth(), 20));
         outputGainLabel.setBounds(gainCol.withSizeKeepingCentre(gainCol.getWidth(), 20));
+
+        stepResLabel.setBounds(stepResHeaderRect);
+        stepResolutionBox.setBounds(resCol.withSizeKeepingCentre(resCol.getWidth(), 20));
     }
 
     {

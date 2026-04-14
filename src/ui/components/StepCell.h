@@ -20,6 +20,9 @@ public:
     void setTied(bool isTied);
     bool isTied() const { return tied; }
 
+    void setChained(bool isChained);
+    bool isChained() const { return chained; }
+
     void setPlaying(bool isPlaying);
     bool isPlaying() const { return playing; }
 
@@ -36,6 +39,7 @@ private:
     int stepIndex{0};
     bool active{false};
     bool tied{false};
+    bool chained{false};
     bool playing{false};
     bool selected{false};
     int presetIndex{0};

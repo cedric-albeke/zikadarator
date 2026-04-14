@@ -9,7 +9,7 @@ namespace zikada {
 class SequencerPanel : public juce::Component
 {
 public:
-    explicit SequencerPanel(juce::AudioProcessorValueTreeState& apvts);
+    SequencerPanel(juce::AudioProcessorValueTreeState& apvts, SequencerState& seqState);
 
     void paint(juce::Graphics& g) override;
     void resized() override;

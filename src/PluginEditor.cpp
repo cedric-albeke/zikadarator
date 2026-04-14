@@ -7,8 +7,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
       processorRef(p),
       lookAndFeel(),
       headerPanel(),
-      sequencerPanel(p.getPluginState().getValueTreeState()),
-      footerPanel(),
+      sequencerPanel(p.getPluginState().getValueTreeState(), p.getSequencerState()),
+      footerPanel(processorRef.getPluginState().getValueTreeState()),
       sidebarPanel(),
       workspacePanel()
 {
@@ -115,6 +115,11 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         footerPanel.setSelectedSlot(lane, slotIndex, userSlot, laneInfos[lane].name);
     };
 
+    sequencerPanel.getStepGrid().onChainChanged = [this](int, int, int)
+    {
+        markCurrentPresetDirty();
+    };
+
     sidebarPanel.onPresetAssigned = [this](int lane, int step, int presetIndex)
     {
         pushUndoSnapshot();
@@ -129,6 +134,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         if (cell != nullptr)
             cell->setPresetIndex(presetIndex);
 
+        sequencerPanel.getStepGrid().refreshChainVisuals(lane);
         sequencerPanel.getStepGrid().refreshLane(lane);
 
         int slotIndex = presetIndex >= 1 && presetIndex <= 4
@@ -270,6 +276,7 @@ void PluginEditor::refreshSequencerFromState()
                 cell->setPresetIndex(0);
         }
 
+        sequencerPanel.getStepGrid().refreshChainVisuals(lane);
         sequencerPanel.getStepGrid().refreshLane(lane);
     }
 }

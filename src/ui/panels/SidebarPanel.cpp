@@ -7,13 +7,13 @@ namespace {
     constexpr int kGridCols = 5;
     constexpr int kButtonGap = 5;
     constexpr int kHeaderH = 98;
-    constexpr int kInfoH = 56;
+    constexpr int kInfoH = 72;
 }
 
 SidebarPanel::SidebarPanel()
 {
     infoLabel.setJustificationType(juce::Justification::centredLeft);
-    infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f)));
+    infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(16.0f)));
     infoLabel.setColour(juce::Label::textColourId, Colours::white85);
     infoLabel.setMinimumHorizontalScale(1.0f);
     addAndMakeVisible(infoLabel);
@@ -221,7 +221,7 @@ void SidebarPanel::updateInfoForHover(int presetIndex)
         if (p.presetIndex == presetIndex)
         {
             infoLabel.setText(p.infoText, juce::dontSendNotification);
-            infoLabel.setColour(juce::Label::textColourId, Colours::white85);
+            infoLabel.setColour(juce::Label::textColourId, Colours::white);
             return;
         }
     }
@@ -267,6 +267,9 @@ void SidebarPanel::paint(juce::Graphics& g)
                textBounds.withY(textBounds.getY() + textBounds.getHeight() * 0.48f)
                          .withHeight(textBounds.getHeight() * 0.45f),
                juce::Justification::centredLeft, false);
+
+    auto infoBounds = getLocalBounds().removeFromBottom(kInfoH).toFloat().reduced(8, 4);
+    ZikadaLookAndFeel::drawDeviceDisplay(g, infoBounds.toNearestInt());
 }
 
 void SidebarPanel::paintOverChildren(juce::Graphics& g)
@@ -320,12 +323,16 @@ void SidebarPanel::resized()
 
 void SidebarPanel::mouseMove(const juce::MouseEvent& e)
 {
+    if (currentLane < 0)
+        return;
+
+    auto localPos = e.getEventRelativeTo(this).getPosition();
     int prevHover = hoveredPresetIndex;
     hoveredPresetIndex = -1;
     auto presets = getPresetsForLane(currentLane);
     for (size_t i = 0; i < presetButtons.size() && i < presets.size(); ++i)
     {
-        if (presetButtons[i]->getBounds().contains(e.getPosition()))
+        if (presetButtons[i]->getBounds().contains(localPos))
         {
             hoveredPresetIndex = presets[i].presetIndex;
             break;
@@ -338,8 +345,11 @@ void SidebarPanel::mouseMove(const juce::MouseEvent& e)
     }
 }
 
-void SidebarPanel::mouseExit(const juce::MouseEvent&)
+void SidebarPanel::mouseExit(const juce::MouseEvent& e)
 {
+    if (getLocalBounds().contains(e.getEventRelativeTo(this).getPosition()))
+        return;
+
     if (hoveredPresetIndex != -1)
     {
         hoveredPresetIndex = -1;

@@ -513,7 +513,7 @@ void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
     fx2ToneFilter.prepare(newSampleRate, samplesPerBlock);
     modulationEngine.prepare(newSampleRate);
     gainPanEngine.prepare(newSampleRate, samplesPerBlock);
-    lastStep = -1;
+    lastEffectiveSteps.fill(-1);
 }
 
 void PluginProcessor::releaseResources() {}
@@ -583,19 +583,40 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         }
     }
 
-    const auto& sliceStep = sequencerState.getStepData(kSliceLane, sequencerStep);
-    const auto& loopStep = sequencerState.getStepData(kLoopLane, sequencerStep);
-    const auto& envelopeStep = sequencerState.getStepData(kEnvelopeLane, sequencerStep);
-    const auto& fx1Step = sequencerState.getStepData(kFX1Lane, sequencerStep);
-    const auto& filterStep = sequencerState.getStepData(kFilterLane, sequencerStep);
-    const auto& fx2Step = sequencerState.getStepData(kFX2Lane, sequencerStep);
+    auto getEffectiveStep = [&](int lane, int rawStep) -> int
+    {
+        for (int lookback = rawStep; lookback >= juce::jmax(0, rawStep - 15); --lookback)
+        {
+            const auto& s = sequencerState.getStepData(lane, lookback);
+            if (s.active && s.presetIndex > 0)
+            {
+                if (rawStep < lookback + s.chainLength)
+                    return lookback;
+            }
+        }
+        return rawStep;
+    };
 
-    const auto sliceSlot = getSlotDataForStep(sequencerState, kSliceLane, sliceStep);
-    const auto loopSlot = getSlotDataForStep(sequencerState, kLoopLane, loopStep);
+    const int effSliceStep    = getEffectiveStep(kSliceLane,    sequencerStep);
+    const int effLoopStep     = getEffectiveStep(kLoopLane,     sequencerStep);
+    const int effEnvelopeStep = getEffectiveStep(kEnvelopeLane, sequencerStep);
+    const int effFx1Step      = getEffectiveStep(kFX1Lane,      sequencerStep);
+    const int effFilterStep   = getEffectiveStep(kFilterLane,   sequencerStep);
+    const int effFx2Step      = getEffectiveStep(kFX2Lane,      sequencerStep);
+
+    const auto& sliceStep    = sequencerState.getStepData(kSliceLane,    effSliceStep);
+    const auto& loopStep     = sequencerState.getStepData(kLoopLane,     effLoopStep);
+    const auto& envelopeStep = sequencerState.getStepData(kEnvelopeLane, effEnvelopeStep);
+    const auto& fx1Step      = sequencerState.getStepData(kFX1Lane,      effFx1Step);
+    const auto& filterStep   = sequencerState.getStepData(kFilterLane,   effFilterStep);
+    const auto& fx2Step      = sequencerState.getStepData(kFX2Lane,      effFx2Step);
+
+    const auto sliceSlot    = getSlotDataForStep(sequencerState, kSliceLane,    sliceStep);
+    const auto loopSlot     = getSlotDataForStep(sequencerState, kLoopLane,     loopStep);
     const auto envelopeSlot = getSlotDataForStep(sequencerState, kEnvelopeLane, envelopeStep);
-    const auto fx1Slot = getSlotDataForStep(sequencerState, kFX1Lane, fx1Step);
-    const auto filterSlot = getSlotDataForStep(sequencerState, kFilterLane, filterStep);
-    const auto fx2Slot = getSlotDataForStep(sequencerState, kFX2Lane, fx2Step);
+    const auto fx1Slot      = getSlotDataForStep(sequencerState, kFX1Lane,      fx1Step);
+    const auto filterSlot   = getSlotDataForStep(sequencerState, kFilterLane,   filterStep);
+    const auto fx2Slot      = getSlotDataForStep(sequencerState, kFX2Lane,      fx2Step);
 
     const double bpm = currentBPM.load();
     const double stepDurationSeconds = getBeatSeconds(bpm) * ppqPerStep;
@@ -603,14 +624,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const double stepPhaseStart = std::fmod(ppqPosition / ppqPerStep, 1.0);
     const double phaseDelta = 1.0 / samplesPerStep;
 
-    if (sequencerStep != lastStep)
+    if (effSliceStep != lastEffectiveSteps[kSliceLane])
     {
-        currentStep = sequencerStep;
-        lastStep = currentStep;
-
+        lastEffectiveSteps[kSliceLane] = effSliceStep;
         if (sliceStep.active && sliceStep.presetIndex > 0)
-            sliceEngine.triggerSlice(getSliceIndexForPreset(sliceStep.presetIndex, currentStep));
+            sliceEngine.triggerSlice(getSliceIndexForPreset(sliceStep.presetIndex, effSliceStep));
+    }
 
+    if (effLoopStep != lastEffectiveSteps[kLoopLane])
+    {
+        lastEffectiveSteps[kLoopLane] = effLoopStep;
         if (loopStep.active && loopStep.presetIndex > 0)
         {
             configureLoopEngineForPreset(loopEngine, loopStep.presetIndex, loopSlot, stepDurationSeconds);
@@ -620,7 +643,11 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         {
             loopEngine.setEnabled(false);
         }
+    }
 
+    if (effFilterStep != lastEffectiveSteps[kFilterLane])
+    {
+        lastEffectiveSteps[kFilterLane] = effFilterStep;
         if (filterStep.active && filterStep.presetIndex > 0)
         {
             configureFilterForStep(filterEngine, filterStep.presetIndex, filterSlot);
@@ -830,7 +857,7 @@ void PluginProcessor::applyFullState(const juce::ValueTree& stateTree)
     if (seqChild.isValid())
         sequencerState.fromValueTree(seqChild);
 
-    lastStep = -1;
+    lastEffectiveSteps.fill(-1);
 }
 
 void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)

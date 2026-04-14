@@ -2,8 +2,8 @@
 
 namespace zikada {
 
-SequencerPanel::SequencerPanel(juce::AudioProcessorValueTreeState& apvts)
-    : stepGrid(apvts)
+SequencerPanel::SequencerPanel(juce::AudioProcessorValueTreeState& apvts, SequencerState& seqState)
+    : stepGrid(apvts, seqState)
 {
     addAndMakeVisible(stepGrid);
     addAndMakeVisible(waveformDisplay);

@@ -64,6 +64,12 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
                                     .reduced(bounds.getWidth() * 0.10f, 0);
             PresetIcons::drawPresetIcon(g, laneIndex, presetIndex, iconBounds, Colours::white.withAlpha(0.95f));
         }
+
+        if (chained)
+        {
+            g.setColour(Colours::white.withAlpha(0.9f));
+            g.fillEllipse(bounds.getRight() - 8.0f, bounds.getCentreY() - 3.0f, 6.0f, 6.0f);
+        }
     }
     else
     {
@@ -135,6 +141,12 @@ void StepCell::setActive(bool a)
 void StepCell::setTied(bool t)
 {
     tied = t;
+    repaint();
+}
+
+void StepCell::setChained(bool c)
+{
+    chained = c;
     repaint();
 }
 
