@@ -20,9 +20,12 @@ public:
     SidebarPanel();
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
 
     void setSelectedStep(int lane, int step, const StepData& stepData);
+
+    juce::String getPresetLabel(int lane, int presetIndex) const;
 
     std::function<void(int lane, int step, int presetIndex)> onPresetAssigned;
 

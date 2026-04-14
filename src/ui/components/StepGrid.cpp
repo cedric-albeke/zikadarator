@@ -1,4 +1,5 @@
 #include "ui/components/StepGrid.h"
+#include "ui/components/PresetIcons.h"
 
 namespace zikada {
 
@@ -174,7 +175,14 @@ void StepGrid::paint(juce::Graphics& g)
         g.setColour(laneCol.withAlpha(0.22f));
         g.drawRoundedRectangle(chipBounds, 4.0f, 1.0f);
 
-        const auto nameZone = chipBounds.withTrimmedLeft(8.0f);
+        float iconSize = chipBounds.getHeight() * 0.35f;
+        auto iconBounds = juce::Rectangle<float>(
+            chipBounds.getX() + 8.0f,
+            chipBounds.getCentreY() - iconSize * 0.5f,
+            iconSize, iconSize);
+        PresetIcons::drawLaneIcon(g, lane, iconBounds, laneCol, 1.5f);
+
+        const auto nameZone = chipBounds.withTrimmedLeft(8.0f + iconSize + 4.0f);
         g.setColour(laneCol);
         g.setFont(laf != nullptr ? laf->getVcrFont(13.0f)
                                  : juce::Font(juce::FontOptions().withHeight(13.0f)));

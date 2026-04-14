@@ -16,7 +16,7 @@ void SequencerPanel::paint(juce::Graphics& g)
     ZikadaLookAndFeel::drawPremiumPanel(g, getLocalBounds(), false);
 
     auto inner = getLocalBounds().reduced(PM::kPadding, 10);
-    auto inputStripBounds = inner.removeFromTop(68);
+    auto inputStripBounds = inner.removeFromTop(98);
 
     ZikadaLookAndFeel::drawDeviceDisplay(g, inputStripBounds);
 
@@ -57,7 +57,7 @@ void SequencerPanel::resized()
     namespace PM = PanelMetrics;
     auto inner = getLocalBounds().reduced(PM::kPadding, 10);
 
-    auto inputStripBounds = inner.removeFromTop(68);
+    auto inputStripBounds = inner.removeFromTop(98);
     auto displayInner     = inputStripBounds.reduced(3, 3);
     displayInner.removeFromLeft(90);
     waveformDisplay.setBounds(displayInner);

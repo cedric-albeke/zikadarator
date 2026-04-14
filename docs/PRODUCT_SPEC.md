@@ -81,12 +81,13 @@ Unlike simple on/off step sequencers, each step selects *which variant* of an ef
 ## Per-Step Depth: The 3 Layers
 
 ### Layer 1 — Step Assignment
-Click any step cell to open a popup selector with:
-- 20 factory presets
-- 4 user slots (U1–U4)
-- Random mode (🔀)
-- Tie mode (⛓️)
-- Delete (✕)
+Click any step cell to select it; the right sidebar shows the lane's FX preset grid:
+- **16 factory presets** per lane, each with a unique procedural icon
+- **4 user slots** (U1–U4)
+- Presets are arranged in a 5-column icon grid inside the 300 px sidebar
+- Selected presets are reflected as short labels inside active step cells
+- Tie mode (⛓️) links steps visually with a continuous lane-colour bar
+- Right-click deletes a step
 
 ### Layer 2 — User Slot Configuration
 Click the `⚙` icon on any lane to open the User Editor:
@@ -258,11 +259,14 @@ Six modes that intelligently fill the entire grid:
 - **Right-click** deletes steps or opens context menu
 
 ### Visual Feedback
-- Real-time INPUT waveform with slice markers
+- Real-time INPUT waveform with slice markers (98 px tall strip)
 - Animated playhead across the step grid
 - Lane colors indicate active effects at a glance
+- **Lane category icons** on every lane chip (SLICE, LOOP, ENVELOPE, FX1, FILTER, FX2)
 - **Tie steps** rendered as a continuous colored bar spanning tied cells
 - **Mute/Solo buttons** on each lane header: M (amber warning) and S (neon green)
+- **Right sidebar FX preset grid** — 300 px wide, 5-column icon grid with 16 factory presets + 4 user slots per lane
+- **Procedural preset icons** — every selectable FX preset has a unique vector icon (no raster assets)
 - Subtle neon glow on hovered/selected elements
 - In-header preset strip reflects the active preset, favorite state, and dirty state
 

@@ -113,21 +113,21 @@ Each user parameter can be driven by:
 
 ### Layout (Top → Bottom)
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ HEADER (single 80px row): Logo | Tabs | Preset Strip | Undo/Redo   │
-├─────────────────────────────────────────────────────────────────────┤
-│ PAGE A — SEQUENCER                                                 │
-│   Signal display                                                   │
-│   6-lane step grid                                                 │
-│   Right preset sidebar                                             │
-│   Footer detail dock                                               │
-├─────────────────────────────────────────────────────────────────────┤
-│ PAGE B — PRESETS                                                   │
-│   Search/filter browser | preset details | library metadata        │
-├─────────────────────────────────────────────────────────────────────┤
-│ PAGE C — SETTINGS                                                  │
-│   Embedded standalone Audio/MIDI device selector                   │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│ HEADER (single 80px row): Logo | Tabs | Preset Strip | Undo/Redo        │
+├──────────────────────────────────────────────────────────────────────────┤
+│ PAGE A — SEQUENCER                                                      │
+│   Signal display (98px waveform strip)                                  │
+│   6-lane step grid with lane-icon chips                                 │
+│   Right FX preset sidebar (300px) with category header + icon grid      │
+│   Footer detail dock                                                    │
+├──────────────────────────────────────────────────────────────────────────┤
+│ PAGE B — PRESETS                                                        │
+│   Search/filter browser | preset details | library metadata             │
+├──────────────────────────────────────────────────────────────────────────┤
+│ PAGE C — SETTINGS                                                       │
+│   Embedded standalone Audio/MIDI device selector                        │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### HeaderPanel Architecture
@@ -154,6 +154,20 @@ Inline SVG strings are parsed via `juce::parseXML()` → `juce::Drawable::create
 - **Resizable**: Editor scales from 75% to 200%
 - **Standalone integration**: Audio device, sample rate, buffer size, and MIDI routing are embedded inside the Settings tab via JUCE standalone host APIs
 - **Preset access**: Header dropdown and browser both read from the same metadata-backed preset ordering
+
+### SidebarPanel Architecture
+The right sidebar (`SidebarPanel`) is a reactive FX preset selector with three key visual layers:
+
+- **Header area (98 px)** — matches the waveform strip height. Shows a large procedural lane category icon, the lane name in bold, and a `SELECT PRESET` sublabel. The header background uses the lane colour as a faint left-edge accent and rounded chip styling.
+- **Preset icon grid** — 5-column square button grid. Each lane now exposes **16 factory presets + 4 user slots (U1–U4) = 20 total buttons**. Buttons have no text; preset identity is communicated entirely through procedural icons drawn in `paintOverChildren()`.
+- **Icon system** — `PresetIcons.h` provides a pure `juce::Path` / `juce::Graphics` drawing library (no raster assets). It defines:
+  - **Lane category icons** (`drawSliceIcon`, `drawLoopIcon`, `drawEnvelopeIcon`, `drawFxIcon`, `drawFilterIcon`) used in both the sidebar header and the StepGrid lane chips.
+  - **Preset icons** per lane type — parameterized shapes such as slice-count dots, loop direction arrows, envelope waveforms, FX effect symbols, and filter response curves.
+
+**Layout flow (left → right in sequencer page):**
+1. **Step grid** — 6 lanes × 16 steps, each lane chip shows the category icon + lane name + `ROW N`
+2. **Sidebar** — 300 px wide, right-aligned, reacts to the selected step
+3. **Waveform strip** — 98 px tall, sits above the step grid
 
 ### Color Mapping to Lanes (Zikada Palette)
 | Lane | Color | Hex |

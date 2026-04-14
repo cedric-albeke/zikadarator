@@ -127,12 +127,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
         auto* cell = sequencerPanel.getStepGrid().getCell(lane, step);
         if (cell != nullptr)
-        {
-            if (presetIndex >= 1 && presetIndex <= 4)
-                cell->setPresetLabel("U" + juce::String(presetIndex));
-            else
-                cell->setPresetLabel("");
-        }
+            cell->setPresetLabel(sidebarPanel.getPresetLabel(lane, presetIndex));
 
         sequencerPanel.getStepGrid().refreshLane(lane);
 
@@ -233,7 +228,7 @@ void PluginEditor::resized()
     footerPanel.setBounds(bounds.removeFromBottom(170));
     bounds.removeFromBottom(PM::kModuleGap);
 
-    sidebarPanel.setBounds(bounds.removeFromRight(260));
+    sidebarPanel.setBounds(bounds.removeFromRight(300));
     bounds.removeFromRight(PM::kModuleGap);
     sequencerPanel.setBounds(bounds);
 }
@@ -269,8 +264,8 @@ void PluginEditor::refreshSequencerFromState()
                 continue;
 
             cell->setActive(stepData.active);
-            if (stepData.active && stepData.presetIndex >= 1 && stepData.presetIndex <= 4)
-                cell->setPresetLabel("U" + juce::String(stepData.presetIndex));
+            if (stepData.active)
+                cell->setPresetLabel(sidebarPanel.getPresetLabel(lane, stepData.presetIndex));
             else
                 cell->setPresetLabel("");
         }
