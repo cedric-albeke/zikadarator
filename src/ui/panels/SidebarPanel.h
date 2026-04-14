@@ -11,6 +11,7 @@ struct LanePresetDef
 {
     juce::String label;
     juce::String tooltip;
+    juce::String infoText;
     int          presetIndex;
 };
 
@@ -22,10 +23,14 @@ public:
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     void setSelectedStep(int lane, int step, const StepData& stepData);
 
     juce::String getPresetLabel(int lane, int presetIndex) const;
+    juce::String getPresetTooltip(int lane, int presetIndex) const;
+    juce::String getPresetInfo(int lane, int presetIndex) const;
 
     std::function<void(int lane, int step, int presetIndex)> onPresetAssigned;
 
@@ -33,14 +38,16 @@ private:
     int currentLane{-1};
     int currentStep{-1};
     bool hasSelection{false};
+    int hoveredPresetIndex{-1};
 
-    juce::Label laneHeaderLabel;
+    juce::Label infoLabel;
     std::vector<std::unique_ptr<juce::TextButton>> presetButtons;
 
     std::vector<LanePresetDef> getPresetsForLane(int lane) const;
     void buildPresetGrid();
     void highlightPresetButton(int presetIndex);
     void notifyPresetAssigned(int presetIndex);
+    void updateInfoForHover(int presetIndex);
 };
 
 }

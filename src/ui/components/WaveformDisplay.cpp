@@ -14,53 +14,70 @@ WaveformDisplay::~WaveformDisplay()
 
 void WaveformDisplay::paint(juce::Graphics& g)
 {
-    g.fillAll(Colours::bgSurface);
-    
-    auto bounds = getLocalBounds().toFloat().reduced(4.0f);
+    g.fillAll(Colours::bgPrimary);
+
+    auto fullBounds = getLocalBounds();
+    ZikadaLookAndFeel::drawDeviceDisplay(g, fullBounds);
+
+    auto bounds = fullBounds.toFloat().reduced(6.0f);
     auto centreY = bounds.getCentreY();
-    auto height = bounds.getHeight() * 0.75f;
-    
+    auto height = bounds.getHeight() * 0.72f;
+
     juce::Path waveform;
     waveform.startNewSubPath(bounds.getX(), centreY);
-    
+
     for (int i = 0; i < numDisplayBins; ++i)
     {
         auto x = bounds.getX() + (static_cast<float>(i) / static_cast<float>(numDisplayBins - 1)) * bounds.getWidth();
         auto y = centreY - displayPeaks[i] * height * 0.5f;
         waveform.lineTo(x, y);
     }
-    
+
     for (int i = numDisplayBins - 1; i >= 0; --i)
     {
         auto x = bounds.getX() + (static_cast<float>(i) / static_cast<float>(numDisplayBins - 1)) * bounds.getWidth();
         auto y = centreY + displayPeaks[i] * height * 0.5f;
         waveform.lineTo(x, y);
     }
-    
+
     waveform.closeSubPath();
-    g.setColour(Colours::waveform.withAlpha(0.3f));
+    g.setColour(Colours::waveform.withAlpha(0.25f));
     g.fillPath(waveform);
-    
+
     g.setColour(Colours::waveform);
     g.strokePath(waveform, juce::PathStrokeType(1.5f));
-    
+
     for (int i = 1; i < numSlices; ++i)
     {
         auto x = bounds.getX() + (static_cast<float>(i) / static_cast<float>(numSlices)) * bounds.getWidth();
-        g.setColour(Colours::white10);
-        g.drawLine(x, bounds.getY(), x, bounds.getBottom(), 1.0f);
+        int lane = (i - 1) % 6;
+        auto laneCol = laneInfos[lane].colour.withAlpha(0.12f);
+        g.setColour(laneCol);
+        g.drawLine(x, bounds.getY() + 2.0f, x, bounds.getBottom() - 2.0f, 1.0f);
     }
-    
+
     auto playheadX = bounds.getX() + playheadPos.load() * bounds.getWidth();
+
+    juce::ColourGradient playheadGlow(
+        Colours::neonGreen.withAlpha(0.35f), playheadX, centreY,
+        Colours::neonGreen.withAlpha(0.0f), playheadX - 18.0f, centreY, true);
+    g.setGradientFill(playheadGlow);
+    g.fillRect(playheadX - 18.0f, bounds.getY(), 18.0f, bounds.getHeight());
+    playheadGlow.point1 = juce::Point<float>(playheadX, centreY);
+    playheadGlow.point2 = juce::Point<float>(playheadX + 18.0f, centreY);
+    g.setGradientFill(playheadGlow);
+    g.fillRect(playheadX, bounds.getY(), 18.0f, bounds.getHeight());
+
     g.setColour(Colours::neonGreen);
-    g.drawLine(playheadX, bounds.getY(), playheadX, bounds.getBottom(), 2.0f);
-    
-    g.setColour(Colours::neonGreen.withAlpha(0.3f));
-    g.drawLine(playheadX - 4.0f, bounds.getY(), playheadX - 4.0f, bounds.getBottom(), 1.0f);
-    g.drawLine(playheadX + 4.0f, bounds.getY(), playheadX + 4.0f, bounds.getBottom(), 1.0f);
-    
-    g.setColour(Colours::white10);
-    g.drawRect(bounds, 1.0f);
+    g.drawLine(playheadX, bounds.getY(), playheadX, bounds.getBottom(), 2.5f);
+
+    g.setColour(Colours::neonGreen.withAlpha(0.4f));
+    g.drawLine(playheadX - 3.0f, bounds.getY(), playheadX - 3.0f, bounds.getBottom(), 1.0f);
+    g.drawLine(playheadX + 3.0f, bounds.getY(), playheadX + 3.0f, bounds.getBottom(), 1.0f);
+
+    float headY = centreY;
+    g.setColour(Colours::neonGreen.brighter(0.3f));
+    g.fillEllipse(playheadX - 3.5f, headY - 3.5f, 7.0f, 7.0f);
 }
 
 void WaveformDisplay::resized()

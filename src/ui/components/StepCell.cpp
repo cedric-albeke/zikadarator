@@ -1,4 +1,5 @@
 #include "ui/components/StepCell.h"
+#include "ui/components/PresetIcons.h"
 
 namespace zikada {
 
@@ -53,15 +54,15 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.setColour(Colours::bgPrimary.withAlpha(0.90f));
         g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
                                  : juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
-        g.drawText(juce::String(stepIndex + 1), bounds, juce::Justification::centred, false);
+        auto numBounds = bounds.withHeight(bounds.getHeight() * 0.35f);
+        g.drawText(juce::String(stepIndex + 1), numBounds, juce::Justification::centred, false);
 
-        if (presetLabel.isNotEmpty())
+        if (presetIndex > 0)
         {
-            g.setColour(Colours::white.withAlpha(0.90f));
-            g.setFont(laf != nullptr ? laf->getSpaceMonoFont(9.0f, true)
-                                     : juce::Font(juce::FontOptions().withHeight(9.0f).withStyle("Bold")));
-            auto labelBounds = bounds.withTrimmedTop(bounds.getHeight() * 0.65f);
-            g.drawText(presetLabel, labelBounds, juce::Justification::centred, false);
+            auto iconBounds = bounds.withTrimmedTop(bounds.getHeight() * 0.30f)
+                                    .withTrimmedBottom(bounds.getHeight() * 0.10f)
+                                    .reduced(bounds.getWidth() * 0.10f, 0);
+            PresetIcons::drawPresetIcon(g, laneIndex, presetIndex, iconBounds, Colours::white.withAlpha(0.95f));
         }
     }
     else
@@ -149,9 +150,9 @@ void StepCell::setSelected(bool s)
     repaint();
 }
 
-void StepCell::setPresetLabel(const juce::String& label)
+void StepCell::setPresetIndex(int index)
 {
-    presetLabel = label;
+    presetIndex = index;
     repaint();
 }
 

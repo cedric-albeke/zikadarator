@@ -200,6 +200,14 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
     const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
 
     auto inner    = detailZone.reduced(kInnerPad, 4);
+
+    if (hasSelection && selectedLane >= 0)
+    {
+        const auto laneCol = laneInfos[selectedLane].colour;
+        g.setColour(laneCol.withAlpha(0.90f));
+        g.fillRoundedRectangle(inner.withWidth(3.5f).withTrimmedTop(6.0f).withTrimmedBottom(6.0f).toFloat(), 1.5f);
+    }
+
     auto labelRow = inner.removeFromTop(kLabelH).toFloat();
 
     g.setFont(laf != nullptr ? laf->getVcrFont(9.0f)
@@ -252,11 +260,7 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
 
 void FooterPanel::drawSignalModule(juce::Graphics& g) const
 {
-    const auto sf = signalZone.toFloat();
-    g.setColour(Colours::panelRaised.withAlpha(0.30f));
-    g.fillRoundedRectangle(sf, PanelMetrics::kInnerCorner);
-    g.setColour(Colours::white.withAlpha(0.08f));
-    g.drawRoundedRectangle(sf.reduced(0.5f), PanelMetrics::kInnerCorner, 1.0f);
+    ZikadaLookAndFeel::drawDeviceDisplay(g, signalZone);
 
     const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
     g.setFont(laf != nullptr ? laf->getVcrFont(9.0f)

@@ -127,7 +127,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
         auto* cell = sequencerPanel.getStepGrid().getCell(lane, step);
         if (cell != nullptr)
-            cell->setPresetLabel(sidebarPanel.getPresetLabel(lane, presetIndex));
+            cell->setPresetIndex(presetIndex);
 
         sequencerPanel.getStepGrid().refreshLane(lane);
 
@@ -265,9 +265,9 @@ void PluginEditor::refreshSequencerFromState()
 
             cell->setActive(stepData.active);
             if (stepData.active)
-                cell->setPresetLabel(sidebarPanel.getPresetLabel(lane, stepData.presetIndex));
+                cell->setPresetIndex(stepData.presetIndex);
             else
-                cell->setPresetLabel("");
+                cell->setPresetIndex(0);
         }
 
         sequencerPanel.getStepGrid().refreshLane(lane);

@@ -26,8 +26,8 @@ public:
     void setSelected(bool isSelected);
     bool isSelected() const { return selected; }
 
-    void setPresetLabel(const juce::String& label);
-    const juce::String& getPresetLabel() const { return presetLabel; }
+    void setPresetIndex(int index);
+    int getPresetIndex() const { return presetIndex; }
 
     std::function<void()> onSelected;
 
@@ -38,7 +38,7 @@ private:
     bool tied{false};
     bool playing{false};
     bool selected{false};
-    juce::String presetLabel;
+    int presetIndex{0};
 };
 
 }

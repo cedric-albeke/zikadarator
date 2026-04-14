@@ -136,7 +136,7 @@ void configureFilterForStep(FilterEngine& filterEngine, int presetIndex, const U
     filterEngine.setEnabled(true);
 }
 
-void processFxLane(float* left, float* right, int numSamples, int presetIndex, const UserSlotData& slotData,
+void processFxLane(float* left, float* right, int numSamples, int lane, int presetIndex, const UserSlotData& slotData,
                    DelayEngine& delayEngine, ReverbEngine& reverbEngine,
                    BitcrushEngine& bitcrushEngine, PitchEngine& pitchEngine, FilterEngine& toneFilter,
                    double bpm, double phaseStart, double phaseDelta)
@@ -145,65 +145,300 @@ void processFxLane(float* left, float* right, int numSamples, int presetIndex, c
     reverbEngine.setEnabled(false);
     bitcrushEngine.setEnabled(false);
     pitchEngine.setEnabled(false);
+    toneFilter.setEnabled(false);
 
     const double beatSeconds = getBeatSeconds(bpm);
     const float phase = static_cast<float>(std::fmod(phaseStart, 1.0));
 
-    switch (presetIndex)
+    if (lane == kFX1Lane)
     {
-        case 6:
-            reverbEngine.setRoomSize(juce::jlimit(0.1f, 1.0f, slotData.delayFeedback));
-            reverbEngine.setDamping(juce::jlimit(0.0f, 1.0f, 1.0f - slotData.filterResonance * 0.1f));
-            reverbEngine.setWidth(juce::jlimit(0.0f, 1.0f, 0.5f + slotData.pan * 0.5f));
-            reverbEngine.setMix(slotData.delayMix);
-            reverbEngine.setEnabled(true);
-            reverbEngine.process(left, right, numSamples);
-            break;
-        case 7:
-            delayEngine.setDelayTime(0.012f + 0.01f * (0.5f + 0.5f * std::sin(phase * 6.2831853f)));
-            delayEngine.setFeedback(juce::jlimit(0.0f, 0.35f, slotData.delayFeedback * 0.4f));
-            delayEngine.setMix(juce::jlimit(0.15f, 0.65f, slotData.delayMix * 0.65f));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            break;
-        case 8:
-            bitcrushEngine.setBitDepth(juce::jmap(slotData.filterResonance, 0.1f, 10.0f, 12.0f, 3.0f));
-            bitcrushEngine.setSampleRateReduction(juce::jmap(slotData.delayTime, 0.0f, 1.0f, 16000.0f, 1800.0f));
-            bitcrushEngine.setEnabled(true);
-            bitcrushEngine.process(left, right, numSamples);
-            break;
-        case 9:
-            pitchEngine.setSemitones(juce::jmap(slotData.pan, -1.0f, 1.0f, -12.0f, 12.0f));
-            pitchEngine.setMix(slotData.delayMix);
-            pitchEngine.setEnabled(true);
-            pitchEngine.process(left, right, numSamples);
-            break;
-        case 10:
-            delayEngine.setDelayTime(0.0035f + 0.004f * (0.5f + 0.5f * std::sin(phase * 6.2831853f)));
-            delayEngine.setFeedback(juce::jlimit(0.25f, 0.92f, slotData.delayFeedback));
-            delayEngine.setMix(juce::jlimit(0.15f, 0.72f, slotData.delayMix * 0.65f));
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            break;
-        case 11:
-            toneFilter.setFilterType(FilterEngine::FilterType::BandReject);
-            toneFilter.setCutoff(juce::jlimit(180.0f, 6200.0f, 280.0f + 4200.0f * (0.5f + 0.5f * std::sin(phase * 6.2831853f))));
-            toneFilter.setResonance(juce::jlimit(0.8f, 8.0f, slotData.filterResonance));
-            toneFilter.setEnabled(true);
-            toneFilter.process(left, right, numSamples);
-            break;
-        case 12:
-            applyTremolo(left, right, numSamples, juce::jlimit(0.2f, 1.0f, slotData.delayMix), phaseStart, phaseDelta);
-            applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
-            return;
-        case 5:
-        default:
-            delayEngine.setDelayTime(juce::jlimit(0.01f, 1.0f, slotData.delayTime * static_cast<float>(beatSeconds)));
-            delayEngine.setFeedback(slotData.delayFeedback);
-            delayEngine.setMix(slotData.delayMix);
-            delayEngine.setEnabled(true);
-            delayEngine.process(left, right, numSamples);
-            break;
+        switch (presetIndex)
+        {
+            case 5:
+                delayEngine.setDelayTime(juce::jlimit(0.01f, 1.0f, slotData.delayTime * static_cast<float>(beatSeconds)));
+                delayEngine.setFeedback(slotData.delayFeedback * 0.5f);
+                delayEngine.setMix(slotData.delayMix);
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+            case 6:
+                delayEngine.setDelayTime(0.012f + 0.01f * (0.5f + 0.5f * std::sin(phase * 6.2831853f)));
+                delayEngine.setFeedback(juce::jlimit(0.0f, 0.35f, slotData.delayFeedback * 0.4f));
+                delayEngine.setMix(juce::jlimit(0.15f, 0.65f, slotData.delayMix * 0.65f));
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+            case 7:
+                reverbEngine.setRoomSize(juce::jlimit(0.1f, 0.5f, slotData.delayFeedback));
+                reverbEngine.setDamping(juce::jlimit(0.0f, 1.0f, 1.0f - slotData.filterResonance * 0.1f));
+                reverbEngine.setWidth(juce::jlimit(0.0f, 1.0f, 0.5f + slotData.pan * 0.5f));
+                reverbEngine.setMix(slotData.delayMix);
+                reverbEngine.setEnabled(true);
+                reverbEngine.process(left, right, numSamples);
+                break;
+            case 8:
+                reverbEngine.setRoomSize(juce::jlimit(0.5f, 1.0f, slotData.delayFeedback));
+                reverbEngine.setDamping(juce::jlimit(0.0f, 0.6f, 1.0f - slotData.filterResonance * 0.15f));
+                reverbEngine.setWidth(juce::jlimit(0.0f, 1.0f, 0.5f + slotData.pan * 0.5f));
+                reverbEngine.setMix(juce::jlimit(0.2f, 0.9f, slotData.delayMix));
+                reverbEngine.setEnabled(true);
+                reverbEngine.process(left, right, numSamples);
+                break;
+            case 9:
+                delayEngine.setDelayTime(0.015f + 0.008f * std::sin(phase * 6.2831853f));
+                delayEngine.setFeedback(0.05f);
+                delayEngine.setMix(juce::jlimit(0.2f, 0.5f, slotData.delayMix * 0.4f));
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+            case 10:
+                delayEngine.setDelayTime(0.020f + 0.012f * std::sin(phase * 6.2831853f));
+                delayEngine.setFeedback(0.15f);
+                delayEngine.setMix(juce::jlimit(0.35f, 0.75f, slotData.delayMix * 0.6f));
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+            case 11:
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i, 1.0));
+                    toneFilter.setFilterType(FilterEngine::FilterType::Comb);
+                    toneFilter.setCutoff(juce::jlimit(200.0f, 4000.0f, 800.0f + 1200.0f * std::sin(modPhase * 3.14159265f)));
+                    toneFilter.setResonance(juce::jlimit(2.0f, 10.0f, 4.0f + slotData.filterResonance));
+                    toneFilter.setEnabled(true);
+                    left[i] = toneFilter.processSampleLeft(left[i]);
+                    right[i] = toneFilter.processSampleRight(right[i]);
+                }
+                break;
+            case 12:
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i * 2.0, 1.0));
+                    toneFilter.setFilterType(FilterEngine::FilterType::Comb);
+                    toneFilter.setCutoff(juce::jlimit(200.0f, 6000.0f, 1000.0f + 2000.0f * std::sin(modPhase * 6.2831853f)));
+                    toneFilter.setResonance(juce::jlimit(2.0f, 10.0f, 4.0f + slotData.filterResonance));
+                    toneFilter.setEnabled(true);
+                    left[i] = toneFilter.processSampleLeft(left[i]);
+                    right[i] = toneFilter.processSampleRight(right[i]);
+                }
+                break;
+            case 13:
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i, 1.0));
+                    toneFilter.setFilterType(FilterEngine::FilterType::BandReject);
+                    toneFilter.setCutoff(juce::jlimit(300.0f, 3000.0f, 600.0f + 1200.0f * std::sin(modPhase * 3.14159265f)));
+                    toneFilter.setResonance(juce::jlimit(1.0f, 6.0f, 2.0f + slotData.filterResonance * 0.3f));
+                    toneFilter.setEnabled(true);
+                    left[i] = toneFilter.processSampleLeft(left[i]);
+                    right[i] = toneFilter.processSampleRight(right[i]);
+                }
+                break;
+            case 14:
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i * 1.5, 1.0));
+                    toneFilter.setFilterType(FilterEngine::FilterType::BandReject);
+                    toneFilter.setCutoff(juce::jlimit(200.0f, 5000.0f, 800.0f + 2000.0f * std::sin(modPhase * 6.2831853f)));
+                    toneFilter.setResonance(juce::jlimit(3.0f, 12.0f, 5.0f + slotData.filterResonance));
+                    toneFilter.setEnabled(true);
+                    left[i] = toneFilter.processSampleLeft(left[i]);
+                    right[i] = toneFilter.processSampleRight(right[i]);
+                }
+                break;
+            case 15:
+                applyTremolo(left, right, numSamples, juce::jlimit(0.2f, 0.8f, slotData.delayMix), phaseStart, phaseDelta);
+                applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+                return;
+            case 16:
+                applyTremolo(left, right, numSamples, juce::jlimit(0.5f, 1.0f, slotData.delayMix), phaseStart * 2.0, phaseDelta * 2.0);
+                applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
+                return;
+            case 17:
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    left[i] = std::tanh(left[i] * 2.5f);
+                    right[i] = std::tanh(right[i] * 2.5f);
+                }
+                break;
+            case 18:
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    left[i] = std::tanh(left[i] * 6.0f);
+                    right[i] = std::tanh(right[i] * 6.0f);
+                }
+                break;
+            case 19:
+                pitchEngine.setSemitones(juce::jmap(slotData.pan, -1.0f, 1.0f, -3.0f, 3.0f));
+                pitchEngine.setMix(juce::jlimit(0.2f, 0.6f, slotData.delayMix * 0.5f));
+                pitchEngine.setEnabled(true);
+                pitchEngine.process(left, right, numSamples);
+                break;
+            case 20:
+                bitcrushEngine.setBitDepth(juce::jmap(slotData.filterResonance, 0.1f, 10.0f, 10.0f, 5.0f));
+                bitcrushEngine.setSampleRateReduction(juce::jmap(slotData.delayTime, 0.0f, 1.0f, 12000.0f, 4000.0f));
+                bitcrushEngine.setEnabled(true);
+                bitcrushEngine.process(left, right, numSamples);
+                pitchEngine.setSemitones(juce::jmap(slotData.pan, -1.0f, 1.0f, -5.0f, 5.0f));
+                pitchEngine.setMix(0.4f);
+                pitchEngine.setEnabled(true);
+                pitchEngine.process(left, right, numSamples);
+                break;
+            default:
+                delayEngine.setDelayTime(juce::jlimit(0.01f, 1.0f, slotData.delayTime * static_cast<float>(beatSeconds)));
+                delayEngine.setFeedback(slotData.delayFeedback * 0.5f);
+                delayEngine.setMix(slotData.delayMix);
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+        }
+    }
+    else
+    {
+        switch (presetIndex)
+        {
+            case 5:
+                bitcrushEngine.setBitDepth(juce::jmap(slotData.filterResonance, 0.1f, 10.0f, 12.0f, 7.0f));
+                bitcrushEngine.setSampleRateReduction(juce::jmap(slotData.delayTime, 0.0f, 1.0f, 16000.0f, 8000.0f));
+                bitcrushEngine.setEnabled(true);
+                bitcrushEngine.process(left, right, numSamples);
+                break;
+            case 6:
+                bitcrushEngine.setBitDepth(juce::jmap(slotData.filterResonance, 0.1f, 10.0f, 8.0f, 2.0f));
+                bitcrushEngine.setSampleRateReduction(juce::jmap(slotData.delayTime, 0.0f, 1.0f, 12000.0f, 1800.0f));
+                bitcrushEngine.setEnabled(true);
+                bitcrushEngine.process(left, right, numSamples);
+                break;
+            case 7:
+                pitchEngine.setSemitones(juce::jmap(slotData.pan, -1.0f, 1.0f, 0.0f, 12.0f));
+                pitchEngine.setMix(slotData.delayMix);
+                pitchEngine.setEnabled(true);
+                pitchEngine.process(left, right, numSamples);
+                break;
+            case 8:
+                pitchEngine.setSemitones(juce::jmap(slotData.pan, -1.0f, 1.0f, -12.0f, 0.0f));
+                pitchEngine.setMix(slotData.delayMix);
+                pitchEngine.setEnabled(true);
+                pitchEngine.process(left, right, numSamples);
+                break;
+            case 9:
+                pitchEngine.setSemitones(-7.0f);
+                pitchEngine.setMix(juce::jlimit(0.3f, 0.8f, slotData.delayMix));
+                pitchEngine.setEnabled(true);
+                pitchEngine.process(left, right, numSamples);
+                toneFilter.setFilterType(FilterEngine::FilterType::LowPass12);
+                toneFilter.setCutoff(800.0f);
+                toneFilter.setResonance(1.5f);
+                toneFilter.setEnabled(true);
+                toneFilter.process(left, right, numSamples);
+                break;
+            case 10:
+                delayEngine.setDelayTime(0.003f + 0.002f * std::sin(phase * 12.5663706f));
+                delayEngine.setFeedback(0.1f);
+                delayEngine.setMix(0.5f);
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+            case 11:
+                delayEngine.setDelayTime(juce::jlimit(0.05f, 0.8f, slotData.delayTime * static_cast<float>(beatSeconds) * 2.0f));
+                delayEngine.setFeedback(juce::jlimit(0.1f, 0.5f, slotData.delayFeedback * 0.5f));
+                delayEngine.setMix(juce::jlimit(0.2f, 0.7f, slotData.delayMix));
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+            case 12:
+                delayEngine.setDelayTime(juce::jlimit(0.05f, 1.0f, slotData.delayTime * static_cast<float>(beatSeconds) * 2.5f));
+                delayEngine.setFeedback(juce::jlimit(0.2f, 0.75f, slotData.delayFeedback));
+                delayEngine.setMix(juce::jlimit(0.3f, 0.8f, slotData.delayMix));
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+            case 13:
+                toneFilter.setFilterType(FilterEngine::FilterType::Comb);
+                toneFilter.setCutoff(3000.0f);
+                toneFilter.setResonance(juce::jlimit(4.0f, 14.0f, 8.0f + slotData.filterResonance));
+                toneFilter.setEnabled(true);
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    float rm = std::sin(static_cast<float>(i) * 0.15f) * 0.15f;
+                    left[i] *= (1.0f + rm);
+                    right[i] *= (1.0f + rm);
+                    left[i] = toneFilter.processSampleLeft(left[i]);
+                    right[i] = toneFilter.processSampleRight(right[i]);
+                }
+                break;
+            case 14:
+                bitcrushEngine.setBitDepth(4.0f);
+                bitcrushEngine.setSampleRateReduction(6000.0f);
+                bitcrushEngine.setEnabled(true);
+                bitcrushEngine.process(left, right, numSamples);
+                toneFilter.setFilterType(FilterEngine::FilterType::Comb);
+                toneFilter.setCutoff(2500.0f);
+                toneFilter.setResonance(12.0f);
+                toneFilter.setEnabled(true);
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    float rm = std::sin(static_cast<float>(i) * 0.25f) * 0.35f;
+                    left[i] *= (1.0f + rm);
+                    right[i] *= (1.0f + rm);
+                    left[i] = toneFilter.processSampleLeft(left[i]);
+                    right[i] = toneFilter.processSampleRight(right[i]);
+                }
+                break;
+            case 15:
+                toneFilter.setFilterType(FilterEngine::FilterType::BandPass);
+                toneFilter.setCutoff(juce::jlimit(800.0f, 8000.0f, slotData.filterCutoff));
+                toneFilter.setResonance(juce::jlimit(2.0f, 10.0f, slotData.filterResonance));
+                toneFilter.setEnabled(true);
+                toneFilter.process(left, right, numSamples);
+                break;
+            case 16:
+                toneFilter.setFilterType(FilterEngine::FilterType::LowPass12);
+                toneFilter.setCutoff(juce::jlimit(100.0f, 2000.0f, slotData.filterCutoff * 0.5f));
+                toneFilter.setResonance(juce::jlimit(1.0f, 8.0f, slotData.filterResonance));
+                toneFilter.setEnabled(true);
+                toneFilter.process(left, right, numSamples);
+                break;
+            case 17:
+                bitcrushEngine.setBitDepth(juce::jmap(slotData.filterResonance, 0.1f, 10.0f, 6.0f, 3.0f));
+                bitcrushEngine.setSampleRateReduction(juce::jmap(slotData.delayTime, 0.0f, 1.0f, 14000.0f, 3000.0f));
+                bitcrushEngine.setEnabled(true);
+                bitcrushEngine.process(left, right, numSamples);
+                break;
+            case 18:
+                pitchEngine.setSemitones(juce::jmap(phase, 0.0f, 1.0f, -7.0f, 7.0f));
+                pitchEngine.setMix(juce::jlimit(0.3f, 0.7f, slotData.delayMix));
+                pitchEngine.setEnabled(true);
+                pitchEngine.process(left, right, numSamples);
+                break;
+            case 19:
+                reverbEngine.setRoomSize(juce::jlimit(0.7f, 1.0f, slotData.delayFeedback));
+                reverbEngine.setDamping(0.2f);
+                reverbEngine.setWidth(0.8f);
+                reverbEngine.setMix(juce::jlimit(0.4f, 0.9f, slotData.delayMix));
+                reverbEngine.setEnabled(true);
+                reverbEngine.process(left, right, numSamples);
+                break;
+            case 20:
+                pitchEngine.setSemitones(12.0f);
+                pitchEngine.setMix(0.35f);
+                pitchEngine.setEnabled(true);
+                pitchEngine.process(left, right, numSamples);
+                reverbEngine.setRoomSize(juce::jlimit(0.5f, 1.0f, slotData.delayFeedback));
+                reverbEngine.setDamping(0.3f);
+                reverbEngine.setWidth(0.7f);
+                reverbEngine.setMix(juce::jlimit(0.3f, 0.8f, slotData.delayMix));
+                reverbEngine.setEnabled(true);
+                reverbEngine.process(left, right, numSamples);
+                break;
+            default:
+                delayEngine.setDelayTime(juce::jlimit(0.01f, 1.0f, slotData.delayTime * static_cast<float>(beatSeconds)));
+                delayEngine.setFeedback(slotData.delayFeedback);
+                delayEngine.setMix(slotData.delayMix);
+                delayEngine.setEnabled(true);
+                delayEngine.process(left, right, numSamples);
+                break;
+        }
     }
 
     applyGainPan(left, right, numSamples, slotData.volume, slotData.pan);
@@ -450,7 +685,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     if (fx1Step.active && fx1Step.presetIndex > 0 && isLaneActive(kFX1Lane))
     {
-        processFxLane(wetLeft.data(), wetRight.data(), numSamples, fx1Step.presetIndex, fx1Slot,
+        processFxLane(wetLeft.data(), wetRight.data(), numSamples, kFX1Lane, fx1Step.presetIndex, fx1Slot,
                       fx1DelayEngine, fx1ReverbEngine, fx1BitcrushEngine, fx1PitchEngine, fx1ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
         applyLaneMix(kFX1Lane, wetLeft.data(), wetRight.data(), numSamples);
@@ -478,7 +713,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     if (fx2Step.active && fx2Step.presetIndex > 0 && isLaneActive(kFX2Lane))
     {
-        processFxLane(wetLeft.data(), wetRight.data(), numSamples, fx2Step.presetIndex, fx2Slot,
+        processFxLane(wetLeft.data(), wetRight.data(), numSamples, kFX2Lane, fx2Step.presetIndex, fx2Slot,
                       fx2DelayEngine, fx2ReverbEngine, fx2BitcrushEngine, fx2PitchEngine, fx2ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
         applyLaneMix(kFX2Lane, wetLeft.data(), wetRight.data(), numSamples);
