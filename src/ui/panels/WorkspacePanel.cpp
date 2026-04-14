@@ -478,7 +478,7 @@ void WorkspacePanel::updatePresetInfoPanels()
                             juce::dontSendNotification);
 
     const auto storagePath = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-                                 .getChildFile("ZIKARATOR")
+                                 .getChildFile("ZIKADARATOR")
                                  .getChildFile("Presets")
                                  .getFullPathName();
     presetInfoBodyB.setText("User presets are written to:\n" + storagePath
