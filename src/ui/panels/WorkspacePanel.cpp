@@ -45,6 +45,57 @@ void configureCombo(juce::ComboBox& combo)
     combo.setColour(juce::ComboBox::arrowColourId, Colours::neonGreen);
 }
 
+void configureValueLabel(juce::Label& label)
+{
+    configureLabel(label, 11.0f, Colours::white50, juce::Justification::centredLeft, true);
+}
+
+void styleComponentTree(juce::Component& component)
+{
+    if (auto* combo = dynamic_cast<juce::ComboBox*>(&component))
+    {
+        combo->setColour(juce::ComboBox::backgroundColourId, Colours::bgSurface);
+        combo->setColour(juce::ComboBox::textColourId, Colours::white85);
+        combo->setColour(juce::ComboBox::outlineColourId, Colours::white10);
+        combo->setColour(juce::ComboBox::arrowColourId, Colours::neonGreen);
+    }
+    else if (auto* label = dynamic_cast<juce::Label*>(&component))
+    {
+        label->setColour(juce::Label::textColourId, Colours::white85);
+        label->setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
+    }
+    else if (auto* toggle = dynamic_cast<juce::ToggleButton*>(&component))
+    {
+        toggle->setColour(juce::ToggleButton::textColourId, Colours::white85);
+        toggle->setColour(juce::ToggleButton::tickColourId, Colours::neonGreen);
+        toggle->setColour(juce::ToggleButton::tickDisabledColourId, Colours::white50);
+    }
+    else if (auto* textButton = dynamic_cast<juce::TextButton*>(&component))
+    {
+        textButton->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
+        textButton->setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
+        textButton->setColour(juce::TextButton::textColourOffId, Colours::white85);
+        textButton->setColour(juce::TextButton::textColourOnId, Colours::white);
+    }
+    else if (auto* listBox = dynamic_cast<juce::ListBox*>(&component))
+    {
+        listBox->setColour(juce::ListBox::backgroundColourId, Colours::bgSurface);
+        listBox->setColour(juce::ListBox::outlineColourId, Colours::white10);
+    }
+    else if (auto* slider = dynamic_cast<juce::Slider*>(&component))
+    {
+        slider->setColour(juce::Slider::trackColourId, Colours::white10);
+        slider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
+        slider->setColour(juce::Slider::backgroundColourId, juce::Colours::transparentBlack);
+        slider->setColour(juce::Slider::textBoxTextColourId, Colours::white85);
+        slider->setColour(juce::Slider::textBoxBackgroundColourId, Colours::bgSurface);
+        slider->setColour(juce::Slider::textBoxOutlineColourId, Colours::white10);
+    }
+
+    for (int i = 0; i < component.getNumChildComponents(); ++i)
+        styleComponentTree(*component.getChildComponent(i));
+}
+
 } // namespace
 
 WorkspacePanel::WorkspacePanel()
@@ -65,9 +116,16 @@ WorkspacePanel::WorkspacePanel()
 
     configureLabel(settingsLeadLabel, 13.0f, Colours::white85, juce::Justification::topLeft);
     configureLabel(settingsDeviceTitle, 13.0f, Colours::neonGreen, juce::Justification::topLeft, true);
+    configureLabel(settingsProductTitle, 13.0f, Colours::neonGreen, juce::Justification::topLeft, true);
     configureLabel(settingsNotesTitle, 13.0f, Colours::neonGreen, juce::Justification::topLeft, true);
     configureLabel(settingsNotesBody, 12.0f, Colours::white85, juce::Justification::topLeft);
     configureLabel(standaloneMuteLabel, 11.0f, Colours::white50, juce::Justification::centredLeft, true);
+    configureValueLabel(dryWetLabel);
+    configureValueLabel(outputGainLabel);
+    configureValueLabel(tempoLabel);
+    configureValueLabel(mixModeLabel);
+    configureValueLabel(clockSourceLabel);
+    configureValueLabel(stepResolutionLabel);
 
     presetList.setModel(this);
     presetList.setRowHeight(52);
@@ -94,14 +152,17 @@ WorkspacePanel::WorkspacePanel()
     configureFilterButton(allFilterButton);
     configureFilterButton(factoryFilterButton);
     configureFilterButton(userFilterButton);
+    configureFilterButton(favoriteFilterButton);
     allFilterButton.onClick = [this] { setPresetSourceFilter(PresetSourceFilter::All); };
     factoryFilterButton.onClick = [this] { setPresetSourceFilter(PresetSourceFilter::Factory); };
     userFilterButton.onClick = [this] { setPresetSourceFilter(PresetSourceFilter::User); };
+    favoriteFilterButton.onClick = [this] { setPresetSourceFilter(PresetSourceFilter::Favorites); };
     allFilterButton.setToggleState(true, juce::dontSendNotification);
 
     configureActionButton(saveButton, Colours::neonGreen);
     configureActionButton(loadButton, Colours::laneFX2);
     configureActionButton(deleteButton, Colours::warning);
+    configureActionButton(favoritePresetButton, Colours::bgAccent.brighter(0.08f));
 
     saveButton.onClick = [this]
     {
@@ -121,13 +182,45 @@ WorkspacePanel::WorkspacePanel()
             onDeletePreset(selectedPresetRow);
     };
 
+    favoritePresetButton.onClick = [this]
+    {
+        if (selectedPresetRow < 0)
+            return;
+
+        if (onToggleFavoritePreset)
+            onToggleFavoritePreset(selectedPresetRow);
+    };
+
     settingsLeadLabel.setText("Standalone audio and MIDI device configuration now lives inside this Settings tab, so the old external host dialog is no longer the only place to change devices, buffer size, sample rate, and MIDI inputs.", juce::dontSendNotification);
     settingsDeviceTitle.setText("AUDIO / MIDI DEVICE SETUP", juce::dontSendNotification);
-    settingsNotesTitle.setText("PRODUCT SETTINGS NEXT", juce::dontSendNotification);
-    settingsNotesBody.setText("This page now hosts the real standalone device selector. Product-specific preferences like workflow, scaling, or routing can still be layered in underneath afterward.", juce::dontSendNotification);
+    settingsProductTitle.setText("PRODUCT SETTINGS", juce::dontSendNotification);
+    settingsNotesTitle.setText("SETTINGS NOTES", juce::dontSendNotification);
+    settingsNotesBody.setText("The upper panel is the real JUCE standalone device selector. The lower product settings keep global editor behavior, clocking, and output controls close to the host-device setup instead of scattering them through the editor.", juce::dontSendNotification);
     standaloneMuteLabel.setText("FEEDBACK LOOP", juce::dontSendNotification);
     standaloneMuteButton.setColour(juce::ToggleButton::textColourId, Colours::white85);
     standaloneMuteButton.setClickingTogglesState(true);
+    dryWetLabel.setText("GLOBAL DRY/WET", juce::dontSendNotification);
+    outputGainLabel.setText("OUTPUT GAIN", juce::dontSendNotification);
+    tempoLabel.setText("FREE TEMPO", juce::dontSendNotification);
+    mixModeLabel.setText("MIX MODE", juce::dontSendNotification);
+    clockSourceLabel.setText("CLOCK SOURCE", juce::dontSendNotification);
+    stepResolutionLabel.setText("STEP RESOLUTION", juce::dontSendNotification);
+
+    configureSlider(dryWetSlider);
+    configureSlider(outputGainSlider);
+    configureSlider(tempoSlider);
+    dryWetSlider.setRange(0.0, 100.0, 0.1);
+    outputGainSlider.setRange(-24.0, 24.0, 0.1);
+    tempoSlider.setRange(20.0, 300.0, 0.1);
+
+    configureCombo(mixModeBox);
+    mixModeBox.addItemList({"Linear", "Ducking", "Sidechain", "Multiply", "Screen", "Difference"}, 1);
+    configureCombo(clockSourceBox);
+    clockSourceBox.addItemList({"Host", "Free"}, 1);
+    configureCombo(stepResolutionBox);
+    stepResolutionBox.addItemList({"1/8", "1/4", "1/2"}, 1);
+
+    bypassToggle.setColour(juce::ToggleButton::textColourId, Colours::white85);
 
     rebuildStandaloneSettingsComponent();
 
@@ -149,23 +242,45 @@ WorkspacePanel::WorkspacePanel()
     addAndMakeVisible(allFilterButton);
     addAndMakeVisible(factoryFilterButton);
     addAndMakeVisible(userFilterButton);
+    addAndMakeVisible(favoriteFilterButton);
     addAndMakeVisible(saveButton);
     addAndMakeVisible(loadButton);
     addAndMakeVisible(deleteButton);
+    addAndMakeVisible(favoritePresetButton);
 
     addAndMakeVisible(settingsLeadLabel);
     addAndMakeVisible(settingsDeviceTitle);
+    addAndMakeVisible(settingsProductTitle);
     addAndMakeVisible(settingsNotesTitle);
     addAndMakeVisible(settingsNotesBody);
     addAndMakeVisible(standaloneMuteLabel);
     addAndMakeVisible(standaloneMuteButton);
+    addAndMakeVisible(dryWetLabel);
+    addAndMakeVisible(outputGainLabel);
+    addAndMakeVisible(tempoLabel);
+    addAndMakeVisible(mixModeLabel);
+    addAndMakeVisible(clockSourceLabel);
+    addAndMakeVisible(stepResolutionLabel);
+    addAndMakeVisible(bypassToggle);
+    addAndMakeVisible(dryWetSlider);
+    addAndMakeVisible(outputGainSlider);
+    addAndMakeVisible(tempoSlider);
+    addAndMakeVisible(mixModeBox);
+    addAndMakeVisible(clockSourceBox);
+    addAndMakeVisible(stepResolutionBox);
 
     refreshCopy();
 }
 
 void WorkspacePanel::bindToParameters(juce::AudioProcessorValueTreeState& apvts)
 {
-    juce::ignoreUnused(apvts);
+    dryWetAttachment = std::make_unique<SliderAttachment>(apvts, ParameterIDs::dryWet, dryWetSlider);
+    outputGainAttachment = std::make_unique<SliderAttachment>(apvts, ParameterIDs::outputGain, outputGainSlider);
+    tempoAttachment = std::make_unique<SliderAttachment>(apvts, ParameterIDs::tempo, tempoSlider);
+    mixModeAttachment = std::make_unique<ComboBoxAttachment>(apvts, ParameterIDs::mixMode, mixModeBox);
+    clockSourceAttachment = std::make_unique<ComboBoxAttachment>(apvts, ParameterIDs::clockSource, clockSourceBox);
+    stepResolutionAttachment = std::make_unique<ComboBoxAttachment>(apvts, ParameterIDs::stepResolution, stepResolutionBox);
+    bypassAttachment = std::make_unique<ButtonAttachment>(apvts, ParameterIDs::bypass, bypassToggle);
     rebuildStandaloneSettingsComponent();
 }
 
@@ -253,16 +368,32 @@ void WorkspacePanel::applyVisibility()
     allFilterButton.setVisible(showPresets);
     factoryFilterButton.setVisible(showPresets);
     userFilterButton.setVisible(showPresets);
+    favoriteFilterButton.setVisible(showPresets);
     saveButton.setVisible(showPresets);
     loadButton.setVisible(showPresets);
     deleteButton.setVisible(showPresets);
+    favoritePresetButton.setVisible(showPresets);
 
     settingsLeadLabel.setVisible(!showPresets);
     settingsDeviceTitle.setVisible(!showPresets);
+    settingsProductTitle.setVisible(!showPresets);
     settingsNotesTitle.setVisible(!showPresets);
     settingsNotesBody.setVisible(!showPresets);
     standaloneMuteLabel.setVisible(!showPresets && standaloneDeviceSelector != nullptr);
     standaloneMuteButton.setVisible(!showPresets && standaloneDeviceSelector != nullptr);
+    dryWetLabel.setVisible(!showPresets);
+    outputGainLabel.setVisible(!showPresets);
+    tempoLabel.setVisible(!showPresets);
+    mixModeLabel.setVisible(!showPresets);
+    clockSourceLabel.setVisible(!showPresets);
+    stepResolutionLabel.setVisible(!showPresets);
+    bypassToggle.setVisible(!showPresets);
+    dryWetSlider.setVisible(!showPresets);
+    outputGainSlider.setVisible(!showPresets);
+    tempoSlider.setVisible(!showPresets);
+    mixModeBox.setVisible(!showPresets);
+    clockSourceBox.setVisible(!showPresets);
+    stepResolutionBox.setVisible(!showPresets);
     if (standaloneDeviceSelector != nullptr)
         standaloneDeviceSelector->setVisible(!showPresets);
 }
@@ -301,6 +432,7 @@ void WorkspacePanel::rebuildStandaloneSettingsComponent()
                                                                                          true,
                                                                                          false);
         addAndMakeVisible(*standaloneDeviceSelector);
+        styleStandaloneSettingsComponent();
         muteInputValue.referTo(holder->getMuteInputValue());
         standaloneMuteButton.getToggleStateValue().referTo(muteInputValue);
         const bool hasFeedbackToggle = holder->getProcessorHasPotentialFeedbackLoop();
@@ -310,12 +442,23 @@ void WorkspacePanel::rebuildStandaloneSettingsComponent()
    #endif
 }
 
+void WorkspacePanel::styleStandaloneSettingsComponent()
+{
+    if (standaloneDeviceSelector == nullptr)
+        return;
+
+    standaloneDeviceSelector->setColour(juce::ListBox::backgroundColourId, Colours::bgSurface);
+    standaloneDeviceSelector->setColour(juce::ListBox::outlineColourId, Colours::white10);
+    styleComponentTree(*standaloneDeviceSelector);
+}
+
 void WorkspacePanel::setPresetSourceFilter(PresetSourceFilter filter)
 {
     presetSourceFilter = filter;
     allFilterButton.setToggleState(filter == PresetSourceFilter::All, juce::dontSendNotification);
     factoryFilterButton.setToggleState(filter == PresetSourceFilter::Factory, juce::dontSendNotification);
     userFilterButton.setToggleState(filter == PresetSourceFilter::User, juce::dontSendNotification);
+    favoriteFilterButton.setToggleState(filter == PresetSourceFilter::Favorites, juce::dontSendNotification);
     rebuildPresetFilter();
 }
 
@@ -341,6 +484,11 @@ void WorkspacePanel::updatePresetInfoPanels()
     presetInfoBodyB.setText("User presets are written to:\n" + storagePath
                                 + "\n\nFactory presets remain embedded in the binary for fast browsing and instant restore.",
                             juce::dontSendNotification);
+
+    if (selectedPresetRow >= 0 && selectedPresetRow < static_cast<int>(presetItems.size()))
+        favoritePresetButton.setButtonText(presetItems[static_cast<size_t>(selectedPresetRow)].isFavorite ? "UNSTAR" : "STAR");
+    else
+        favoritePresetButton.setButtonText("STAR");
 }
 
 void WorkspacePanel::rebuildPresetFilter()
@@ -357,6 +505,8 @@ void WorkspacePanel::rebuildPresetFilter()
         if (presetSourceFilter == PresetSourceFilter::Factory && !item.isFactory)
             continue;
         if (presetSourceFilter == PresetSourceFilter::User && item.isFactory)
+            continue;
+        if (presetSourceFilter == PresetSourceFilter::Favorites && !item.isFavorite)
             continue;
         if (category.isNotEmpty() && item.category != category)
             continue;
@@ -449,6 +599,7 @@ void WorkspacePanel::paint(juce::Graphics& g)
     else
     {
         ZikadaLookAndFeel::drawDeviceDisplay(g, settingsDeviceZone);
+        ZikadaLookAndFeel::drawDeviceDisplay(g, settingsProductZone);
         ZikadaLookAndFeel::drawDeviceDisplay(g, settingsNotesZone);
     }
 }
@@ -491,6 +642,8 @@ void WorkspacePanel::resized()
         factoryFilterButton.setBounds(filterRow.removeFromLeft(72));
         filterRow.removeFromLeft(6);
         userFilterButton.setBounds(filterRow.removeFromLeft(58));
+        filterRow.removeFromLeft(6);
+        favoriteFilterButton.setBounds(filterRow.removeFromLeft(48));
 
         browserInner.removeFromTop(10);
         auto saveArea = browserInner.removeFromBottom(74);
@@ -510,6 +663,8 @@ void WorkspacePanel::resized()
         presetDetailBody.setBounds(detailInner);
         loadButton.setBounds(detailActionRow.removeFromLeft(128));
         detailActionRow.removeFromLeft(10);
+        favoritePresetButton.setBounds(detailActionRow.removeFromLeft(84));
+        detailActionRow.removeFromLeft(10);
         deleteButton.setBounds(detailActionRow.removeFromLeft(118));
 
         auto infoAInner = presetInfoZoneA.reduced(18, 16);
@@ -527,6 +682,8 @@ void WorkspacePanel::resized()
         const int topHeight = juce::jlimit(320, 520, bounds.getHeight() * 2 / 3);
         settingsDeviceZone = bounds.removeFromTop(topHeight);
         bounds.removeFromTop(14);
+        settingsProductZone = bounds.removeFromTop(190);
+        bounds.removeFromTop(14);
         settingsNotesZone = bounds;
 
         auto deviceInner = settingsDeviceZone.reduced(18, 16);
@@ -543,6 +700,41 @@ void WorkspacePanel::resized()
             deviceInner.removeFromTop(10);
             standaloneDeviceSelector->setBounds(deviceInner);
         }
+
+        auto productInner = settingsProductZone.reduced(18, 16);
+        settingsProductTitle.setBounds(productInner.removeFromTop(20));
+        productInner.removeFromTop(10);
+
+        auto row1 = productInner.removeFromTop(28);
+        clockSourceLabel.setBounds(row1.removeFromLeft(130));
+        clockSourceBox.setBounds(row1);
+        productInner.removeFromTop(10);
+
+        auto row2 = productInner.removeFromTop(28);
+        stepResolutionLabel.setBounds(row2.removeFromLeft(130));
+        stepResolutionBox.setBounds(row2);
+        productInner.removeFromTop(10);
+
+        auto row3 = productInner.removeFromTop(28);
+        tempoLabel.setBounds(row3.removeFromLeft(130));
+        tempoSlider.setBounds(row3);
+        productInner.removeFromTop(10);
+
+        auto row4 = productInner.removeFromTop(28);
+        dryWetLabel.setBounds(row4.removeFromLeft(130));
+        dryWetSlider.setBounds(row4);
+        productInner.removeFromTop(10);
+
+        auto row5 = productInner.removeFromTop(28);
+        outputGainLabel.setBounds(row5.removeFromLeft(130));
+        outputGainSlider.setBounds(row5);
+        productInner.removeFromTop(10);
+
+        auto row6 = productInner.removeFromTop(28);
+        mixModeLabel.setBounds(row6.removeFromLeft(130));
+        mixModeBox.setBounds(row6);
+        productInner.removeFromTop(12);
+        bypassToggle.setBounds(productInner.removeFromTop(24));
 
         auto notesInner = settingsNotesZone.reduced(18, 16);
         settingsNotesTitle.setBounds(notesInner.removeFromTop(20));

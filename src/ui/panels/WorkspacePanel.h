@@ -36,6 +36,7 @@ public:
     std::function<void(const juce::String&)> onSavePreset;
     std::function<void(int)> onLoadPreset;
     std::function<void(int)> onDeletePreset;
+    std::function<void(int)> onToggleFavoritePreset;
 
 private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
@@ -46,7 +47,8 @@ private:
     {
         All = 0,
         Factory,
-        User
+        User,
+        Favorites
     };
 
     Mode mode{Mode::Presets};
@@ -72,16 +74,32 @@ private:
     juce::TextButton allFilterButton{"ALL"};
     juce::TextButton factoryFilterButton{"FACTORY"};
     juce::TextButton userFilterButton{"USER"};
+    juce::TextButton favoriteFilterButton{"FAV"};
     juce::TextButton saveButton{"SAVE CURRENT"};
     juce::TextButton loadButton{"LOAD PRESET"};
     juce::TextButton deleteButton{"DELETE USER"};
+    juce::TextButton favoritePresetButton{"STAR"};
 
     juce::Label settingsLeadLabel;
     juce::Label settingsDeviceTitle;
+    juce::Label settingsProductTitle;
     juce::Label settingsNotesTitle;
     juce::Label settingsNotesBody;
     juce::Label standaloneMuteLabel;
+    juce::Label dryWetLabel;
+    juce::Label outputGainLabel;
+    juce::Label tempoLabel;
+    juce::Label mixModeLabel;
+    juce::Label clockSourceLabel;
+    juce::Label stepResolutionLabel;
     juce::ToggleButton standaloneMuteButton{"Mute audio input"};
+    juce::ToggleButton bypassToggle{"Bypass audio"};
+    juce::Slider dryWetSlider;
+    juce::Slider outputGainSlider;
+    juce::Slider tempoSlider;
+    juce::ComboBox mixModeBox;
+    juce::ComboBox clockSourceBox;
+    juce::ComboBox stepResolutionBox;
     std::unique_ptr<juce::AudioDeviceSelectorComponent> standaloneDeviceSelector;
     juce::Value muteInputValue;
 
@@ -103,6 +121,7 @@ private:
     juce::Rectangle<int> presetInfoZoneA;
     juce::Rectangle<int> presetInfoZoneB;
     juce::Rectangle<int> settingsDeviceZone;
+    juce::Rectangle<int> settingsProductZone;
     juce::Rectangle<int> settingsNotesZone;
 
     void refreshCopy();
@@ -112,6 +131,7 @@ private:
     void updatePresetInfoPanels();
     void setPresetSourceFilter(PresetSourceFilter filter);
     void rebuildStandaloneSettingsComponent();
+    void styleStandaloneSettingsComponent();
 
     int getNumRows() override;
     void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
