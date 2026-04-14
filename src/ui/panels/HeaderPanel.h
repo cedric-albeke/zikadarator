@@ -21,6 +21,7 @@ public:
     HeaderPanel();
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
 
     void setSelectedPage(Page page);
@@ -41,6 +42,7 @@ private:
     juce::Image logoImage;
     std::unique_ptr<juce::Drawable> undoIcon;
     std::unique_ptr<juce::Drawable> redoIcon;
+    std::unique_ptr<juce::Drawable> saveIcon;
     juce::TextButton undoButton{"UNDO"};
     juce::TextButton redoButton{"REDO"};
     juce::TextButton sequencerTab{"SEQUENCER"};

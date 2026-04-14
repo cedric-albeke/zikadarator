@@ -3,37 +3,68 @@
 
 namespace zikada {
 
+namespace HeaderLayout {
+    constexpr int kPadX          = 10;
+    constexpr int kLogoSize      = 60;
+    constexpr int kLogoGap       = 8;
+    constexpr int kWordmarkW     = 190;
+    constexpr int kSectionGap    = 14;
+    constexpr int kTabW          = 110;
+    constexpr int kTabGap        = 3;
+    constexpr float kTabCorner   = 3.0f;
+    constexpr int kPresetStripW  = 380;
+    constexpr int kNavW          = 30;
+    constexpr int kActionW       = 38;
+    constexpr int kActionGap     = 4;
+    constexpr float kDotRadius   = 3.0f;
+}
+
+static const juce::String kUndoSvg(
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\">"
+    "<path d=\"M9 14L4 9l5-5\" fill=\"none\" stroke=\"#D9E3E7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    "<path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\" fill=\"none\" stroke=\"#D9E3E7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    "</svg>");
+
+static const juce::String kRedoSvg(
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\">"
+    "<path d=\"M15 14L20 9L15 4\" fill=\"none\" stroke=\"#D9E3E7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    "<path d=\"M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13\" fill=\"none\" stroke=\"#D9E3E7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    "</svg>");
+
+static const juce::String kSaveSvg(
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\">"
+    "<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" fill=\"none\" stroke=\"#8A9BA0\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    "<path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" fill=\"none\" stroke=\"#8A9BA0\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    "<path d=\"M7 3v4a1 1 0 0 0 1 1h7\" fill=\"none\" stroke=\"#8A9BA0\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    "</svg>");
+
+static std::unique_ptr<juce::Drawable> parseSvgString(const juce::String& svgText)
+{
+    if (auto xml = juce::parseXML(svgText))
+        return juce::Drawable::createFromSVG(*xml);
+    return nullptr;
+}
+
 HeaderPanel::HeaderPanel()
 {
-    logoImage = juce::ImageCache::getFromMemory(BinaryData::zikadacicada_png,
-                                                BinaryData::zikadacicada_pngSize);
+    logoImage = juce::ImageCache::getFromMemory(
+        BinaryData::zikadacicada128_png, BinaryData::zikadacicada128_pngSize);
 
-    static constexpr auto undoSvg = R"svg(
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D9E3E7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M9 14 4 9l5-5" />
-  <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
-</svg>
-)svg";
-
-    static constexpr auto redoSvg = R"svg(
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D9E3E7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="m15 14 5-5-5-5" />
-  <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13" />
-</svg>
-)svg";
-
-    undoIcon = juce::Drawable::createFromImageData(undoSvg, sizeof(undoSvg) - 1);
-    redoIcon = juce::Drawable::createFromImageData(redoSvg, sizeof(redoSvg) - 1);
+    undoIcon = parseSvgString(kUndoSvg);
+    redoIcon = parseSvgString(kRedoSvg);
+    saveIcon = parseSvgString(kSaveSvg);
 
     auto configureTab = [this](juce::TextButton& button, Page page)
     {
         button.setClickingTogglesState(true);
         button.setRadioGroupId(1001);
-        button.setColour(juce::TextButton::buttonColourId, Colours::bgHover.brighter(0.02f));
-        button.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.08f));
-        button.setColour(juce::TextButton::textColourOffId, Colours::white85);
-        button.setColour(juce::TextButton::textColourOnId, Colours::white);
-        button.onClick = [this, page] {
+        button.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        button.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+        button.setColour(juce::TextButton::textColourOffId, juce::Colours::transparentBlack);
+        button.setColour(juce::TextButton::textColourOnId, juce::Colours::transparentBlack);
+        button.setButtonText("");
+        button.onClick = [this, page]
+        {
             setSelectedPage(page);
             if (onPageSelected)
                 onPageSelected(page);
@@ -45,16 +76,16 @@ HeaderPanel::HeaderPanel()
     configureTab(presetsTab, Page::Presets);
     configureTab(settingsTab, Page::Settings);
 
-    auto configureAction = [](juce::TextButton& button)
+    auto configureHitZone = [](juce::TextButton& button)
     {
-        button.setColour(juce::TextButton::buttonColourId, Colours::bgHover.brighter(0.02f));
-        button.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.08f));
-        button.setColour(juce::TextButton::textColourOffId, Colours::white85);
-        button.setColour(juce::TextButton::textColourOnId, Colours::white);
+        button.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        button.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+        button.setColour(juce::TextButton::textColourOffId, juce::Colours::transparentBlack);
+        button.setColour(juce::TextButton::textColourOnId, juce::Colours::transparentBlack);
     };
 
-    configureAction(undoButton);
-    configureAction(redoButton);
+    configureHitZone(undoButton);
+    configureHitZone(redoButton);
     undoButton.setButtonText("");
     redoButton.setButtonText("");
     undoButton.onClick = [this] { if (onUndoRequested) onUndoRequested(); };
@@ -62,11 +93,8 @@ HeaderPanel::HeaderPanel()
     addAndMakeVisible(undoButton);
     addAndMakeVisible(redoButton);
 
-    presetSelectButton.setButtonText(currentPresetName + " ▼");
-    presetSelectButton.setColour(juce::TextButton::buttonColourId, Colours::bgHover.brighter(0.02f));
-    presetSelectButton.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
-    presetSelectButton.setColour(juce::TextButton::textColourOffId, Colours::white);
-    presetSelectButton.setColour(juce::TextButton::textColourOnId, Colours::white);
+    configureHitZone(presetSelectButton);
+    presetSelectButton.setButtonText("");
     presetSelectButton.onClick = [this]
     {
         if (onPresetMenuRequested)
@@ -75,11 +103,11 @@ HeaderPanel::HeaderPanel()
     addAndMakeVisible(presetSelectButton);
 
     presetMetaLabel.setJustificationType(juce::Justification::centredLeft);
-    presetMetaLabel.setColour(juce::Label::textColourId, Colours::laneFX2.withAlpha(0.88f));
+    presetMetaLabel.setColour(juce::Label::textColourId, Colours::white50);
     addAndMakeVisible(presetMetaLabel);
 
-    configureAction(presetPrevButton);
-    configureAction(presetNextButton);
+    configureHitZone(presetPrevButton);
+    configureHitZone(presetNextButton);
     presetPrevButton.setButtonText("");
     presetNextButton.setButtonText("");
     presetPrevButton.onClick = [this] { if (onPresetPreviousRequested) onPresetPreviousRequested(); };
@@ -100,241 +128,302 @@ void HeaderPanel::setSelectedPage(Page page)
     sequencerTab.setToggleState(page == Page::Sequencer, juce::dontSendNotification);
     presetsTab.setToggleState(page == Page::Presets, juce::dontSendNotification);
     settingsTab.setToggleState(page == Page::Settings, juce::dontSendNotification);
+    repaint();
 }
 
 void HeaderPanel::setUndoEnabled(bool enabled)
 {
     undoButton.setEnabled(enabled);
-    undoButton.setAlpha(enabled ? 1.0f : 0.82f);
 }
 
 void HeaderPanel::setRedoEnabled(bool enabled)
 {
     redoButton.setEnabled(enabled);
-    redoButton.setAlpha(enabled ? 1.0f : 0.82f);
 }
 
-void HeaderPanel::setPresetDisplay(const juce::String& presetName, const juce::String& presetMeta, bool dirty)
+void HeaderPanel::setPresetDisplay(const juce::String& presetName,
+                                   const juce::String& presetMeta,
+                                   bool dirty)
 {
     currentPresetName = presetName;
     currentPresetMeta = presetMeta;
     presetDirty = dirty;
-    presetSelectButton.setButtonText(currentPresetName + (presetDirty ? " * ▼" : " ▼"));
-    presetMetaLabel.setText(currentPresetMeta, juce::dontSendNotification);
+    repaint();
 }
 
 void HeaderPanel::setPresetStepEnabled(bool previousEnabled, bool nextEnabled)
 {
     presetPrevButton.setEnabled(previousEnabled);
-    presetPrevButton.setAlpha(previousEnabled ? 1.0f : 0.45f);
     presetNextButton.setEnabled(nextEnabled);
-    presetNextButton.setAlpha(nextEnabled ? 1.0f : 0.45f);
+    repaint();
 }
 
+// ── Paint (background, logo, wordmark — drawn BEFORE children) ──────
 void HeaderPanel::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds().toFloat();
+    namespace HL = HeaderLayout;
+    const auto bounds = getLocalBounds().toFloat();
+    const auto* laf   = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
 
-    juce::ColourGradient headerGradient(Colours::bgHover.brighter(0.08f), 0.0f, 0.0f,
-                                        Colours::bgAccent, 0.0f, bounds.getBottom(), false);
-    g.setGradientFill(headerGradient);
+    g.setColour(Colours::bgPrimary.darker(0.20f));
     g.fillAll();
 
-    g.setColour(Colours::white10);
-    g.drawLine(0.0f, 0.5f, bounds.getRight(), 0.5f, 1.0f);
-    g.setColour(Colours::neonGreen);
-    g.drawLine(0.0f, bounds.getBottom() - 1.0f, bounds.getRight(), bounds.getBottom() - 1.0f, 2.0f);
+    g.setColour(Colours::neonGreen.withAlpha(0.50f));
+    g.drawLine(0.0f, bounds.getBottom() - 1.5f,
+               bounds.getRight(), bounds.getBottom() - 1.5f, 2.0f);
 
-    auto content   = getLocalBounds().reduced(12, 8);
-    auto brandArea = content.removeFromLeft(278);
+    auto wordmarkFont = laf ? laf->getAntaFont(26.0f)
+                            : juce::Font(juce::FontOptions().withHeight(26.0f));
+    auto versionFont  = laf ? laf->getAntaFont(15.0f)
+                            : juce::Font(juce::FontOptions().withHeight(15.0f));
+    auto sublineFont  = laf ? laf->getSpaceMonoFont(13.0f, false)
+                            : juce::Font(juce::FontOptions().withHeight(10.0f));
 
-    const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+    // ── Logo (128px pre-scaled asset) ───────────────────────────────
+    const float logoSz = static_cast<float>(HL::kLogoSize);
+    const float logoX  = static_cast<float>(HL::kPadX);
+    const float logoY  = bounds.getCentreY() - logoSz * 0.5f;
 
-    auto wordmarkFont = laf != nullptr ? laf->getAntaFont(30.0f)
-                                       : juce::Font(juce::FontOptions().withHeight(30.0f));
-    auto monoSmallFont = laf != nullptr ? laf->getSpaceMonoFont(9.0f, true)
-                                        : juce::Font(juce::FontOptions().withHeight(9.0f).withStyle("Bold"));
-    auto monoMetaFont = laf != nullptr ? laf->getSpaceMonoFont(8.0f, true)
-                                       : juce::Font(juce::FontOptions().withHeight(8.0f).withStyle("Bold"));
-
-    g.setColour(Colours::bgHover.brighter(0.03f));
-    g.fillRoundedRectangle(brandArea.toFloat(), 2.0f);
-    g.setColour(Colours::white10);
-    g.drawRoundedRectangle(brandArea.toFloat().reduced(0.5f), 2.0f, 1.0f);
-
-    auto brandInner = brandArea.reduced(12, 8);
-    auto logoArea = brandInner.removeFromLeft(66);
-    auto logoFloat = logoArea.toFloat();
-    g.setColour(Colours::neonGreen.withAlpha(0.14f));
-    g.fillRoundedRectangle(logoFloat.reduced(1.0f), 10.0f);
-    g.setColour(Colours::bgHover.brighter(0.10f));
-    g.fillRoundedRectangle(logoFloat.reduced(4.0f), 10.0f);
-    g.setColour(Colours::neonGreen.withAlpha(0.34f));
-    g.drawRoundedRectangle(logoFloat.reduced(4.5f), 10.0f, 1.0f);
-    auto logoBounds = logoArea.reduced(5, 5);
     if (logoImage.isValid())
     {
         g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
         g.drawImageWithin(logoImage,
-                          logoBounds.getX(), logoBounds.getY(),
-                          logoBounds.getWidth(), logoBounds.getHeight(),
-                          juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize,
+                          static_cast<int>(logoX), static_cast<int>(logoY),
+                          static_cast<int>(logoSz), static_cast<int>(logoSz),
+                          juce::RectanglePlacement::centred
+                              | juce::RectanglePlacement::onlyReduceInSize,
                           false);
+
+        g.setColour(Colours::neonGreen.withAlpha(0.06f));
+        g.fillEllipse(logoX + 2.0f, logoY + 2.0f, logoSz - 4.0f, logoSz - 4.0f);
     }
 
-    auto textArea = brandInner.reduced(10, 2).toFloat();
-    auto wordmarkRow = textArea.removeFromTop(30.0f);
-    auto sublineRow = textArea.removeFromTop(12.0f);
+    // ── Wordmark + subline ──────────────────────────────────────────
+    const float wmX = logoX + logoSz + static_cast<float>(HL::kLogoGap);
+
+    juce::GlyphArrangement gaZikada, gaRator, gaV1;
+    gaZikada.addLineOfText(wordmarkFont, "ZIKADA", 0, 0);
+    gaRator.addLineOfText(wordmarkFont, "RATOR", 0, 0);
+    gaV1.addLineOfText(versionFont, "V1", 0, 0);
+
+    const float wZikada = gaZikada.getBoundingBox(0, gaZikada.getNumGlyphs(), true).getWidth();
+    const float wRator  = gaRator.getBoundingBox(0, gaRator.getNumGlyphs(), true).getWidth();
+    const float wV1     = gaV1.getBoundingBox(0, gaV1.getNumGlyphs(), true).getWidth();
+    const float totalWmW = wZikada + wRator + wV1 + 6.0f;
+
+    const float wmY = bounds.getCentreY() - 14.0f;
 
     g.setFont(wordmarkFont);
-
-    juce::GlyphArrangement gaLeft, gaRight;
-    gaLeft.addLineOfText(wordmarkFont, "ZIKADA", 0.0f, 0.0f);
-    gaRight.addLineOfText(wordmarkFont, "RATOR", 0.0f, 0.0f);
-    float leftWidth = gaLeft.getBoundingBox(0, gaLeft.getNumGlyphs(), true).getWidth();
-    float rightWidth = gaRight.getBoundingBox(0, gaRight.getNumGlyphs(), true).getWidth();
-
     g.setColour(Colours::white);
     g.drawText("ZIKADA",
-                juce::Rectangle<float>(wordmarkRow.getX(), wordmarkRow.getY(),
-                                       leftWidth + 2.0f, wordmarkRow.getHeight()),
-                juce::Justification::bottomLeft, false);
+               juce::Rectangle<float>(wmX, wmY, wZikada + 2.0f, 26.0f),
+               juce::Justification::centredLeft, false);
 
     g.setColour(Colours::neonGreen);
     g.drawText("RATOR",
-               juce::Rectangle<float>(wordmarkRow.getX() + leftWidth - 1.0f, wordmarkRow.getY(),
-                                      rightWidth + 4.0f, wordmarkRow.getHeight()),
-               juce::Justification::bottomLeft, false);
+               juce::Rectangle<float>(wmX + wZikada, wmY, wRator + 2.0f, 26.0f),
+               juce::Justification::centredLeft, false);
 
-    g.setFont(monoSmallFont);
-    g.setColour(Colours::laneFX2.withAlpha(0.70f));
-    g.drawText("SEQUENCE THE SIGNAL / V1",
-               juce::Rectangle<float>(sublineRow.getX(), sublineRow.getY(), 240.0f, sublineRow.getHeight()),
-               juce::Justification::topLeft, false);
+    g.setFont(versionFont);
+    g.setColour(Colours::neonGreen.withAlpha(0.65f));
+    g.drawText("V1",
+               juce::Rectangle<float>(wmX + wZikada + wRator + 3.0f, wmY + 2.0f, wV1 + 2.0f, 22.0f),
+               juce::Justification::centredLeft, false);
 
-    if (presetSelectButton.getWidth() > 0)
+    g.setFont(sublineFont);
+    g.setColour(Colours::white50);
+    g.drawText("SEQUENCE THE SIGNAL",
+               juce::Rectangle<float>(wmX, wmY + 26.0f, totalWmW, 14.0f),
+               juce::Justification::centredLeft, false);
+}
+
+// ── PaintOverChildren (tabs, preset strip, icons — drawn AFTER children) ──
+void HeaderPanel::paintOverChildren(juce::Graphics& g)
+{
+    namespace HL = HeaderLayout;
+    const auto bounds = getLocalBounds().toFloat();
+    const auto* laf   = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+
+    auto tabFont    = laf ? laf->getSpaceMonoFont(13.0f, true)
+                          : juce::Font(juce::FontOptions().withHeight(13.0f).withStyle("Bold"));
+    auto presetFont = laf ? laf->getSpaceMonoFont(12.0f, false)
+                          : juce::Font(juce::FontOptions().withHeight(12.0f));
+
+    // ── Tab cells ───────────────────────────────────────────────────
+    auto drawTab = [&](const juce::TextButton& tab, const juce::String& label, bool active)
     {
-        auto presetFrame = presetMetaLabel.getBounds().getUnion(presetSelectButton.getBounds()).toFloat();
-        g.setColour(Colours::bgHover.brighter(0.02f));
-        g.fillRoundedRectangle(presetFrame, 2.0f);
-        g.setColour(Colours::white10);
-        g.drawRoundedRectangle(presetFrame.reduced(0.5f), 2.0f, 1.0f);
+        auto r = tab.getBounds().toFloat();
 
-        g.setColour(Colours::white10);
-        const float separatorY = static_cast<float>(presetSelectButton.getY()) - 2.0f;
-        g.drawLine(presetFrame.getX() + 1.0f, separatorY, presetFrame.getRight() - 1.0f, separatorY, 1.0f);
-
-        const auto navGroup = presetPrevButton.getBounds().getUnion(presetNextButton.getBounds()).toFloat();
-        g.setColour(Colours::bgHover.brighter(0.02f));
-        g.fillRoundedRectangle(navGroup, 2.0f);
-        g.setColour(Colours::white10);
-        g.drawRoundedRectangle(navGroup.reduced(0.5f), 2.0f, 1.0f);
-        const float navSepX = static_cast<float>(presetNextButton.getX()) - 3.0f;
-        g.drawLine(navSepX, navGroup.getY() + 5.0f, navSepX, navGroup.getBottom() - 5.0f, 1.0f);
-
-        const auto drawChevron = [&g](juce::Rectangle<float> area, bool left, bool enabled)
+        if (active)
         {
-            juce::Path path;
-            const float cx = area.getCentreX();
-            const float cy = area.getCentreY();
-            const float size = 5.0f;
-            if (left)
-            {
-                path.startNewSubPath(cx + size * 0.5f, cy - size);
-                path.lineTo(cx - size * 0.5f, cy);
-                path.lineTo(cx + size * 0.5f, cy + size);
-            }
-            else
-            {
-                path.startNewSubPath(cx - size * 0.5f, cy - size);
-                path.lineTo(cx + size * 0.5f, cy);
-                path.lineTo(cx - size * 0.5f, cy + size);
-            }
+            g.setColour(Colours::bgHover.brighter(0.08f));
+            g.fillRoundedRectangle(r, HL::kTabCorner);
+        }
 
-            g.setColour((enabled ? Colours::white85 : Colours::white50).withAlpha(enabled ? 0.95f : 0.45f));
-            g.strokePath(path, juce::PathStrokeType(1.7f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-        };
+        g.setColour(Colours::white.withAlpha(active ? 0.10f : 0.06f));
+        g.drawRoundedRectangle(r.reduced(0.5f), HL::kTabCorner, 1.0f);
 
-        drawChevron(presetPrevButton.getBounds().toFloat(), true, presetPrevButton.isEnabled());
-        drawChevron(presetNextButton.getBounds().toFloat(), false, presetNextButton.isEnabled());
-
-        const auto drawDrawableIcon = [&g](juce::Drawable* drawable, juce::Rectangle<float> area, bool enabled)
+        if (active)
         {
-            if (drawable == nullptr)
-                return;
+            g.setColour(Colours::neonGreen);
+            g.fillEllipse(r.getCentreX() - HL::kDotRadius,
+                          r.getY() + 6.0f,
+                          HL::kDotRadius * 2.0f,
+                          HL::kDotRadius * 2.0f);
+        }
+        else
+        {
+            g.setColour(Colours::white.withAlpha(0.18f));
+            g.fillEllipse(r.getCentreX() - 2.0f,
+                          r.getY() + 7.0f,
+                          4.0f, 4.0f);
+        }
 
-            g.saveState();
-            g.setOpacity(enabled ? 0.96f : 0.62f);
-            drawable->drawWithin(g, area.reduced(12.0f, 12.0f), juce::RectanglePlacement::centred, 1.0f);
-            g.restoreState();
-        };
+        g.setFont(tabFont);
+        g.setColour(active ? Colours::white : Colours::white50);
+        g.drawText(label, r.withTrimmedTop(6.0f), juce::Justification::centred, false);
+    };
 
-        drawDrawableIcon(undoIcon.get(), undoButton.getBounds().toFloat(), undoButton.isEnabled());
-        drawDrawableIcon(redoIcon.get(), redoButton.getBounds().toFloat(), redoButton.isEnabled());
+    drawTab(sequencerTab, "SEQUENCER", selectedPage == Page::Sequencer);
+    drawTab(presetsTab,   "PRESETS",   selectedPage == Page::Presets);
+    drawTab(settingsTab,  "SETTINGS",  selectedPage == Page::Settings);
 
-        g.setFont(monoMetaFont);
-        g.setColour(selectedPage == Page::Sequencer ? Colours::bgPrimary.withAlpha(0.90f) : Colours::white85.withAlpha(0.78f));
-        g.drawText(sequencerTab.getButtonText(), sequencerTab.getBounds(), juce::Justification::centred, false);
-        g.drawText(presetsTab.getButtonText(), presetsTab.getBounds(), juce::Justification::centred, false);
-        g.drawText(settingsTab.getButtonText(), settingsTab.getBounds(), juce::Justification::centred, false);
+    // ── Preset strip with integrated nav ────────────────────────────
+    {
+        auto prevR  = presetPrevButton.getBounds().toFloat();
+        auto nextR  = presetNextButton.getBounds().toFloat();
+        auto psRect = presetSelectButton.getBounds().toFloat();
+
+        auto stripRect = juce::Rectangle<float>(
+            prevR.getX() - 6.0f,
+            psRect.getY() - 3.0f,
+            nextR.getRight() - prevR.getX() + 12.0f,
+            psRect.getHeight() + 6.0f);
+
+        g.setColour(Colours::bgHover.brighter(0.03f));
+        g.fillRoundedRectangle(stripRect, 3.0f);
+        g.setColour(Colours::white.withAlpha(0.07f));
+        g.drawRoundedRectangle(stripRect.reduced(0.5f), 3.0f, 1.0f);
+
+        if (saveIcon != nullptr)
+        {
+            auto iconArea = juce::Rectangle<float>(
+                prevR.getRight() + 6.0f,
+                stripRect.getCentreY() - 9.0f,
+                18.0f, 18.0f);
+            g.setOpacity(0.7f);
+            saveIcon->drawWithin(g, iconArea, juce::RectanglePlacement::centred, 1.0f);
+            g.setOpacity(1.0f);
+        }
+
+        juce::String displayName = currentPresetName + (presetDirty ? " *" : "");
+        g.setFont(presetFont);
+        g.setColour(Colours::white);
+        auto textArea = juce::Rectangle<float>(
+            prevR.getRight() + 28.0f,
+            stripRect.getY(),
+            nextR.getX() - prevR.getRight() - 56.0f,
+            stripRect.getHeight());
+        g.drawText(displayName, textArea, juce::Justification::centredLeft, true);
+
+        const float triX = nextR.getX() - 18.0f;
+        const float triY = stripRect.getCentreY() - 3.0f;
+        juce::Path tri;
+        tri.addTriangle(triX, triY, triX + 8.0f, triY, triX + 4.0f, triY + 5.0f);
+        g.setColour(Colours::white50);
+        g.fillPath(tri);
+
+        g.setColour(Colours::white.withAlpha(0.06f));
+        g.drawLine(stripRect.getX() - 7.0f,
+                   bounds.getY() + 12.0f,
+                   stripRect.getX() - 7.0f,
+                   bounds.getBottom() - 12.0f,
+                   1.0f);
     }
 
-    if (redoButton.getWidth() > 0 && sequencerTab.getWidth() > 0)
+    // ── Nav chevrons (inside strip) ─────────────────────────────────
+    auto drawChevron = [&g](juce::Rectangle<float> area, bool left, bool enabled)
     {
-        float sepX   = static_cast<float>(redoButton.getRight()) +
-                       (static_cast<float>(sequencerTab.getX() - redoButton.getRight())) * 0.5f;
-        float sepTop = static_cast<float>(getHeight()) * 0.28f;
-        float sepBot = static_cast<float>(getHeight()) * 0.72f;
-        g.setColour(Colours::white.withAlpha(0.12f));
-        g.drawLine(sepX, sepTop, sepX, sepBot, 1.0f);
-    }
+        const float cx = area.getCentreX();
+        const float cy = area.getCentreY();
+        const float sz = 5.0f;
+        juce::Path path;
+        if (left)
+        {
+            path.startNewSubPath(cx + sz * 0.5f, cy - sz);
+            path.lineTo(cx - sz * 0.5f, cy);
+            path.lineTo(cx + sz * 0.5f, cy + sz);
+        }
+        else
+        {
+            path.startNewSubPath(cx - sz * 0.5f, cy - sz);
+            path.lineTo(cx + sz * 0.5f, cy);
+            path.lineTo(cx - sz * 0.5f, cy + sz);
+        }
+        g.setColour(enabled ? Colours::white85 : Colours::white.withAlpha(0.25f));
+        g.strokePath(path, juce::PathStrokeType(1.8f, juce::PathStrokeType::curved,
+                                                 juce::PathStrokeType::rounded));
+    };
+
+    drawChevron(presetPrevButton.getBounds().toFloat(), true,  presetPrevButton.isEnabled());
+    drawChevron(presetNextButton.getBounds().toFloat(), false, presetNextButton.isEnabled());
+
+    // ── Undo/redo icons ─────────────────────────────────────────────
+    auto drawActionIcon = [&g](juce::Drawable* icon, juce::Rectangle<float> area, bool enabled)
+    {
+        if (icon == nullptr) return;
+        const float inset = 8.0f;
+        g.setOpacity(enabled ? 0.85f : 0.30f);
+        icon->drawWithin(g, area.reduced(inset), juce::RectanglePlacement::centred, 1.0f);
+        g.setOpacity(1.0f);
+    };
+
+    drawActionIcon(undoIcon.get(), undoButton.getBounds().toFloat(), undoButton.isEnabled());
+    drawActionIcon(redoIcon.get(), redoButton.getBounds().toFloat(), redoButton.isEnabled());
 }
 
 void HeaderPanel::resized()
 {
-    const int brandClearance  = 544;
+    namespace HL = HeaderLayout;
+    const auto bounds  = getLocalBounds();
+    const int  totalH  = bounds.getHeight();
 
-    auto bounds = getLocalBounds().reduced(12, 10);
-    bounds.removeFromLeft(brandClearance);
+    auto row = bounds.reduced(HL::kPadX, 6);
+    const int cellH = totalH - 14;
 
-    const int tabWidth = 94;
-    const int tabHeight = 50;
-    const int actionWidth = 52;
-    const int navWidth = 34;
-    const int spacing = 6;
+    const int logoBlockW = HL::kLogoSize + HL::kLogoGap + HL::kWordmarkW;
+    row.removeFromLeft(logoBlockW);
+    row.removeFromLeft(HL::kSectionGap);
 
-    auto tabArea = bounds.removeFromLeft(tabWidth * 3 + spacing * 2);
-    tabArea = tabArea.withHeight(tabHeight).withCentre(tabArea.getCentre());
-    sequencerTab.setBounds(tabArea.removeFromLeft(tabWidth));
-    tabArea.removeFromLeft(spacing);
-    presetsTab.setBounds(tabArea.removeFromLeft(tabWidth));
-    tabArea.removeFromLeft(spacing);
-    settingsTab.setBounds(tabArea.removeFromLeft(tabWidth));
+    // ── Tabs (left) ─────────────────────────────────────────────────
+    auto tabArea = row.removeFromLeft(HL::kTabW * 3 + HL::kTabGap * 2);
+    tabArea = tabArea.withHeight(cellH).withCentre(tabArea.getCentre());
 
-    bounds.removeFromLeft(12);
+    sequencerTab.setBounds(tabArea.removeFromLeft(HL::kTabW));
+    tabArea.removeFromLeft(HL::kTabGap);
+    presetsTab.setBounds(tabArea.removeFromLeft(HL::kTabW));
+    tabArea.removeFromLeft(HL::kTabGap);
+    settingsTab.setBounds(tabArea.removeFromLeft(HL::kTabW));
 
-    auto actionsArea = bounds.removeFromRight(actionWidth * 2 + spacing);
-    actionsArea = actionsArea.withHeight(tabHeight).withCentre(actionsArea.getCentre());
-    undoButton.setBounds(actionsArea.removeFromLeft(actionWidth));
-    actionsArea.removeFromLeft(spacing);
-    redoButton.setBounds(actionsArea.removeFromLeft(actionWidth));
+    // ── Undo/redo (far right) ───────────────────────────────────────
+    auto actionArea = row.removeFromRight(HL::kActionW * 2 + HL::kActionGap);
+    actionArea = actionArea.withHeight(cellH).withCentre(actionArea.getCentre());
+    undoButton.setBounds(actionArea.removeFromLeft(HL::kActionW));
+    actionArea.removeFromLeft(HL::kActionGap);
+    redoButton.setBounds(actionArea.removeFromLeft(HL::kActionW));
 
-    bounds.removeFromRight(10);
+    row.removeFromRight(HL::kSectionGap);
 
-    auto presetNavArea = bounds.removeFromRight(navWidth * 2 + spacing);
-    presetNavArea = presetNavArea.withHeight(tabHeight).withCentre(presetNavArea.getCentre());
-    presetPrevButton.setBounds(presetNavArea.removeFromLeft(navWidth));
-    presetNavArea.removeFromLeft(spacing);
-    presetNextButton.setBounds(presetNavArea.removeFromLeft(navWidth));
+    // ── Preset strip with integrated nav (RIGHT-aligned) ────────────
+    const int stripTotalW = HL::kNavW + HL::kPresetStripW + HL::kNavW;
+    auto stripArea = row.removeFromRight(juce::jmin(row.getWidth(), stripTotalW));
+    stripArea = stripArea.withHeight(cellH).withCentre(stripArea.getCentre());
 
-    bounds.removeFromRight(4);
+    presetPrevButton.setBounds(stripArea.removeFromLeft(HL::kNavW));
+    presetNextButton.setBounds(stripArea.removeFromRight(HL::kNavW));
+    presetSelectButton.setBounds(stripArea);
 
-    auto presetArea = bounds.removeFromRight(388);
-    presetArea = presetArea.withHeight(tabHeight).withCentre(presetArea.getCentre());
-    auto presetTop = presetArea.removeFromTop(14);
-    presetMetaLabel.setBounds(presetTop.reduced(10, 0));
-    presetArea.removeFromTop(4);
-    presetSelectButton.setBounds(presetArea.reduced(6, 0));
+    presetMetaLabel.setBounds(0, 0, 0, 0);
 }
 
-}
+} // namespace zikada
