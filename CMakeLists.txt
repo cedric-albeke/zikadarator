@@ -66,6 +66,7 @@ target_sources(ZikadaFX
         src/state/PresetManager.cpp
         src/engine/SequencerEngine.cpp
         src/engine/CircularAudioBuffer.cpp
+        src/engine/LoopEngine.cpp
         src/engine/SliceEngine.cpp
         src/engine/FilterEngine.cpp
         src/engine/DelayEngine.cpp

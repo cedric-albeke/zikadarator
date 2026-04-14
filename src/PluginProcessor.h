@@ -6,6 +6,7 @@
 #include "state/SequencerState.h"
 #include "engine/SequencerEngine.h"
 #include "engine/SliceEngine.h"
+#include "engine/LoopEngine.h"
 #include "engine/FilterEngine.h"
 #include "engine/DelayEngine.h"
 #include "engine/ReverbEngine.h"
@@ -72,7 +73,7 @@ private:
     SequencerState sequencerState;
     SequencerEngine sequencerEngine;
     SliceEngine sliceEngine;
-    DelayEngine loopDelayEngine;
+    LoopEngine loopEngine;
     FilterEngine filterEngine;
     DelayEngine fx1DelayEngine;
     ReverbEngine fx1ReverbEngine;
