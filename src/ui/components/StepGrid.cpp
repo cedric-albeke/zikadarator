@@ -32,6 +32,8 @@ void StepGrid::setupGrid()
                     onStepSelected(lane, step);
             };
 
+            cell->setInterceptsMouseClicks(false, false);
+
             cells[lane][step] = std::move(cell);
         }
 
@@ -262,6 +264,88 @@ void StepGrid::setSelectedStep(int lane, int step)
     if (selectedLane >= 0 && selectedStep >= 0
         && selectedLane < numLanes && selectedStep < numSteps)
         cells[selectedLane][selectedStep]->setSelected(true);
+}
+
+std::pair<int, int> StepGrid::hitTestCell(juce::Point<int> pos) const
+{
+    const int labelWidth     = 72;
+    const int labelGap       = 8;
+    const int knobStripWidth = 56;
+    const int rulerHeight    = 14;
+
+    const auto bounds  = getLocalBounds();
+    const int cellAreaX = bounds.getX() + labelWidth + labelGap;
+    const int cellAreaW = bounds.getWidth() - labelWidth - labelGap - knobStripWidth;
+
+    if (pos.y < rulerHeight || pos.x < cellAreaX || pos.x >= cellAreaX + cellAreaW)
+        return { -1, -1 };
+
+    const int laneAreaH = bounds.getHeight() - rulerHeight;
+    const int laneHeight = laneAreaH / numLanes;
+    const int stepWidth  = cellAreaW  / numSteps;
+
+    if (laneHeight == 0 || stepWidth == 0)
+        return { -1, -1 };
+
+    const int step = (pos.x - cellAreaX) / stepWidth;
+    const int lane = (pos.y - rulerHeight) / laneHeight;
+
+    if (step < 0 || step >= numSteps || lane < 0 || lane >= numLanes)
+        return { -1, -1 };
+
+    return { lane, step };
+}
+
+void StepGrid::applyPaintToCell(int lane, int step)
+{
+    if (lane < 0 || lane >= numLanes || step < 0 || step >= numSteps)
+        return;
+
+    auto* cell = cells[lane][step].get();
+    if (cell->getToggleState() != paintMode)
+        cell->setToggleState(paintMode, juce::sendNotification);
+}
+
+void StepGrid::mouseDown(const juce::MouseEvent& e)
+{
+    auto [lane, step] = hitTestCell(e.getPosition());
+    if (lane < 0)
+        return;
+
+    isPainting    = true;
+    paintMode     = !cells[lane][step]->getToggleState();
+    lastPaintedLane = lane;
+    lastPaintedStep = step;
+
+    applyPaintToCell(lane, step);
+
+    setSelectedStep(lane, step);
+    if (onStepSelected)
+        onStepSelected(lane, step);
+}
+
+void StepGrid::mouseDrag(const juce::MouseEvent& e)
+{
+    if (!isPainting)
+        return;
+
+    auto [lane, step] = hitTestCell(e.getPosition());
+    if (lane < 0)
+        return;
+
+    if (lane != lastPaintedLane || step != lastPaintedStep)
+    {
+        lastPaintedLane = lane;
+        lastPaintedStep = step;
+        applyPaintToCell(lane, step);
+    }
+}
+
+void StepGrid::mouseUp(const juce::MouseEvent& /*e*/)
+{
+    isPainting      = false;
+    lastPaintedLane = -1;
+    lastPaintedStep = -1;
 }
 
 }

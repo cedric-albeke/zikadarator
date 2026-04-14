@@ -15,6 +15,10 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
+
     void setPlayingStep(int step);
     void setSelectedStep(int lane, int step);
 
@@ -32,7 +36,14 @@ private:
     std::array<std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numSteps>, numLanes> attachments;
     std::array<std::unique_ptr<Knob>, numLanes> mixKnobs;
 
+    bool paintMode{false};
+    bool isPainting{false};
+    int lastPaintedLane{-1};
+    int lastPaintedStep{-1};
+
     void setupGrid();
+    std::pair<int, int> hitTestCell(juce::Point<int> pos) const;
+    void applyPaintToCell(int lane, int step);
 };
 
 }
