@@ -143,7 +143,7 @@ void Knob::mouseDown(const juce::MouseEvent& event)
 
 void Knob::mouseDrag(const juce::MouseEvent& event)
 {
-    auto deltaY = lastMousePos.y - event.getScreenPosition().getY();
+    auto deltaY = -event.getDistanceFromDragStartY();
     auto sensitivity = (maxValue - minValue) / 200.0;
     auto newValue = valueOnMouseDown + deltaY * sensitivity;
     setValue(newValue);
