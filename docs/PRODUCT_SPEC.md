@@ -245,6 +245,7 @@ Six modes that intelligently fill the entire grid:
 ## UI/UX Features
 
 ### Navigation
+- **Header tabs** switch between Sequencer, Presets, and Settings pages
 - **Scroll wheel** over step cells cycles presets without opening popup
 - **Drag horizontally** across cells to paint/copy
 - **Shift+Click** creates Tie steps
@@ -255,7 +256,12 @@ Six modes that intelligently fill the entire grid:
 - Animated playhead across the step grid
 - Lane colors indicate active effects at a glance
 - Subtle neon glow on hovered/selected elements
-- "SYSTEM ONLINE" pulse when audio is passing through
+- In-header preset strip reflects the active factory or user preset
+
+### Settings Surface
+- **Standalone builds** expose the real JUCE Audio/MIDI device panel inside the Settings tab
+- Controls include output/input device selection, active input channels, sample rate, audio buffer size, MIDI inputs, and feedback-loop mute
+- Product-specific workflow settings can be layered into the same tab beneath the device panel over time
 
 ### Editor Scaling
 - 75% — Compact mode for small screens

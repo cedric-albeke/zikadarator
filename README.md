@@ -1,4 +1,4 @@
-# Zikada FX
+# ZIKADARATOR
 
 A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zikada brand identity.
 
@@ -6,13 +6,15 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 
 **"Sequence the signal."**
 
-Zikada FX is a 16-step multi-FX sequencer that transforms incoming audio in real-time. Chop, stutter, filter, and reshape loops through 6 independent, reorderable effect lanes — each with 20+ preset variants per step.
+ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in real-time. Chop, stutter, filter, and reshape loops through 6 independent lanes, each with per-step preset assignment, footer-based user-slot editing, and an integrated preset/settings workspace.
 
 ## Features
 
 - **16-step FX sequencer** with 6 reorderable lanes
-- **Per-step sub-presets** — each step selects *which variant* of an effect to apply
-- **3-layer depth model**: Step grid → User slots (U1-U4) → Per-parameter modulation
+- **Right-sidebar preset grid** for per-step assignment
+- **Footer detail dock** for U1-U4 slot editing and modulation
+- **Preset browser + Settings tabs** embedded directly in the main editor
+- **Standalone device settings in-tab** — audio device, sample rate, buffer size, and MIDI inputs now live inside the Settings page
 - **Zikada-native UI**: Neon green (`#00FF85`) on deep teal-black, VCR OSD Mono typography, vector-based custom components
 - **VST3 / AU / Standalone** formats
 
@@ -30,21 +32,42 @@ src/
 ├── PluginProcessor.cpp/.h      # Main audio processor
 ├── PluginEditor.cpp/.h         # Main editor component
 ├── engine/                     # Audio engine
-│   └── SequencerEngine.cpp/.h  # 16-step sequencer core
+│   ├── SequencerEngine.cpp/.h  # 16-step sequencer core
+│   ├── SliceEngine.cpp/.h
+│   ├── FilterEngine.cpp/.h
+│   ├── DelayEngine.cpp/.h
+│   ├── ReverbEngine.cpp/.h
+│   ├── BitcrushEngine.cpp/.h
+│   ├── PitchEngine.cpp/.h
+│   ├── ModulationEngine.cpp/.h
+│   └── GainPanEngine.cpp/.h
 ├── state/                      # Parameter / state management
 │   ├── PluginState.cpp/.h
-│   └── ParameterIDs.h
+│   ├── ParameterIDs.h
+│   ├── SequencerState.h
+│   └── PresetManager.cpp/.h
 └── ui/                         # User interface
     ├── ZikadaLookAndFeel.cpp/.h
     ├── components/
     │   ├── VcrLabel.cpp/.h
     │   ├── StepCell.cpp/.h
-    │   └── StepGrid.cpp/.h
+    │   ├── StepGrid.cpp/.h
+    │   ├── Knob.cpp/.h
+    │   └── WaveformDisplay.cpp/.h
     └── panels/
         ├── HeaderPanel.cpp/.h
         ├── SequencerPanel.cpp/.h
-        └── FooterPanel.cpp/.h
+        ├── FooterPanel.cpp/.h
+        ├── SidebarPanel.cpp/.h
+        └── WorkspacePanel.cpp/.h
 ```
+
+## Current Editor Layout
+
+- **Header**: Serum-inspired tab rail, in-header preset strip, undo/redo
+- **Sequencer page**: Signal monitor, 6-lane step grid, right preset sidebar, footer detail dock
+- **Presets page**: In-app browser for factory and user presets
+- **Settings page**: Embedded JUCE standalone Audio/MIDI device selector
 
 ## Building
 

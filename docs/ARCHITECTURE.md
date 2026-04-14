@@ -35,42 +35,34 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 │   ├── PluginEditor.cpp/.h     # Main editor component
 │   ├── engine/                 # Audio engine
 │   │   ├── SequencerEngine.h   # 16-step sequencer core
-│   │   ├── StepData.h          # Per-step state structures
 │   │   ├── SliceEngine.h       # Audio slicing / buffer shuffle
-│   │   ├── LoopEngine.h        # Stutter / loop patterns
-│   │   ├── EnvelopeEngine.h    # Per-step volume envelopes
-│   │   ├── FilterEngine.h      # Filter + vowel effects
-│   │   ├── FxRack.h            # FX1 + FX2 multi-effect lanes
-│   │   └── effects/            # Individual effect implementations
-│   │       ├── DelayEffect.h
-│   │       ├── ReverbEffect.h
-│   │       ├── DistortionEffect.h
-│   │       ├── GrainEffect.h
-│   │       ├── PhaserEffect.h
-│   │       ├── VinylEffect.h
-│   │       └── ...
+│   │   ├── FilterEngine.h      # Filter + vowel / formant style shaping
+│   │   ├── DelayEngine.h
+│   │   ├── ReverbEngine.h
+│   │   ├── BitcrushEngine.h
+│   │   ├── PitchEngine.h
+│   │   ├── ModulationEngine.h
+│   │   └── GainPanEngine.h
 │   ├── ui/                     # User interface
 │   │   ├── ZikadaLookAndFeel.h # Brand color/fonts (not LnF inheritance)
 │   │   ├── components/         # Reusable UI widgets
 │   │   │   ├── StepGrid.h      # 16x6 step sequencer grid
 │   │   │   ├── StepCell.h      # Individual step button
-│   │   │   ├── LaneHeader.h    # Lane label + controls
-│   │   │   ├── EffectPopup.h   # Step effect selector popup
-│   │   │   ├── UserEditor.h    # U1-U4 parameter editor
 │   │   │   ├── Knob.h          # Custom rotary knob
-│   │   │   ├── Fader.h         # Custom vertical fader
 │   │   │   ├── WaveformDisplay.h
 │   │   │   ├── VcrLabel.h      # Monospace uppercase label
-│   │   │   └── GlowButton.h    # Neon glow button
+│   │   │   └── StepGrid.h
 │   │   ├── panels/             # Main layout panels
 │   │   │   ├── HeaderPanel.h
 │   │   │   ├── SequencerPanel.h
 │   │   │   ├── FooterPanel.h
-│   │   │   └── SettingsPanel.h
+│   │   │   ├── SidebarPanel.h
+│   │   │   └── WorkspacePanel.h
 │   │   └── fonts/              # Embedded binary fonts
 │   └── state/                  # Parameter / state management
 │       ├── PluginState.h
 │       ├── ParameterIDs.h
+│       ├── SequencerState.h
 │       └── PresetManager.h
 └── assets/                     # Images, fonts, binary data
     ├── fonts/
@@ -117,20 +109,21 @@ Each user parameter can be driven by:
 
 ### Layout (Top → Bottom)
 ```
-┌────────────────────────────────────────────────────────────┐
-│ HEADER: Transport | Preset | Undo | Random | Settings      │
-├────────────────────────────────────────────────────────────┤
-│ INPUT LANE: Live waveform (16-slice visualization)         │
-├────────────────────────────────────────────────────────────┤
-│ LANE 1: [Label] [⚙] [R] [■■■■■■■■■■■■■■■■] [Wet]          │
-│ LANE 2: [Label] [⚙] [R] [■■■■■■■■■■■■■■■■] [Wet]          │
-│ LANE 3: [Label] [⚙] [R] [■■■■■■■■■■■■■■■■] [Wet]          │
-│ LANE 4: [Label] [⚙] [R] [■■■■■■■■■■■■■■■■] [Wet]          │
-│ LANE 5: [Label] [⚙] [R] [■■■■■■■■■■■■■■■■] [Wet]          │
-│ LANE 6: [Label] [⚙] [R] [■■■■■■■■■■■■■■■■] [Wet]          │
-├────────────────────────────────────────────────────────────┤
-│ FOOTER: Dry/Wet Mix | Blend Mode | Bypass | Output Level   │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ HEADER: Logo | Sequencer | Presets | Settings | Preset | Undo/Redo │
+├─────────────────────────────────────────────────────────────────────┤
+│ PAGE A — SEQUENCER                                                 │
+│   Signal display                                                   │
+│   6-lane step grid                                                 │
+│   Right preset sidebar                                             │
+│   Footer detail dock                                               │
+├─────────────────────────────────────────────────────────────────────┤
+│ PAGE B — PRESETS                                                   │
+│   Search/filter browser | preset details | library metadata        │
+├─────────────────────────────────────────────────────────────────────┤
+│ PAGE C — SETTINGS                                                  │
+│   Embedded standalone Audio/MIDI device selector                   │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Design Principles
@@ -139,6 +132,7 @@ Each user parameter can be driven by:
 - **Immediate feedback**: Every interaction has a visual response within 1 frame
 - **Keyboard + mouse**: Scroll wheel cycles presets, drag-to-paint, shift+tie, right-click delete
 - **Resizable**: Editor scales from 75% to 200%
+- **Standalone integration**: Audio device, sample rate, buffer size, and MIDI routing are embedded inside the Settings tab via JUCE standalone host APIs
 
 ### Color Mapping to Lanes (Zikada Palette)
 | Lane | Color | Hex |
@@ -172,6 +166,11 @@ Each user parameter can be driven by:
 - Lane order
 - MIDI Learn mappings
 - Randomization preferences
+
+### Standalone Host State
+- Embedded `AudioDeviceSelectorComponent` uses JUCE standalone host state
+- Audio device setup is still owned by `juce::StandalonePluginHolder`
+- Settings tab now surfaces the same device options that used to live only behind the standalone host Options button
 
 ---
 
