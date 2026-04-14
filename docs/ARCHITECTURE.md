@@ -36,6 +36,7 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 │   ├── engine/                 # Audio engine
 │   │   ├── SequencerEngine.h   # 16-step sequencer core
 │   │   ├── SliceEngine.h       # Audio slicing / buffer shuffle
+│   │   ├── LoopEngine.h        # Dedicated micro-loop / stutter engine
 │   │   ├── FilterEngine.h      # Filter + vowel / formant style shaping
 │   │   ├── DelayEngine.h
 │   │   ├── ReverbEngine.h
@@ -91,6 +92,7 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 
 ### Processing Model
 - `SliceEngine` operates on a shared circular audio buffer (2+ bars)
+- `LoopEngine` captures recent audio history and replays micro-loops per step
 - Each subsequent engine receives the output of the previous
 - `EnvelopeEngine` applies per-step amplitude curves
 - `FxRack` hosts 2 independent effect lanes (FX1, FX2)
@@ -133,6 +135,7 @@ Each user parameter can be driven by:
 - **Keyboard + mouse**: Scroll wheel cycles presets, drag-to-paint, shift+tie, right-click delete
 - **Resizable**: Editor scales from 75% to 200%
 - **Standalone integration**: Audio device, sample rate, buffer size, and MIDI routing are embedded inside the Settings tab via JUCE standalone host APIs
+- **Preset access**: Header preset strip opens a popup menu for favorites, recents, full list access, and browser navigation
 
 ### Color Mapping to Lanes (Zikada Palette)
 | Lane | Color | Hex |
@@ -171,6 +174,10 @@ Each user parameter can be driven by:
 - Embedded `AudioDeviceSelectorComponent` uses JUCE standalone host state
 - Audio device setup is still owned by `juce::StandalonePluginHolder`
 - Settings tab now surfaces the same device options that used to live only behind the standalone host Options button
+
+### Preset Metadata State
+- `PresetManager` persists favorites and recent-use ordering alongside user presets
+- Header dropdown and browser both read from the same metadata-backed preset ordering
 
 ---
 

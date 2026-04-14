@@ -14,6 +14,7 @@ ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in re
 - **Right-sidebar preset grid** for per-step assignment
 - **Footer detail dock** for U1-U4 slot editing and modulation
 - **Preset browser + Settings tabs** embedded directly in the main editor
+- **Header preset dropdown** with favorites, recents, and direct loading
 - **Standalone device settings in-tab** — audio device, sample rate, buffer size, and MIDI inputs now live inside the Settings page
 - **Zikada-native UI**: Neon green (`#00FF85`) on deep teal-black, VCR OSD Mono typography, vector-based custom components
 - **VST3 / AU / Standalone** formats
@@ -65,6 +66,7 @@ src/
 ## Current Editor Layout
 
 - **Header**: Serum-inspired tab rail, in-header preset strip, undo/redo
+- **Header preset strip**: popup dropdown for favorites, recent presets, full preset list, and browser access
 - **Sequencer page**: Signal monitor, 6-lane step grid, right preset sidebar, footer detail dock
 - **Presets page**: In-app browser for factory and user presets
 - **Settings page**: Embedded JUCE standalone Audio/MIDI device selector

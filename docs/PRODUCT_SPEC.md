@@ -32,6 +32,7 @@ Unlike simple on/off step sequencers, each step selects *which variant* of an ef
 
 ### 3. LOOP — Stutter & Repeat
 - **Function**: Micro-looping and stutter effects per step
+- **Engine model**: Dedicated micro-loop engine with captured audio history, retrigger, reverse, and variable playback rate
 - **Presets**: Double, Triple, Reverse, Rhythmic subdivisions (1/32–1/4), Pitch-shifted loops, Granular freeze
 - **Creative use**: Build tension with rhythmic stutters before drops
 
@@ -195,6 +196,7 @@ Each lane has an independent dry/wet control on the far right of the sequencer r
 - Save full sequencer state + all U1-U4 configurations
 - Saved to user documents folder
 - Tag-based organization (custom categories)
+- Favorites + recent-use metadata drive both the browser order and the header dropdown
 
 ### Remote Lists (Performance Mode)
 - Map presets to MIDI notes for live triggering
@@ -246,6 +248,7 @@ Six modes that intelligently fill the entire grid:
 
 ### Navigation
 - **Header tabs** switch between Sequencer, Presets, and Settings pages
+- **Header preset dropdown** opens favorites, recents, full preset list, and direct browser access
 - **Scroll wheel** over step cells cycles presets without opening popup
 - **Drag horizontally** across cells to paint/copy
 - **Shift+Click** creates Tie steps
@@ -256,7 +259,7 @@ Six modes that intelligently fill the entire grid:
 - Animated playhead across the step grid
 - Lane colors indicate active effects at a glance
 - Subtle neon glow on hovered/selected elements
-- In-header preset strip reflects the active factory or user preset
+- In-header preset strip reflects the active preset, favorite state, and dirty state
 
 ### Settings Surface
 - **Standalone builds** expose the real JUCE Audio/MIDI device panel inside the Settings tab
