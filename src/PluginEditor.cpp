@@ -1,5 +1,9 @@
 #include "PluginEditor.h"
 
+#if JUCE_WINDOWS
+ #include <windows.h>
+#endif
+
 namespace zikada {
 
 PluginEditor::PluginEditor(PluginProcessor& p)
@@ -12,6 +16,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
       sidebarPanel(),
       workspacePanel()
 {
+    setOpaque(true);
     setLookAndFeel(&lookAndFeel);
 
     addAndMakeVisible(headerPanel);
@@ -172,6 +177,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     setResizeLimits(900, 600, 2400, 1600);
 
     setPage(Page::Sequencer);
+    applyWineSafeRenderingIfNeeded();
 
     startTimerHz(30);
 }
@@ -184,6 +190,8 @@ PluginEditor::~PluginEditor()
 
 void PluginEditor::timerCallback()
 {
+    applyWineSafeRenderingIfNeeded();
+
     if (currentPage != Page::Sequencer)
         return;
 
@@ -205,6 +213,18 @@ void PluginEditor::timerCallback()
         sequencerPanel.getStepGrid().setPlayingStep(step);
         lastPlayingStep = step;
     }
+}
+
+void PluginEditor::parentHierarchyChanged()
+{
+    AudioProcessorEditor::parentHierarchyChanged();
+    applyWineSafeRenderingIfNeeded();
+}
+
+void PluginEditor::visibilityChanged()
+{
+    AudioProcessorEditor::visibilityChanged();
+    applyWineSafeRenderingIfNeeded();
 }
 
 void PluginEditor::paint(juce::Graphics& g)
@@ -490,6 +510,35 @@ void PluginEditor::updateHistoryButtons()
 {
     headerPanel.setUndoEnabled(!undoStack.empty());
     headerPanel.setRedoEnabled(!redoStack.empty());
+}
+
+bool PluginEditor::isRunningUnderWine()
+{
+#if JUCE_WINDOWS
+    if (auto* ntdll = ::GetModuleHandleA("ntdll.dll"))
+        return ::GetProcAddress(ntdll, "wine_get_version") != nullptr;
+#endif
+
+    return false;
+}
+
+void PluginEditor::applyWineSafeRenderingIfNeeded()
+{
+    if (wineSafeRendererApplied || !isRunningUnderWine())
+        return;
+
+    if (auto* peer = getPeer())
+    {
+        const auto engines = peer->getAvailableRenderingEngines();
+        const auto softwareIndex = engines.indexOf("Software Renderer");
+
+        if (softwareIndex >= 0 && peer->getCurrentRenderingEngine() != softwareIndex)
+            peer->setCurrentRenderingEngine(softwareIndex);
+
+        wineSafeRendererApplied = true;
+        peer->repaint(getLocalBounds());
+        repaint();
+    }
 }
 
 WaveformDisplay* PluginEditor::getWaveformDisplay()

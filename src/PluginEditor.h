@@ -23,6 +23,8 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
+    void parentHierarchyChanged() override;
+    void visibilityChanged() override;
 
     WaveformDisplay* getWaveformDisplay();
 
@@ -48,6 +50,8 @@ private:
     void undoLastChange();
     void redoLastChange();
     void updateHistoryButtons();
+    void applyWineSafeRenderingIfNeeded();
+    static bool isRunningUnderWine();
 
     PluginProcessor& processorRef;
     ZikadaLookAndFeel lookAndFeel;
@@ -67,6 +71,7 @@ private:
     int lastFooterHistorySlot{-1};
 
     int lastPlayingStep{-1};
+    bool wineSafeRendererApplied{false};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };
