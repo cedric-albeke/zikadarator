@@ -31,13 +31,13 @@ FooterPanel::FooterPanel()
 
     mixModeLabel.setText("LINEAR", juce::dontSendNotification);
     mixModeLabel.setJustificationType(juce::Justification::centred);
-    mixModeLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
+    mixModeLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
+    mixModeLabel.setJustificationType(juce::Justification::centred);
     mixModeLabel.setColour(juce::Label::textColourId, Colours::neonGreen);
     addAndMakeVisible(mixModeLabel);
 
-    outputGainLabel.setText("0.0 dB", juce::dontSendNotification);
+    outputGainLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f)));
     outputGainLabel.setJustificationType(juce::Justification::centred);
-    outputGainLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
     outputGainLabel.setColour(juce::Label::textColourId, Colours::white85);
     addAndMakeVisible(outputGainLabel);
 
@@ -122,7 +122,7 @@ void FooterPanel::setupModulationControls()
         auto paramLabel = std::make_unique<juce::Label>();
         paramLabel->setText("SHAPE", juce::dontSendNotification);
         paramLabel->setJustificationType(juce::Justification::centred);
-        paramLabel->setFont(juce::Font(juce::FontOptions().withHeight(9.0f)));
+        paramLabel->setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
         paramLabel->setColour(juce::Label::textColourId, Colours::white50);
         addChildComponent(paramLabel.get());
         modParamLabels[i] = std::move(paramLabel);
@@ -178,14 +178,14 @@ void FooterPanel::drawDryWetModule(juce::Graphics& g) const
     auto inner  = dryWetZone.reduced(kInnerPad, 4).toFloat();
     auto topRow = inner.removeFromTop(static_cast<float>(kLabelH));
 
-    g.setFont(laf != nullptr ? laf->getVcrFont(9.0f)
-                              : juce::Font(juce::FontOptions().withHeight(9.0f)));
+    g.setFont(laf != nullptr ? laf->getVcrFont(11.0f)
+                              : juce::Font(juce::FontOptions().withHeight(11.0f)));
     g.setColour(Colours::neonGreen.withAlpha(0.70f));
     g.drawText("DRY / WET", topRow, juce::Justification::centredLeft, false);
 
     const auto valStr = juce::String(static_cast<int>(dryWetSlider.getValue())) + "%";
-    g.setFont(laf != nullptr ? laf->getSpaceMonoFont(10.0f, true)
-                              : juce::Font(juce::FontOptions().withHeight(10.0f)));
+    g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
+                              : juce::Font(juce::FontOptions().withHeight(12.0f)));
     g.setColour(Colours::white85);
     g.drawText(valStr, topRow, juce::Justification::centredRight, false);
 }
@@ -210,8 +210,8 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
 
     auto labelRow = inner.removeFromTop(kLabelH).toFloat();
 
-    g.setFont(laf != nullptr ? laf->getVcrFont(9.0f)
-                              : juce::Font(juce::FontOptions().withHeight(9.0f)));
+    g.setFont(laf != nullptr ? laf->getVcrFont(11.0f)
+                              : juce::Font(juce::FontOptions().withHeight(11.0f)));
     g.setColour(Colours::neonGreen.withAlpha(0.55f));
 
     if (modModeActive)
@@ -225,15 +225,15 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
     if (hasSelection)
     {
         const auto infoStr = selectedLaneName + "  /  U" + juce::String(selectedSlot + 1);
-        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(10.0f, true)
-                                  : juce::Font(juce::FontOptions().withHeight(10.0f).withStyle("Bold")));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
+                                  : juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
         g.setColour(Colours::neonGreen.withAlpha(0.90f));
         g.drawText(infoStr, infoRow, juce::Justification::centredRight, false);
     }
     else if (!modModeActive)
     {
-        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(9.0f)
-                                  : juce::Font(juce::FontOptions().withHeight(9.0f)));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(11.0f)
+                                  : juce::Font(juce::FontOptions().withHeight(11.0f)));
         g.setColour(Colours::white.withAlpha(0.20f));
         g.drawText("SELECT A STEP TO EDIT", infoRow, juce::Justification::centredRight, false);
 
@@ -263,8 +263,8 @@ void FooterPanel::drawSignalModule(juce::Graphics& g) const
     ZikadaLookAndFeel::drawDeviceDisplay(g, signalZone);
 
     const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
-    g.setFont(laf != nullptr ? laf->getVcrFont(9.0f)
-                              : juce::Font(juce::FontOptions().withHeight(9.0f)));
+    g.setFont(laf != nullptr ? laf->getVcrFont(11.0f)
+                              : juce::Font(juce::FontOptions().withHeight(11.0f)));
     g.setColour(Colours::white50);
     g.drawText("MIX MODE",  mixModeHeaderRect.toFloat(),    juce::Justification::centredLeft, false);
     g.drawText("OUTPUT",    outputGainHeaderRect.toFloat(),  juce::Justification::centredLeft, false);

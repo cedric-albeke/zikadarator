@@ -46,7 +46,7 @@ void setUserSlot(SequencerState& state, int lane, int slot, float cutoff, float 
 
 PresetManager::PresetManager()
     : presetDirectory(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-                          .getChildFile("ZIKADARATOR")
+                          .getChildFile("ZIKARATOR")
                           .getChildFile("Presets")),
       metadataFile(presetDirectory.getChildFile("preset-metadata.xml"))
 {

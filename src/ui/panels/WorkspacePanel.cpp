@@ -10,7 +10,7 @@ void configureLabel(juce::Label& label, float size, juce::Colour colour, juce::J
 {
     label.setJustificationType(justification);
     label.setColour(juce::Label::textColourId, colour);
-    label.setFont(juce::Font(juce::FontOptions().withHeight(size).withStyle(bold ? "Bold" : "Regular")));
+    label.setFont(juce::Font(juce::FontOptions().withHeight(size + 2.0f).withStyle(bold ? "Bold" : "Regular")));
 }
 
 void configureFilterButton(juce::TextButton& button)
@@ -478,7 +478,7 @@ void WorkspacePanel::updatePresetInfoPanels()
                             juce::dontSendNotification);
 
     const auto storagePath = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-                                 .getChildFile("ZIKADARATOR")
+                                 .getChildFile("ZIKARATOR")
                                  .getChildFile("Presets")
                                  .getFullPathName();
     presetInfoBodyB.setText("User presets are written to:\n" + storagePath
@@ -764,7 +764,7 @@ void WorkspacePanel::paintListBoxItem(int rowNumber, juce::Graphics& g, int widt
     auto inner = bounds.reduced(10, 7);
         auto top = inner.removeFromTop(18);
         g.setColour(item.isFactory ? Colours::neonGreen : Colours::laneFX2);
-        g.setFont(juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(16.0f).withStyle("Bold")));
         g.drawText(item.name, top, juce::Justification::centredLeft, false);
 
         auto badge = top.removeFromRight(76);
@@ -772,11 +772,11 @@ void WorkspacePanel::paintListBoxItem(int rowNumber, juce::Graphics& g, int widt
         g.fillRoundedRectangle(badge.toFloat(), 5.0f);
         g.setColour(item.isFactory ? Colours::neonGreen : Colours::laneFX2);
         g.drawRoundedRectangle(badge.toFloat(), 5.0f, 1.0f);
-        g.setFont(juce::Font(juce::FontOptions().withHeight(10.0f).withStyle("Bold")));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
         g.drawText(item.category.toUpperCase(), badge, juce::Justification::centred, false);
 
         g.setColour(Colours::white50);
-        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
         g.drawText(item.subtitle, inner.removeFromTop(16), juce::Justification::centredLeft, false);
 }
 

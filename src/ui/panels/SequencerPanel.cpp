@@ -26,7 +26,7 @@ void SequencerPanel::paint(juce::Graphics& g)
         auto displayInnerF = inputStripBounds.reduced(3, 3).toFloat();
         auto labelAreaF    = displayInnerF.withWidth(90.0f);
 
-        g.setFont(laf->getVcrFont(12.0f));
+        g.setFont(laf->getVcrFont(14.0f));
         g.setColour(Colours::neonGreen.withAlpha(0.82f));
         g.drawText("SIGNAL",
                    labelAreaF.withHeight(labelAreaF.getHeight() * 0.5f),

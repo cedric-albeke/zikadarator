@@ -13,7 +13,7 @@ namespace {
 SidebarPanel::SidebarPanel()
 {
     infoLabel.setJustificationType(juce::Justification::centredLeft);
-    infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
+    infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f)));
     infoLabel.setColour(juce::Label::textColourId, Colours::white85);
     infoLabel.setMinimumHorizontalScale(1.0f);
     addAndMakeVisible(infoLabel);
@@ -186,6 +186,7 @@ void SidebarPanel::buildPresetGrid()
         btn->setColour(juce::TextButton::textColourOffId, juce::Colours::transparentBlack);
         btn->setColour(juce::TextButton::textColourOnId, juce::Colours::transparentBlack);
         addAndMakeVisible(btn.get());
+        btn->addMouseListener(this, true);
         presetButtons.push_back(std::move(btn));
     }
 
@@ -238,11 +239,11 @@ void SidebarPanel::paint(juce::Graphics& g)
         return;
 
     auto laneColour = laneInfos[currentLane].colour;
-    auto headerBounds = bounds.removeFromTop(static_cast<float>(kHeaderH)).reduced(8.0f, 8.0f);
+    auto headerBounds = bounds.removeFromTop(static_cast<float>(kHeaderH));
 
     ZikadaLookAndFeel::drawDeviceDisplay(g, headerBounds.toNearestInt());
 
-    auto headerInner = headerBounds.reduced(6.0f, 6.0f);
+    auto headerInner = headerBounds.reduced(14, 10).toFloat();
     g.setColour(laneColour.withAlpha(0.90f));
     g.fillRoundedRectangle(headerInner.withWidth(4.0f).withTrimmedTop(8.0f).withTrimmedBottom(8.0f), 2.0f);
 
@@ -254,13 +255,13 @@ void SidebarPanel::paint(juce::Graphics& g)
     PresetIcons::drawLaneIcon(g, currentLane, iconBounds, laneColour, 2.0f);
 
     auto textBounds = headerInner.withTrimmedLeft(iconSize + 28.0f);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(20.0f).withStyle("Bold")));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(23.0f).withStyle("Bold")));
     g.setColour(Colours::white);
     g.drawText(laneInfos[currentLane].name,
                textBounds.withHeight(textBounds.getHeight() * 0.55f),
                juce::Justification::centredLeft, false);
 
-    g.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(14.0f)));
     g.setColour(Colours::white50);
     g.drawText("SELECT PRESET",
                textBounds.withY(textBounds.getY() + textBounds.getHeight() * 0.48f)

@@ -22,6 +22,7 @@ juce_add_binary_data(ZikadaFXAssets SOURCES
     assets/fonts/VCR-OSD-MONO.ttf
     assets/images/zikada-cicada.png
     assets/images/zikada-cicada-128.png
+    assets/images/zikator-logo.png
 )
 
 set_target_properties(ZikadaFXAssets PROPERTIES
@@ -40,7 +41,7 @@ juce_add_plugin(ZikadaFX
     PLUGIN_MANUFACTURER_CODE Zika
     PLUGIN_CODE Zkfx
     FORMATS VST3 AU Standalone
-    PRODUCT_NAME "ZIKADARATOR"
+    PRODUCT_NAME "ZIKARATOR"
     VERSION "0.1.0"
     BUNDLE_ID "io.zikada.fx"
     MICROPHONE_PERMISSION_ENABLED TRUE

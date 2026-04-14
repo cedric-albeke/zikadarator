@@ -48,7 +48,7 @@ static std::unique_ptr<juce::Drawable> parseSvgString(const juce::String& svgTex
 HeaderPanel::HeaderPanel()
 {
     logoImage = juce::ImageCache::getFromMemory(
-        BinaryData::zikadacicada128_png, BinaryData::zikadacicada128_pngSize);
+        BinaryData::zikatorlogo_png, BinaryData::zikatorlogo_pngSize);
 
     undoIcon = parseSvgString(kUndoSvg);
     redoIcon = parseSvgString(kRedoSvg);
@@ -172,12 +172,12 @@ void HeaderPanel::paint(juce::Graphics& g)
     g.drawLine(0.0f, bounds.getBottom() - 1.5f,
                bounds.getRight(), bounds.getBottom() - 1.5f, 2.0f);
 
-    auto wordmarkFont = laf ? laf->getAntaFont(26.0f)
-                            : juce::Font(juce::FontOptions().withHeight(26.0f));
-    auto versionFont  = laf ? laf->getAntaFont(15.0f)
-                            : juce::Font(juce::FontOptions().withHeight(15.0f));
-    auto sublineFont  = laf ? laf->getSpaceMonoFont(13.0f, false)
-                            : juce::Font(juce::FontOptions().withHeight(10.0f));
+    auto wordmarkFont = laf ? laf->getAntaFont(30.0f)
+                            : juce::Font(juce::FontOptions().withHeight(30.0f));
+    auto versionFont  = laf ? laf->getAntaFont(17.0f)
+                            : juce::Font(juce::FontOptions().withHeight(17.0f));
+    auto sublineFont  = laf ? laf->getSpaceMonoFont(15.0f, false)
+                            : juce::Font(juce::FontOptions().withHeight(12.0f));
 
     // ── Logo (128px pre-scaled asset) ───────────────────────────────
     const float logoSz = static_cast<float>(HL::kLogoSize);
@@ -201,33 +201,33 @@ void HeaderPanel::paint(juce::Graphics& g)
     // ── Wordmark + subline ──────────────────────────────────────────
     const float wmX = logoX + logoSz + static_cast<float>(HL::kLogoGap);
 
-    juce::GlyphArrangement gaZikada, gaRator, gaV1;
-    gaZikada.addLineOfText(wordmarkFont, "ZIKADA", 0, 0);
+    juce::GlyphArrangement gaZika, gaRator, gaV1;
+    gaZika.addLineOfText(wordmarkFont, "ZIKA", 0, 0);
     gaRator.addLineOfText(wordmarkFont, "RATOR", 0, 0);
     gaV1.addLineOfText(versionFont, "V1", 0, 0);
 
-    const float wZikada = gaZikada.getBoundingBox(0, gaZikada.getNumGlyphs(), true).getWidth();
+    const float wZika = gaZika.getBoundingBox(0, gaZika.getNumGlyphs(), true).getWidth();
     const float wRator  = gaRator.getBoundingBox(0, gaRator.getNumGlyphs(), true).getWidth();
     const float wV1     = gaV1.getBoundingBox(0, gaV1.getNumGlyphs(), true).getWidth();
-    const float totalWmW = wZikada + wRator + wV1 + 6.0f;
+    const float totalWmW = wZika + wRator + wV1 + 6.0f;
 
     const float wmY = bounds.getCentreY() - 14.0f;
 
     g.setFont(wordmarkFont);
     g.setColour(Colours::white);
-    g.drawText("ZIKADA",
-               juce::Rectangle<float>(wmX, wmY, wZikada + 2.0f, 26.0f),
+    g.drawText("ZIKA",
+               juce::Rectangle<float>(wmX, wmY, wZika + 2.0f, 26.0f),
                juce::Justification::centredLeft, false);
 
     g.setColour(Colours::neonGreen);
     g.drawText("RATOR",
-               juce::Rectangle<float>(wmX + wZikada, wmY, wRator + 2.0f, 26.0f),
+               juce::Rectangle<float>(wmX + wZika, wmY, wRator + 2.0f, 26.0f),
                juce::Justification::centredLeft, false);
 
     g.setFont(versionFont);
     g.setColour(Colours::neonGreen.withAlpha(0.65f));
     g.drawText("V1",
-               juce::Rectangle<float>(wmX + wZikada + wRator + 3.0f, wmY + 2.0f, wV1 + 2.0f, 22.0f),
+               juce::Rectangle<float>(wmX + wZika + wRator + 3.0f, wmY + 2.0f, wV1 + 2.0f, 22.0f),
                juce::Justification::centredLeft, false);
 
     g.setFont(sublineFont);
@@ -244,10 +244,10 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
     const auto bounds = getLocalBounds().toFloat();
     const auto* laf   = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
 
-    auto tabFont    = laf ? laf->getSpaceMonoFont(13.0f, true)
-                          : juce::Font(juce::FontOptions().withHeight(13.0f).withStyle("Bold"));
-    auto presetFont = laf ? laf->getSpaceMonoFont(12.0f, false)
-                          : juce::Font(juce::FontOptions().withHeight(12.0f));
+    auto tabFont    = laf ? laf->getSpaceMonoFont(15.0f, true)
+                          : juce::Font(juce::FontOptions().withHeight(15.0f).withStyle("Bold"));
+    auto presetFont = laf ? laf->getSpaceMonoFont(14.0f, false)
+                          : juce::Font(juce::FontOptions().withHeight(14.0f));
 
     // ── Tab cells ───────────────────────────────────────────────────
     auto drawTab = [&](const juce::TextButton& tab, const juce::String& label, bool active)

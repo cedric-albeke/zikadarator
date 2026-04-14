@@ -52,8 +52,8 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.drawRoundedRectangle(bounds, corner, 1.5f);
 
         g.setColour(Colours::bgPrimary.withAlpha(0.90f));
-        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
-                                 : juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(14.0f, true)
+                                 : juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
         auto numBounds = bounds.withHeight(bounds.getHeight() * 0.35f);
         g.drawText(juce::String(stepIndex + 1), numBounds, juce::Justification::centred, false);
 
@@ -91,8 +91,8 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 
         const float numAlpha = isGroupStart ? 0.68f : 0.48f;
         g.setColour(Colours::white.withAlpha(numAlpha));
-        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f)
-                                 : juce::Font(juce::FontOptions().withHeight(12.0f)));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(14.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(14.0f)));
         g.drawText(juce::String(stepIndex + 1), bounds, juce::Justification::centred, false);
     }
 

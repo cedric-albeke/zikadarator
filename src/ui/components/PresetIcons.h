@@ -22,41 +22,42 @@ struct PresetIcons
 
     static void drawSliceIcon(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour c, float stroke = 1.5f)
     {
-        juce::ignoreUnused(stroke);
         float cx = bounds.getCentreX();
         float cy = bounds.getCentreY();
-        float w = bounds.getWidth() * 0.55f;
-        float h = bounds.getHeight() * 0.45f;
-        float x = cx - w * 0.5f;
-        float y = cy - h * 0.5f;
-        juce::Path blade;
-        blade.startNewSubPath(x + w * 0.15f, y);
-        blade.lineTo(x + w * 0.85f, y + h * 0.25f);
-        blade.lineTo(x + w * 0.7f, y + h * 0.25f);
-        blade.lineTo(x + w * 0.95f, y + h);
-        blade.lineTo(x + w * 0.55f, y + h * 0.35f);
-        blade.lineTo(x + w * 0.4f, y + h * 0.35f);
-        blade.lineTo(x + w * 0.1f, y + h * 0.15f);
-        blade.closeSubPath();
+        float r = bounds.getWidth() * 0.09f;
         g.setColour(c);
-        g.fillPath(blade);
+        g.drawEllipse(cx - r * 2.8f - r, cy - r * 1.2f - r, r * 2.0f, r * 2.0f, stroke);
+        g.drawEllipse(cx + r * 2.8f - r, cy - r * 1.2f - r, r * 2.0f, r * 2.0f, stroke);
+        juce::Path blades;
+        float x1 = cx - bounds.getWidth() * 0.32f;
+        float y1 = cy + bounds.getHeight() * 0.22f;
+        float x2 = cx + bounds.getWidth() * 0.32f;
+        float y2 = cy - bounds.getHeight() * 0.22f;
+        blades.startNewSubPath(x1, y1);
+        blades.lineTo(x2, y2);
+        float x3 = cx - bounds.getWidth() * 0.32f;
+        float y3 = cy - bounds.getHeight() * 0.22f;
+        float x4 = cx + bounds.getWidth() * 0.32f;
+        float y4 = cy + bounds.getHeight() * 0.22f;
+        blades.startNewSubPath(x3, y3);
+        blades.lineTo(x4, y4);
+        g.strokePath(blades, juce::PathStrokeType(stroke, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
     static void drawLoopIcon(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour c, float stroke = 1.5f)
     {
         float cx = bounds.getCentreX();
         float cy = bounds.getCentreY();
-        float r = bounds.getWidth() * 0.28f;
+        float r = bounds.getWidth() * 0.26f;
         juce::Path p;
-        p.addCentredArc(cx, cy - r * 0.15f, r, r * 0.75f, 0.0f, 0.3f, 5.8f, true);
+        p.addCentredArc(cx, cy, r, r * 0.65f, 0.0f, 0.4f, 5.6f, true);
         g.setColour(c);
         g.strokePath(p, juce::PathStrokeType(stroke, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-        float ax = cx + r * std::cos(5.8f);
-        float ay = (cy - r * 0.15f) + r * 0.75f * std::sin(5.8f);
+        float ax = cx + r * std::cos(5.6f);
+        float ay = cy + r * 0.65f * std::sin(5.6f);
         juce::Path arrow;
-        arrow.addTriangle(ax - 4.0f, ay - 4.0f, ax + 4.0f, ay, ax - 4.0f, ay + 4.0f);
+        arrow.addTriangle(ax - 3.0f, ay - 3.0f, ax + 3.0f, ay, ax - 3.0f, ay + 3.0f);
         g.fillPath(arrow);
-        g.fillEllipse(cx - r * 0.25f, cy + r * 0.35f, r * 0.5f, r * 0.5f);
     }
 
     static void drawEnvelopeIcon(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour c, float stroke = 1.5f)
@@ -82,20 +83,21 @@ struct PresetIcons
         juce::ignoreUnused(stroke);
         float cx = bounds.getCentreX();
         float cy = bounds.getCentreY();
-        float r = bounds.getWidth() * 0.32f;
+        float rOut = bounds.getWidth() * 0.28f;
+        float rIn = rOut * 0.35f;
+        juce::Path star;
         for (int i = 0; i < 8; ++i)
         {
-            float angle = float(i) * juce::MathConstants<float>::pi / 4.0f;
-            float len = (i % 2 == 0) ? r : r * 0.5f;
-            float x1 = cx + std::cos(angle) * len * 0.3f;
-            float y1 = cy + std::sin(angle) * len * 0.3f;
-            float x2 = cx + std::cos(angle) * len;
-            float y2 = cy + std::sin(angle) * len;
-            g.setColour(c.withAlpha(i % 2 == 0 ? 1.0f : 0.7f));
-            g.drawLine(x1, y1, x2, y2, 2.5f);
+            float angle = float(i) * juce::MathConstants<float>::pi / 4.0f - juce::MathConstants<float>::pi / 8.0f;
+            float r = (i % 2 == 0) ? rOut : rIn;
+            float x = cx + std::cos(angle) * r;
+            float y = cy + std::sin(angle) * r;
+            if (i == 0) star.startNewSubPath(x, y);
+            else star.lineTo(x, y);
         }
-        g.setColour(c.brighter(0.3f));
-        g.fillEllipse(cx - r * 0.2f, cy - r * 0.2f, r * 0.4f, r * 0.4f);
+        star.closeSubPath();
+        g.setColour(c);
+        g.fillPath(star);
     }
 
     static void drawFx2Icon(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour c, float stroke = 1.5f)
@@ -103,25 +105,21 @@ struct PresetIcons
         juce::ignoreUnused(stroke);
         float cx = bounds.getCentreX();
         float cy = bounds.getCentreY();
-        float r = bounds.getWidth() * 0.28f;
-        juce::Path p;
-        for (int i = 0; i < 3; ++i)
-        {
-            float rr = r * (1.0f - i * 0.28f);
-            p.addEllipse(cx - rr, cy - rr * 0.6f, rr * 2.0f, rr * 1.2f);
-        }
-        g.setColour(c.withAlpha(0.6f));
-        g.strokePath(p, juce::PathStrokeType(2.0f));
-        juce::Path wave;
-        wave.startNewSubPath(cx - r * 0.8f, cy);
-        for (int i = 0; i <= 12; ++i)
-        {
-            float nx = cx - r * 0.8f + i * (r * 1.6f / 12.0f);
-            float ny = cy + std::sin(i * 0.9f) * r * 0.25f;
-            wave.lineTo(nx, ny);
-        }
+        float w = bounds.getWidth() * 0.72f;
         g.setColour(c);
-        g.strokePath(wave, juce::PathStrokeType(2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        for (int row = -1; row <= 1; ++row)
+        {
+            juce::Path wave;
+            float y = cy + row * bounds.getHeight() * 0.14f;
+            wave.startNewSubPath(cx - w * 0.5f, y);
+            for (int i = 0; i <= 10; ++i)
+            {
+                float nx = cx - w * 0.5f + i * (w / 10.0f);
+                float ny = y + std::sin(i * 0.6f + row * 0.3f) * bounds.getHeight() * 0.08f;
+                wave.lineTo(nx, ny);
+            }
+            g.strokePath(wave, juce::PathStrokeType(1.8f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        }
     }
 
     static void drawFilterIcon(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour c, float stroke = 1.5f)
@@ -188,31 +186,15 @@ struct PresetIcons
     static void drawSlicePresetIcon(juce::Graphics& g, int fx,
                                     juce::Rectangle<float> bounds, juce::Colour c)
     {
-        int slices = (fx % 8) + 1;
-        if (fx >= 8) slices = 16;
-        int maxDisplay = juce::jmin(slices, 8);
-        float padX = bounds.getWidth() * 0.1f;
-        float barW = (bounds.getWidth() - padX * 2.0f) / maxDisplay;
-        float barH = bounds.getHeight() * 0.45f;
-        float x0 = bounds.getX() + padX;
-        float y = bounds.getCentreY() - barH * 0.5f;
+        static const char* labels[] = {
+            "1", "2", "3", "4", "5", "6", "8", "10",
+            "12", "14", "16", "FWD", "REV", "SC", "RP", "ST"
+        };
+        juce::String text = labels[juce::jlimit(0, 15, fx)];
+        float fontH = bounds.getHeight() * (text.length() > 2 ? 0.32f : 0.45f);
+        g.setFont(juce::Font(juce::FontOptions().withHeight(fontH).withStyle("Bold")));
         g.setColour(c);
-        for (int i = 0; i < maxDisplay; ++i)
-        {
-            float h = barH * (0.5f + 0.5f * ((i + slices) % 3) / 2.0f);
-            float bx = x0 + i * barW + barW * 0.2f;
-            float by = bounds.getCentreY() - h * 0.5f;
-            g.fillRect(bx, by, barW * 0.6f, h);
-        }
-        if (fx >= 8)
-        {
-            juce::Path p;
-            p.addArrow(juce::Line<float>(bounds.getCentreX() - 6.0f, bounds.getCentreY(),
-                                            bounds.getCentreX() + 6.0f, bounds.getCentreY()),
-                       3.0f, 6.0f, 4.0f);
-            g.setColour(c.brighter(0.3f));
-            g.fillPath(p);
-        }
+        g.drawText(text, bounds, juce::Justification::centred, false);
     }
 
     static void drawLoopPresetIcon(juce::Graphics& g, int fx,

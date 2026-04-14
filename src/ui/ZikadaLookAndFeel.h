@@ -60,10 +60,10 @@ class ZikadaLookAndFeel : public juce::LookAndFeel_V4
 public:
     ZikadaLookAndFeel();
     
-    juce::Font getVcrFont(float size = 12.0f) const;
-    juce::Font getSpaceMonoFont(float size = 14.0f, bool bold = false) const;
-    juce::Font getAntaFont(float size = 24.0f) const;
-    juce::Font getInterFont(float size = 16.0f) const;
+    juce::Font getVcrFont(float size = 14.0f) const;
+    juce::Font getSpaceMonoFont(float size = 16.0f, bool bold = false) const;
+    juce::Font getAntaFont(float size = 28.0f) const;
+    juce::Font getInterFont(float size = 18.0f) const;
     
     void initialiseColours();
 

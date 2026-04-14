@@ -3,12 +3,12 @@
 namespace zikada {
 
 VcrLabel::VcrLabel()
-    : font(juce::FontOptions().withHeight(12.0f))
+    : font(juce::FontOptions().withHeight(14.0f))
 {
 }
 
 VcrLabel::VcrLabel(const juce::String& t)
-    : text(t), font(juce::FontOptions().withHeight(12.0f))
+    : text(t), font(juce::FontOptions().withHeight(14.0f))
 {
 }
 

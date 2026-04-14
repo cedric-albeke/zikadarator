@@ -13,21 +13,21 @@ void ZikadaLookAndFeel::loadFonts()
 {
     auto vcrFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::VCROSDMONO_ttf, BinaryData::VCROSDMONO_ttfSize);
-    vcrFont = juce::Font(juce::FontOptions(vcrFace).withHeight(12.0f));
-    
+    vcrFont = juce::Font(juce::FontOptions(vcrFace).withHeight(14.0f));
+
     auto spaceMonoFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::SpaceMonoRegular_ttf, BinaryData::SpaceMonoRegular_ttfSize);
-    spaceMonoFont = juce::Font(juce::FontOptions(spaceMonoFace).withHeight(14.0f));
-    
+    spaceMonoFont = juce::Font(juce::FontOptions(spaceMonoFace).withHeight(16.0f));
+
     auto spaceMonoBoldFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::SpaceMonoBold_ttf, BinaryData::SpaceMonoBold_ttfSize);
-    spaceMonoBoldFont = juce::Font(juce::FontOptions(spaceMonoBoldFace).withHeight(14.0f));
-    
+    spaceMonoBoldFont = juce::Font(juce::FontOptions(spaceMonoBoldFace).withHeight(16.0f));
+
     auto antaFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::AntaRegular_ttf, BinaryData::AntaRegular_ttfSize);
-    antaFont = juce::Font(juce::FontOptions(antaFace).withHeight(24.0f));
-    
-    interFont = juce::Font(juce::FontOptions().withName(juce::Font::getDefaultSansSerifFontName()).withHeight(16.0f));
+    antaFont = juce::Font(juce::FontOptions(antaFace).withHeight(28.0f));
+
+    interFont = juce::Font(juce::FontOptions().withName(juce::Font::getDefaultSansSerifFontName()).withHeight(18.0f));
 }
 
 void ZikadaLookAndFeel::initialiseColours()
@@ -87,7 +87,7 @@ void ZikadaLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
 void ZikadaLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
     bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
-    g.setFont(getSpaceMonoFont(11.0f, true));
+    g.setFont(getSpaceMonoFont(13.0f, true));
 
     juce::Colour textColour;
     if (!button.isEnabled())

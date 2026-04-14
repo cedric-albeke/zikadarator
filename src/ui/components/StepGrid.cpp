@@ -90,7 +90,7 @@ void StepGrid::paint(juce::Graphics& g)
     g.fillAll(Colours::bgPrimary);
 
     const auto  bounds       = getLocalBounds();
-    const int   labelWidth   = 72;
+    const int   labelWidth   = 110;
     const int   labelGap     = 8;
     const int   knobStripW   = 56;
     const int   rulerHeight  = 14;
@@ -122,8 +122,8 @@ void StepGrid::paint(juce::Graphics& g)
 
             g.setColour(beat == 0 ? Colours::neonGreen.withAlpha(0.90f)
                                   : Colours::white.withAlpha(0.55f));
-            g.setFont(laf != nullptr ? laf->getSpaceMonoFont(11.0f, true)
-                                     : juce::Font(juce::FontOptions().withHeight(11.0f)));
+            g.setFont(laf != nullptr ? laf->getSpaceMonoFont(13.0f, true)
+                                     : juce::Font(juce::FontOptions().withHeight(13.0f)));
             g.drawText(juce::String(beat * 4 + 1),
                        juce::Rectangle<int>(bx + 3, bounds.getY() + 1, 20, rulerHeight - 2),
                        juce::Justification::centredLeft, false);
@@ -184,15 +184,15 @@ void StepGrid::paint(juce::Graphics& g)
 
         const auto nameZone = chipBounds.withTrimmedLeft(8.0f + iconSize + 4.0f);
         g.setColour(laneCol);
-        g.setFont(laf != nullptr ? laf->getVcrFont(13.0f)
-                                 : juce::Font(juce::FontOptions().withHeight(13.0f)));
+        g.setFont(laf != nullptr ? laf->getVcrFont(15.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(15.0f)));
         g.drawText(juce::String(laneInfos[lane].name),
                    nameZone.withHeight(nameZone.getHeight() * 0.54f),
                    juce::Justification::centredLeft, false);
 
         g.setColour(Colours::white.withAlpha(0.48f));
-        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(11.0f)
-                                 : juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(13.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(13.0f)));
         g.drawText("ROW " + juce::String(lane + 1),
                    nameZone.withY(nameZone.getY() + nameZone.getHeight() * 0.54f)
                             .withHeight(nameZone.getHeight() * 0.46f),
@@ -242,7 +242,7 @@ void StepGrid::resized()
 {
     auto bounds = getLocalBounds();
 
-    const int labelWidth     = 72;
+    const int labelWidth     = 110;
     const int labelGap       = 8;
     const int knobStripWidth = 56;
     const int rulerHeight    = 14;
@@ -305,7 +305,7 @@ void StepGrid::setSelectedStep(int lane, int step)
 
 std::pair<int, int> StepGrid::hitTestCell(juce::Point<int> pos) const
 {
-    const int labelWidth     = 72;
+    const int labelWidth     = 110;
     const int labelGap       = 8;
     const int knobStripWidth = 56;
     const int rulerHeight    = 14;

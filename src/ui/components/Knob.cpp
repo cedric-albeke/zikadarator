@@ -21,8 +21,8 @@ void Knob::paint(juce::Graphics& g)
     if (label.isNotEmpty())
     {
         g.setColour(accentColour.withAlpha(0.72f));
-        g.setFont(laf != nullptr ? laf->getVcrFont(10.0f)
-                                 : juce::Font(juce::FontOptions().withHeight(10.0f)));
+        g.setFont(laf != nullptr ? laf->getVcrFont(12.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(12.0f)));
         g.drawText(label,
                    juce::Rectangle<float>(0.0f, 0.0f, bw, labelH).toNearestInt(),
                    juce::Justification::centred, false);
@@ -84,8 +84,8 @@ void Knob::paint(juce::Graphics& g)
     g.fillRoundedRectangle(valueRect.reduced(5.0f, 2.0f), 2.0f);
 
     g.setColour(accentColour.withAlpha(0.88f));
-    g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
-                             : juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
+    g.setFont(laf != nullptr ? laf->getSpaceMonoFont(14.0f, true)
+                             : juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
     g.drawText(valueStr, valueRect.toNearestInt(), juce::Justification::centred, false);
 }
 
