@@ -315,37 +315,32 @@ void FooterPanel::resized()
         const int     totalGaps = (numKnobs - 1) * kKnobGap;
         const int     knobW     = (inner.getWidth() - totalGaps) / numKnobs;
 
-        if (!modModeActive)
+        for (int i = 0; i < numKnobs; ++i)
         {
-            for (int i = 0; i < numKnobs; ++i)
-            {
-                const int kx = inner.getX() + i * (knobW + kKnobGap);
-                stepKnobs[i]->setBounds(kx, inner.getY(), knobW, inner.getHeight());
-            }
+            const int kx = inner.getX() + i * (knobW + kKnobGap);
+            stepKnobs[i]->setBounds(kx, inner.getY(), knobW, inner.getHeight());
         }
-        else
-        {
-            const int slotGap = 8;
-            const int slotW = (inner.getWidth() - (kNumModSlots - 1) * slotGap) / kNumModSlots;
-            const int btnH = 20;
-            const int sldH = 18;
-            const int lblH = 12;
-            const int gap = 3;
 
-            for (int i = 0; i < kNumModSlots; ++i)
-            {
-                int sx = inner.getX() + i * (slotW + slotGap);
-                int sy = inner.getY();
-                modTargetButtons[i]->setBounds(sx, sy, slotW, btnH);
-                sy += btnH + gap;
-                modSourceButtons[i]->setBounds(sx, sy, slotW, btnH);
-                sy += btnH + gap;
-                modAmountSliders[i]->setBounds(sx, sy, slotW, sldH);
-                sy += sldH + gap;
-                modParamLabels[i]->setBounds(sx, sy, slotW, lblH);
-                sy += lblH + gap;
-                modParamSliders[i]->setBounds(sx, sy, slotW, std::max(4, inner.getBottom() - sy));
-            }
+        const int slotGap = 8;
+        const int slotW = (inner.getWidth() - (kNumModSlots - 1) * slotGap) / kNumModSlots;
+        const int btnH = 20;
+        const int sldH = 18;
+        const int lblH = 12;
+        const int gap = 3;
+
+        for (int i = 0; i < kNumModSlots; ++i)
+        {
+            int sx = inner.getX() + i * (slotW + slotGap);
+            int sy = inner.getY();
+            modTargetButtons[i]->setBounds(sx, sy, slotW, btnH);
+            sy += btnH + gap;
+            modSourceButtons[i]->setBounds(sx, sy, slotW, btnH);
+            sy += btnH + gap;
+            modAmountSliders[i]->setBounds(sx, sy, slotW, sldH);
+            sy += sldH + gap;
+            modParamLabels[i]->setBounds(sx, sy, slotW, lblH);
+            sy += lblH + gap;
+            modParamSliders[i]->setBounds(sx, sy, slotW, std::max(4, inner.getBottom() - sy));
         }
     }
 }
