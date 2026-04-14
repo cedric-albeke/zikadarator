@@ -23,12 +23,12 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
     if (isCellActive)
     {
         auto laneColour = laneInfos[laneIndex].colour;
-        if (highlighted) laneColour = laneColour.brighter(0.18f);
+        if (highlighted) laneColour = laneColour.brighter(0.28f);
         if (down)        laneColour = laneColour.darker(0.25f);
 
-        const auto glowBounds = bounds.expanded(3.0f);
+        const auto glowBounds = bounds.expanded(highlighted ? 5.0f : 3.0f);
         juce::ColourGradient glowGrad(
-            laneColour.withAlpha(0.28f), glowBounds.getCentreX(), glowBounds.getCentreY(),
+            laneColour.withAlpha(highlighted ? 0.45f : 0.28f), glowBounds.getCentreX(), glowBounds.getCentreY(),
             laneColour.withAlpha(0.0f),  glowBounds.getRight(),   glowBounds.getBottom(), true);
         g.setGradientFill(glowGrad);
         g.fillRoundedRectangle(glowBounds, corner + 2.0f);
@@ -51,6 +51,12 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.setColour(laneColour.withAlpha(0.82f));
         g.drawRoundedRectangle(bounds, corner, 1.5f);
 
+        if (highlighted)
+        {
+            g.setColour(Colours::white.withAlpha(0.18f));
+            g.drawRoundedRectangle(bounds, corner, 2.0f);
+        }
+
         g.setColour(Colours::bgPrimary.withAlpha(0.90f));
         g.setFont(laf != nullptr ? laf->getSpaceMonoFont(14.0f, true)
                                  : juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
@@ -70,6 +76,25 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
             g.setColour(Colours::white.withAlpha(0.9f));
             g.fillEllipse(bounds.getRight() - 8.0f, bounds.getCentreY() - 3.0f, 6.0f, 6.0f);
         }
+
+        if (highlighted && chainable)
+        {
+            const float plusSize = 20.0f;
+            const float plusX = bounds.getRight() - plusSize + 2.0f;
+            const float plusY = bounds.getY() + 2.0f;
+            juce::Rectangle<float> plusBounds(plusX, plusY, plusSize, plusSize);
+
+            g.setColour(Colours::neonGreen);
+            g.fillRoundedRectangle(plusBounds, 5.0f);
+
+            g.setColour(Colours::white);
+            const float stroke = 2.5f;
+            const float cx = plusBounds.getCentreX();
+            const float cy = plusBounds.getCentreY();
+            const float half = plusSize * 0.22f;
+            g.drawLine(cx - half, cy, cx + half, cy, stroke);
+            g.drawLine(cx, cy - half, cx, cy + half, stroke);
+        }
     }
     else
     {
@@ -79,7 +104,7 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
             : Colours::displayBezel.withAlpha(0.95f);
 
         juce::ColourGradient bgGrad(
-            baseBg.brighter(0.07f), bounds.getX(), bounds.getY(),
+            highlighted ? baseBg.brighter(0.22f) : baseBg.brighter(0.07f), bounds.getX(), bounds.getY(),
             baseBg,                 bounds.getX(), bounds.getBottom(), false);
         g.setGradientFill(bgGrad);
         g.fillRoundedRectangle(bounds, corner);
@@ -90,12 +115,18 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
                    bounds.getWidth() - corner * 1.5f,
                    1.0f);
 
-        const float borderAlpha = highlighted ? 0.38f
+        const float borderAlpha = highlighted ? 0.55f
                                 : (isGroupStart ? 0.22f : 0.12f);
         g.setColour(Colours::white.withAlpha(borderAlpha));
-        g.drawRoundedRectangle(bounds, corner, 1.0f);
+        g.drawRoundedRectangle(bounds, corner, highlighted ? 1.5f : 1.0f);
 
-        const float numAlpha = isGroupStart ? 0.68f : 0.48f;
+        if (highlighted)
+        {
+            g.setColour(Colours::white.withAlpha(0.08f));
+            g.fillRoundedRectangle(bounds, corner);
+        }
+
+        const float numAlpha = highlighted ? 0.95f : (isGroupStart ? 0.68f : 0.48f);
         g.setColour(Colours::white.withAlpha(numAlpha));
         g.setFont(laf != nullptr ? laf->getSpaceMonoFont(14.0f)
                                  : juce::Font(juce::FontOptions().withHeight(14.0f)));
@@ -147,6 +178,12 @@ void StepCell::setTied(bool t)
 void StepCell::setChained(bool c)
 {
     chained = c;
+    repaint();
+}
+
+void StepCell::setChainable(bool c)
+{
+    chainable = c;
     repaint();
 }
 

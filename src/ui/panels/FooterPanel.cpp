@@ -4,7 +4,7 @@ namespace zikada {
 
 namespace {
     constexpr int kDryWetW  = 200;
-    constexpr int kSignalW  = 320;
+    constexpr int kSignalW  = 340;
     constexpr int kZoneGap  = 6;
     constexpr int kHPad     = 8;
     constexpr int kVPad     = 4;
@@ -55,10 +55,11 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible(stepResLabel);
 
     stepResolutionBox.addItemList({"1/8", "1/4", "1/2"}, 1);
-    stepResolutionBox.setColour(juce::ComboBox::backgroundColourId,  Colours::bgSurface);
-    stepResolutionBox.setColour(juce::ComboBox::textColourId,         Colours::neonGreen);
-    stepResolutionBox.setColour(juce::ComboBox::outlineColourId,      Colours::white50.withAlpha(0.3f));
-    stepResolutionBox.setColour(juce::ComboBox::arrowColourId,        Colours::white50);
+    stepResolutionBox.setColour(juce::ComboBox::backgroundColourId,    Colours::bgSurface);
+    stepResolutionBox.setColour(juce::ComboBox::textColourId,           Colours::neonGreen);
+    stepResolutionBox.setColour(juce::ComboBox::outlineColourId,        Colours::white50.withAlpha(0.35f));
+    stepResolutionBox.setColour(juce::ComboBox::arrowColourId,          Colours::neonGreen);
+    stepResolutionBox.setColour(juce::ComboBox::focusedOutlineColourId, Colours::neonGreen);
     addAndMakeVisible(stepResolutionBox);
 
     stepResolutionAttachment = std::make_unique<

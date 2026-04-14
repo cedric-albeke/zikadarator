@@ -7,27 +7,6 @@ StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& se
     : apvts(state), sequencerState(seqState)
 {
     setupGrid();
-
-    chainExtendButton.setColour(juce::TextButton::buttonColourId, Colours::neonGreen);
-    chainExtendButton.setColour(juce::TextButton::textColourOffId, Colours::bgPrimary);
-    chainExtendButton.setColour(juce::TextButton::textColourOnId, Colours::bgPrimary);
-    chainExtendButton.onClick = [this]() {
-        if (hoverLane >= 0 && hoverStep >= 0)
-        {
-            auto data = sequencerState.getStepData(hoverLane, hoverStep);
-            int maxExtend = numSteps - hoverStep;
-            if (data.chainLength < maxExtend)
-            {
-                data.chainLength++;
-                sequencerState.setStepData(hoverLane, hoverStep, data);
-                refreshChainVisuals(hoverLane);
-                if (onChainChanged)
-                    onChainChanged(hoverLane, hoverStep, data.chainLength);
-            }
-        }
-    };
-    addAndMakeVisible(chainExtendButton);
-    chainExtendButton.setVisible(false);
 }
 
 void StepGrid::setupGrid()
@@ -373,14 +352,34 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
     if (e.mods.isPopupMenu())
     {
         removeChainAt(lane, step);
-        return;
+        paintMode = false;
+    }
+    else
+    {
+        const auto& s = sequencerState.getStepData(lane, step);
+        bool canExtend = s.active && s.presetIndex > 0 && !isStepConsumedByChain(lane, step);
+        if (canExtend && s.chainLength < (numSteps - step))
+        {
+            auto cellBounds = cells[lane][step]->getBounds();
+            juce::Rectangle<int> plusBounds(cellBounds.getRight() - 20, cellBounds.getY() + 2, 20, 20);
+            if (plusBounds.contains(e.getPosition()))
+            {
+                auto data = s;
+                data.chainLength++;
+                sequencerState.setStepData(lane, step, data);
+                refreshChainVisuals(lane);
+                if (onChainChanged)
+                    onChainChanged(lane, step, data.chainLength);
+                return;
+            }
+        }
+
+        paintMode = true;
     }
 
     isPainting = true;
     lastPaintedLane = lane;
     lastPaintedStep = step;
-
-    paintMode = true;
 
     applyPaintToCell(lane, step);
 
@@ -413,36 +412,6 @@ void StepGrid::mouseUp(const juce::MouseEvent& /*e*/)
     lastPaintedStep = -1;
 }
 
-void StepGrid::mouseMove(const juce::MouseEvent& e)
-{
-    auto [lane, step] = hitTestCell(e.getPosition());
-    if (lane >= 0 && step >= 0)
-    {
-        const auto& s = sequencerState.getStepData(lane, step);
-        bool canExtend = s.active && s.presetIndex > 0 && !isStepConsumedByChain(lane, step);
-        if (canExtend && s.chainLength < (numSteps - step))
-        {
-            hoverLane = lane;
-            hoverStep = step;
-            auto cellBounds = cells[lane][step]->getBounds();
-            chainExtendButton.setBounds(cellBounds.getRight() - 14, cellBounds.getY() + 2, 12, 12);
-            chainExtendButton.setVisible(true);
-            chainExtendButton.toFront(false);
-            return;
-        }
-    }
-    hoverLane = -1;
-    hoverStep = -1;
-    chainExtendButton.setVisible(false);
-}
-
-void StepGrid::mouseExit(const juce::MouseEvent& /*e*/)
-{
-    hoverLane = -1;
-    hoverStep = -1;
-    chainExtendButton.setVisible(false);
-}
-
 void StepGrid::refreshChainVisuals(int lane)
 {
     if (lane < 0 || lane >= numLanes)
@@ -465,6 +434,14 @@ void StepGrid::refreshChainVisuals(int lane)
                 cells[lane][step + c]->setChained(true);
             }
         }
+    }
+
+    for (int step = 0; step < numSteps; ++step)
+    {
+        const auto& s = sequencerState.getStepData(lane, step);
+        bool canExtend = s.active && s.presetIndex > 0 && !isStepConsumedByChain(lane, step)
+                         && s.chainLength < (numSteps - step);
+        cells[lane][step]->setChainable(canExtend);
     }
 }
 

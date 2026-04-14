@@ -23,6 +23,9 @@ public:
     void setChained(bool isChained);
     bool isChained() const { return chained; }
 
+    void setChainable(bool isChainable);
+    bool isChainable() const { return chainable; }
+
     void setPlaying(bool isPlaying);
     bool isPlaying() const { return playing; }
 
@@ -40,6 +43,7 @@ private:
     bool active{false};
     bool tied{false};
     bool chained{false};
+    bool chainable{false};
     bool playing{false};
     bool selected{false};
     int presetIndex{0};
