@@ -6,6 +6,42 @@
 
 namespace zikada {
 
+namespace {
+
+std::unique_ptr<juce::FileLogger> uiLogFile;
+
+void ensureUiLogger()
+{
+    static bool initialised = false;
+
+    if (initialised)
+        return;
+
+    initialised = true;
+
+    if (auto* logger = juce::FileLogger::createDefaultAppLogger("ZIKADARATOR",
+                                                                "UI-Debug.log",
+                                                                "ZIKADARATOR UI debug log",
+                                                                512 * 1024))
+    {
+        uiLogFile.reset(logger);
+        juce::Logger::setCurrentLogger(uiLogFile.get());
+        juce::Logger::writeToLog("[ZIKADARATOR] logging to " + uiLogFile->getLogFile().getFullPathName());
+    }
+}
+
+void debugUiLog(const juce::String& message)
+{
+    ensureUiLogger();
+    juce::Logger::writeToLog("[ZIKADARATOR] " + message);
+
+#if JUCE_DEBUG
+    DBG("[ZIKADARATOR] " + message);
+#endif
+}
+
+}
+
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p),
       processorRef(p),
@@ -16,6 +52,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
       sidebarPanel(),
       workspacePanel()
 {
+    debugUiLog("PluginEditor constructed");
     setOpaque(true);
     setLookAndFeel(&lookAndFeel);
 
@@ -191,6 +228,7 @@ PluginEditor::~PluginEditor()
 void PluginEditor::timerCallback()
 {
     applyWineSafeRenderingIfNeeded();
+    footerPanel.refreshGlobalControlLabels();
 
     if (currentPage != Page::Sequencer)
         return;
@@ -218,12 +256,18 @@ void PluginEditor::timerCallback()
 void PluginEditor::parentHierarchyChanged()
 {
     AudioProcessorEditor::parentHierarchyChanged();
+    wineSafeRendererApplied = false;
+    debugUiLog("parentHierarchyChanged: peer reset requested");
     applyWineSafeRenderingIfNeeded();
 }
 
 void PluginEditor::visibilityChanged()
 {
     AudioProcessorEditor::visibilityChanged();
+    if (isShowing())
+        wineSafeRendererApplied = false;
+
+    debugUiLog("visibilityChanged: showing=" + juce::String(isShowing() ? 1 : 0));
     applyWineSafeRenderingIfNeeded();
 }
 
@@ -237,6 +281,18 @@ void PluginEditor::paint(juce::Graphics& g)
         Colours::shellBg.withAlpha(0.0f),  bf.getX(),       bf.getY(), true);
     g.setGradientFill(bloom);
     g.fillAll();
+
+#if JUCE_DEBUG
+    const auto pageName = pageToString(currentPage);
+    g.setColour(juce::Colours::magenta.withAlpha(0.65f));
+    g.setFont(12.0f);
+    g.drawText("page=" + juce::String(pageName)
+                 + " wineRenderer=" + juce::String(wineSafeRendererApplied ? "on" : "off")
+                 + " size=" + juce::String(getWidth()) + "x" + juce::String(getHeight()),
+               getLocalBounds().removeFromBottom(18).reduced(8, 0),
+               juce::Justification::centredRight,
+               false);
+#endif
 }
 
 void PluginEditor::resized()
@@ -263,6 +319,7 @@ void PluginEditor::resized()
 void PluginEditor::setPage(Page page)
 {
     currentPage = page;
+    const auto pageName = pageToString(page);
 
     const bool showSequencer = page == Page::Sequencer;
     sequencerPanel.setVisible(showSequencer);
@@ -275,7 +332,12 @@ void PluginEditor::setPage(Page page)
     else if (page == Page::Settings)
         workspacePanel.setMode(WorkspacePanel::Mode::Settings);
 
+    debugUiLog("setPage(" + juce::String(pageName)
+               + "): workspaceVisible=" + juce::String(workspacePanel.isVisible() ? 1 : 0)
+               + ", sequencerVisible=" + juce::String(sequencerPanel.isVisible() ? 1 : 0));
+
     resized();
+    workspacePanel.repaint();
     repaint();
 }
 
@@ -315,78 +377,10 @@ void PluginEditor::showHeaderPresetMenu()
     if (items.empty())
         return;
 
-    juce::PopupMenu menu;
-    std::vector<int> favoriteIndices;
-    std::vector<int> recentIndices;
-
-    for (int i = 0; i < static_cast<int>(items.size()); ++i)
-    {
-        const auto& item = items[static_cast<size_t>(i)];
-        if (item.isFavorite)
-            favoriteIndices.push_back(i);
-        if (item.recentRank >= 0)
-            recentIndices.push_back(i);
-    }
-
-    std::sort(recentIndices.begin(), recentIndices.end(), [&items](int a, int b)
-    {
-        return items[static_cast<size_t>(a)].recentRank < items[static_cast<size_t>(b)].recentRank;
-    });
-
-    if (!favoriteIndices.empty())
-    {
-        menu.addSectionHeader("Favorites");
-        for (const int index : favoriteIndices)
-        {
-            const auto& item = items[static_cast<size_t>(index)];
-            menu.addItem(1000 + index, item.name + "   /   " + item.category.toUpperCase(), true, index == currentPresetIndex);
-        }
-        menu.addSeparator();
-    }
-
-    if (!recentIndices.empty())
-    {
-        menu.addSectionHeader("Recent");
-        const int recentCount = juce::jmin(5, static_cast<int>(recentIndices.size()));
-        for (int i = 0; i < recentCount; ++i)
-        {
-            const int index = recentIndices[static_cast<size_t>(i)];
-            const auto& item = items[static_cast<size_t>(index)];
-            menu.addItem(1000 + index, item.name + "   /   " + item.category.toUpperCase(), true, index == currentPresetIndex);
-        }
-        menu.addSeparator();
-    }
-
-    menu.addSectionHeader("All Presets");
-    for (int i = 0; i < static_cast<int>(items.size()); ++i)
-    {
-        const auto& item = items[static_cast<size_t>(i)];
-        const juce::String label = item.name + (item.isFavorite ? "   *" : "")
-                                 + "   /   " + item.category.toUpperCase()
-                                 + "   /   " + (item.isFactory ? "FACTORY" : "USER");
-        menu.addItem(1000 + i, label, true, i == currentPresetIndex);
-    }
-
-    menu.addSeparator();
-    menu.addItem(1, "Open preset browser");
-
-    auto handleSelection = [this](int result)
-    {
-        if (result == 1)
-        {
-            headerPanel.setSelectedPage(HeaderPanel::Page::Presets);
-            setPage(Page::Presets);
-            return;
-        }
-
-        if (result >= 1000)
-            loadPresetByIndex(result - 1000, true);
-    };
-
-    auto options = juce::PopupMenu::Options().withTargetComponent(headerPanel.getPresetMenuTarget())
-                                           .withMinimumWidth(360);
-
-    menu.showMenuAsync(options, [handleSelection](int result) mutable { handleSelection(result); });
+    debugUiLog("showHeaderPresetMenu: redirecting to preset browser instead of spawning PopupMenu, itemCount="
+               + juce::String(static_cast<int>(items.size())));
+    headerPanel.setSelectedPage(HeaderPanel::Page::Presets);
+    setPage(Page::Presets);
 }
 
 void PluginEditor::loadPresetByIndex(int index, bool pushToHistory)
@@ -512,6 +506,17 @@ void PluginEditor::updateHistoryButtons()
     headerPanel.setRedoEnabled(!redoStack.empty());
 }
 
+const char* PluginEditor::pageToString(Page page)
+{
+    switch (page)
+    {
+        case Page::Sequencer: return "Sequencer";
+        case Page::Presets:   return "Presets";
+        case Page::Settings:  return "Settings";
+    }
+    return "Unknown";
+}
+
 bool PluginEditor::isRunningUnderWine()
 {
 #if JUCE_WINDOWS
@@ -527,18 +532,29 @@ void PluginEditor::applyWineSafeRenderingIfNeeded()
     if (wineSafeRendererApplied || !isRunningUnderWine())
         return;
 
-    if (auto* peer = getPeer())
+    auto* peer = getPeer();
+
+    if (peer == nullptr)
     {
-        const auto engines = peer->getAvailableRenderingEngines();
-        const auto softwareIndex = engines.indexOf("Software Renderer");
-
-        if (softwareIndex >= 0 && peer->getCurrentRenderingEngine() != softwareIndex)
-            peer->setCurrentRenderingEngine(softwareIndex);
-
-        wineSafeRendererApplied = true;
-        peer->repaint(getLocalBounds());
-        repaint();
+        debugUiLog("applyWineSafeRenderingIfNeeded: no peer yet");
+        return;
     }
+
+    const auto engines = peer->getAvailableRenderingEngines();
+    const auto softwareIndex = engines.indexOf("Software Renderer");
+    debugUiLog("applyWineSafeRenderingIfNeeded: engines=" + engines.joinIntoString(", ")
+               + ", current=" + juce::String(peer->getCurrentRenderingEngine())
+               + ", softwareIndex=" + juce::String(softwareIndex));
+
+    if (softwareIndex >= 0 && peer->getCurrentRenderingEngine() != softwareIndex)
+    {
+        peer->setCurrentRenderingEngine(softwareIndex);
+        debugUiLog("applyWineSafeRenderingIfNeeded: switched to software renderer");
+    }
+
+    wineSafeRendererApplied = true;
+    peer->repaint(getLocalBounds());
+    repaint();
 }
 
 WaveformDisplay* PluginEditor::getWaveformDisplay()

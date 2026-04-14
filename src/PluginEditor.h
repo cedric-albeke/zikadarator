@@ -52,6 +52,7 @@ private:
     void updateHistoryButtons();
     void applyWineSafeRenderingIfNeeded();
     static bool isRunningUnderWine();
+    static const char* pageToString(Page page);
 
     PluginProcessor& processorRef;
     ZikadaLookAndFeel lookAndFeel;
