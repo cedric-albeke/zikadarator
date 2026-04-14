@@ -29,6 +29,8 @@ public:
     void setHovered(bool isHovered);
     bool isHovered() const { return hovered; }
 
+    void setChainAnimPhase(int phase);
+
     void setPlaying(bool isPlaying);
     bool isPlaying() const { return playing; }
 
@@ -49,6 +51,7 @@ private:
     bool chainable{false};
     bool hovered{false};
     bool playing{false};
+    int  chainAnimPhase{0};
     bool selected{false};
     int presetIndex{0};
 };

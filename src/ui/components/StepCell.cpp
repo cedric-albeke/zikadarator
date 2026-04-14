@@ -147,14 +147,29 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
     if (tied)
     {
         const auto laneColour = laneInfos[laneIndex].colour;
-        g.setColour(laneColour.withAlpha(0.85f));
         const float tieY = bounds.getCentreY();
-        const float tieH = 4.0f;
-        g.fillRoundedRectangle(bounds.getX() - 3.0f, tieY - tieH * 0.5f,
-                               bounds.getWidth() + 6.0f, tieH, 2.0f);
-        g.setColour(laneColour.brighter(0.4f).withAlpha(0.60f));
-        g.fillRoundedRectangle(bounds.getX() - 3.0f, tieY - tieH * 0.5f,
-                               bounds.getWidth() + 6.0f, tieH * 0.4f, 1.5f);
+        const int   numLinks = juce::jmax(2, static_cast<int>(bounds.getWidth() / 10.0f));
+        const float spacing  = bounds.getWidth() / numLinks;
+        const float phase    = static_cast<float>(chainAnimPhase) * 0.125f;
+
+        for (int i = 0; i < numLinks; ++i)
+        {
+            float t = phase + (i / static_cast<float>(numLinks));
+            float alpha = 0.35f + 0.65f * std::abs(std::sin(t * juce::MathConstants<float>::pi));
+            float linkSize = 5.0f + 2.0f * alpha;
+            float cx = bounds.getX() + (i + 0.5f) * spacing;
+
+            g.setColour(laneColour.withAlpha(alpha));
+            g.fillEllipse(cx - linkSize * 0.5f, tieY - linkSize * 0.5f, linkSize, linkSize);
+
+            g.setColour(laneColour.brighter(0.45f).withAlpha(alpha));
+            g.drawEllipse(cx - linkSize * 0.5f + 1.5f, tieY - linkSize * 0.5f + 1.5f,
+                          linkSize - 3.0f, linkSize - 3.0f, 1.5f);
+        }
+
+        g.setColour(laneColour.withAlpha(0.45f));
+        g.fillRoundedRectangle(bounds.getX() - 2.0f, tieY - 1.0f,
+                               bounds.getWidth() + 4.0f, 2.0f, 1.0f);
     }
 
     if (selected)
@@ -194,6 +209,13 @@ void StepCell::setHovered(bool h)
 {
     hovered = h;
     repaint();
+}
+
+void StepCell::setChainAnimPhase(int phase)
+{
+    if (tied && chainAnimPhase != phase)
+        repaint();
+    chainAnimPhase = phase;
 }
 
 void StepCell::setPlaying(bool p)

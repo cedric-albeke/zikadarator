@@ -8,12 +8,14 @@
 
 namespace zikada {
 
-class StepGrid : public juce::Component
+class StepGrid : public juce::Component, private juce::Timer
 {
 public:
     StepGrid(juce::AudioProcessorValueTreeState& apvts, SequencerState& seqState);
+    ~StepGrid() override;
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
 
     void mouseDown(const juce::MouseEvent& e) override;
@@ -64,9 +66,25 @@ private:
     int lastPaintedLane{-1};
     int lastPaintedStep{-1};
 
+    bool chainDrawMode{false};
+    int  chainDrawLane{-1};
+    int  chainDrawStartStep{-1};
+    int  chainDrawCurrentStep{-1};
+
+    bool chainEraseMode{false};
+    int  chainEraseLane{-1};
+    int  chainEraseRoot{-1};
+    int  chainEraseStartStep{-1};
+    int  chainEraseCurrentStep{-1};
+    int  chainEraseOriginalLength{1};
+
+    int chainAnimPhase{0};
+
     void setupGrid();
+    void timerCallback() override;
     std::pair<int, int> hitTestCell(juce::Point<int> pos) const;
     void applyPaintToCell(int lane, int step);
+    int findChainRoot(int lane, int step) const;
 };
 
 }
