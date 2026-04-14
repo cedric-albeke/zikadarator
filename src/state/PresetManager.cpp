@@ -47,7 +47,8 @@ void setUserSlot(SequencerState& state, int lane, int slot, float cutoff, float 
 PresetManager::PresetManager()
     : presetDirectory(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
                           .getChildFile("ZIKADARATOR")
-                          .getChildFile("Presets"))
+                          .getChildFile("Presets")),
+      metadataFile(presetDirectory.getChildFile("preset-metadata.xml"))
 {
     presetDirectory.createDirectory();
     refresh();
@@ -55,9 +56,11 @@ PresetManager::PresetManager()
 
 void PresetManager::refresh()
 {
+    loadMetadata();
     items.clear();
     addFactoryPresets();
     addUserPresets();
+    sortItems();
 }
 
 bool PresetManager::saveUserPreset(const juce::String& name, const juce::ValueTree& state)
@@ -75,6 +78,7 @@ bool PresetManager::saveUserPreset(const juce::String& name, const juce::ValueTr
     if (!xml->writeTo(file))
         return false;
 
+    markPresetUsed(trimmedName.toUpperCase());
     refresh();
     return true;
 }
@@ -99,16 +103,56 @@ bool PresetManager::deleteUserPreset(int index)
 
     const bool removed = item.file.deleteFile();
     if (removed)
+    {
+        favoritePresetNames.removeString(item.name);
+        recentPresetNames.removeString(item.name);
+        saveMetadata();
         refresh();
+    }
 
     return removed;
 }
 
+bool PresetManager::toggleFavorite(const juce::String& name)
+{
+    const auto normalized = name.trim().toUpperCase();
+    if (normalized.isEmpty())
+        return false;
+
+    if (favoritePresetNames.contains(normalized))
+        favoritePresetNames.removeString(normalized);
+    else
+        favoritePresetNames.addIfNotAlreadyThere(normalized);
+
+    saveMetadata();
+    refresh();
+    return favoritePresetNames.contains(normalized);
+}
+
+bool PresetManager::isFavorite(const juce::String& name) const
+{
+    return favoritePresetNames.contains(name.trim().toUpperCase());
+}
+
+void PresetManager::markPresetUsed(const juce::String& name)
+{
+    const auto normalized = name.trim().toUpperCase();
+    if (normalized.isEmpty())
+        return;
+
+    recentPresetNames.removeString(normalized);
+    recentPresetNames.insert(0, normalized);
+    while (recentPresetNames.size() > 12)
+        recentPresetNames.remove(recentPresetNames.size() - 1);
+
+    saveMetadata();
+}
+
 void PresetManager::addFactoryPresets()
 {
-    items.push_back({"INIT", "Utility", "Factory · clean starting point", true, {}, createInitFactoryState()});
-    items.push_back({"NEON GATE", "Glitch", "Factory · gated stutter rhythm", true, {}, createNeonGateFactoryState()});
-    items.push_back({"SPACE BLOOM", "Ambient", "Factory · airy delay and filter trail", true, {}, createSpaceBloomFactoryState()});
+    items.push_back({"INIT", "Utility", "Factory · clean starting point", true, isFavorite("INIT"), recentPresetNames.indexOf("INIT"), {}, createInitFactoryState()});
+    items.push_back({"NEON GATE", "Glitch", "Factory · gated stutter rhythm", true, isFavorite("NEON GATE"), recentPresetNames.indexOf("NEON GATE"), {}, createNeonGateFactoryState()});
+    items.push_back({"SPACE BLOOM", "Ambient", "Factory · airy delay and filter trail", true, isFavorite("SPACE BLOOM"), recentPresetNames.indexOf("SPACE BLOOM"), {}, createSpaceBloomFactoryState()});
 }
 
 void PresetManager::addUserPresets()
@@ -124,10 +168,97 @@ void PresetManager::addUserPresets()
         if (!state.isValid())
             continue;
 
-        items.push_back({file.getFileNameWithoutExtension().replaceCharacter('_', ' ').toUpperCase(),
+        const auto presetName = file.getFileNameWithoutExtension().replaceCharacter('_', ' ').toUpperCase();
+        items.push_back({presetName,
                          "User",
-                         "User · " + file.getFullPathName(), false, file, state});
+                         "User · " + file.getFullPathName(),
+                         false,
+                         isFavorite(presetName),
+                         recentPresetNames.indexOf(presetName),
+                         file,
+                         state});
     }
+}
+
+void PresetManager::loadMetadata()
+{
+    favoritePresetNames.clear();
+    recentPresetNames.clear();
+
+    if (!metadataFile.existsAsFile())
+        return;
+
+    auto xml = juce::XmlDocument::parse(metadataFile);
+    if (xml == nullptr)
+        return;
+
+    auto root = juce::ValueTree::fromXml(*xml);
+    if (!root.isValid())
+        return;
+
+    auto favorites = root.getChildWithName("Favorites");
+    for (int i = 0; i < favorites.getNumChildren(); ++i)
+    {
+        auto child = favorites.getChild(i);
+        favoritePresetNames.addIfNotAlreadyThere(child.getProperty("name").toString());
+    }
+
+    auto recent = root.getChildWithName("Recent");
+    for (int i = 0; i < recent.getNumChildren(); ++i)
+    {
+        auto child = recent.getChild(i);
+        recentPresetNames.addIfNotAlreadyThere(child.getProperty("name").toString());
+    }
+}
+
+void PresetManager::saveMetadata() const
+{
+    juce::ValueTree root("PresetMetadata");
+    juce::ValueTree favorites("Favorites");
+    juce::ValueTree recent("Recent");
+
+    for (const auto& name : favoritePresetNames)
+    {
+        juce::ValueTree child("Preset");
+        child.setProperty("name", name, nullptr);
+        favorites.addChild(child, -1, nullptr);
+    }
+
+    for (const auto& name : recentPresetNames)
+    {
+        juce::ValueTree child("Preset");
+        child.setProperty("name", name, nullptr);
+        recent.addChild(child, -1, nullptr);
+    }
+
+    root.addChild(favorites, -1, nullptr);
+    root.addChild(recent, -1, nullptr);
+
+    if (auto xml = root.createXml())
+        xml->writeTo(metadataFile);
+}
+
+void PresetManager::sortItems()
+{
+    std::stable_sort(items.begin(), items.end(), [](const PresetItem& a, const PresetItem& b)
+    {
+        const auto recentA = a.recentRank >= 0 ? a.recentRank : 9999;
+        const auto recentB = b.recentRank >= 0 ? b.recentRank : 9999;
+
+        if (a.isFavorite != b.isFavorite)
+            return a.isFavorite > b.isFavorite;
+
+        if (recentA != recentB)
+            return recentA < recentB;
+
+        if (a.isFactory != b.isFactory)
+            return a.isFactory > b.isFactory;
+
+        if (a.category != b.category)
+            return a.category < b.category;
+
+        return a.name < b.name;
+    });
 }
 
 juce::ValueTree PresetManager::createBaseState()
