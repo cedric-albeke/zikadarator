@@ -26,6 +26,16 @@ inline juce::String getLaneMixID(int lane)
     return "laneMix_L" + juce::String(lane);
 }
 
+inline juce::String getLaneMuteID(int lane)
+{
+    return "laneMute_L" + juce::String(lane);
+}
+
+inline juce::String getLaneSoloID(int lane)
+{
+    return "laneSolo_L" + juce::String(lane);
+}
+
 inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
@@ -70,6 +80,14 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         auto id = getLaneMixID(lane);
         auto name = "Mix L" + juce::String(lane + 1);
         params.push_back(std::make_unique<juce::AudioParameterFloat>(id, name, 0.0f, 100.0f, 100.0f));
+    }
+
+    for (int lane = 0; lane < 6; ++lane)
+    {
+        params.push_back(std::make_unique<juce::AudioParameterBool>(
+            getLaneMuteID(lane), "Mute L" + juce::String(lane + 1), false));
+        params.push_back(std::make_unique<juce::AudioParameterBool>(
+            getLaneSoloID(lane), "Solo L" + juce::String(lane + 1), false));
     }
 
     return {params.begin(), params.end()};

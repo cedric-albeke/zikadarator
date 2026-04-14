@@ -103,6 +103,19 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.drawRoundedRectangle(bounds, corner, 2.0f);
     }
 
+    if (tied)
+    {
+        const auto laneColour = laneInfos[laneIndex].colour;
+        g.setColour(laneColour.withAlpha(0.85f));
+        const float tieY = bounds.getCentreY();
+        const float tieH = 4.0f;
+        g.fillRoundedRectangle(bounds.getX() - 3.0f, tieY - tieH * 0.5f,
+                               bounds.getWidth() + 6.0f, tieH, 2.0f);
+        g.setColour(laneColour.brighter(0.4f).withAlpha(0.60f));
+        g.fillRoundedRectangle(bounds.getX() - 3.0f, tieY - tieH * 0.5f,
+                               bounds.getWidth() + 6.0f, tieH * 0.4f, 1.5f);
+    }
+
     if (selected)
     {
         g.setColour(Colours::neonGreen);

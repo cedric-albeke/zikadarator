@@ -57,6 +57,30 @@ void StepGrid::setupGrid()
 
         addAndMakeVisible(knob.get());
         mixKnobs[lane] = std::move(knob);
+
+        auto muteBtn = std::make_unique<juce::TextButton>("M");
+        muteBtn->setClickingTogglesState(true);
+        muteBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
+        muteBtn->setColour(juce::TextButton::buttonOnColourId, Colours::warning);
+        muteBtn->setColour(juce::TextButton::textColourOffId, Colours::white50);
+        muteBtn->setColour(juce::TextButton::textColourOnId, Colours::bgPrimary);
+        auto* muteParam = apvts.getParameter(getLaneMuteID(lane));
+        if (muteParam != nullptr)
+            muteAttachments[lane] = std::make_unique<juce::ButtonParameterAttachment>(*muteParam, *muteBtn, nullptr);
+        addAndMakeVisible(muteBtn.get());
+        muteButtons[lane] = std::move(muteBtn);
+
+        auto soloBtn = std::make_unique<juce::TextButton>("S");
+        soloBtn->setClickingTogglesState(true);
+        soloBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
+        soloBtn->setColour(juce::TextButton::buttonOnColourId, Colours::neonGreen);
+        soloBtn->setColour(juce::TextButton::textColourOffId, Colours::white50);
+        soloBtn->setColour(juce::TextButton::textColourOnId, Colours::bgPrimary);
+        auto* soloParam = apvts.getParameter(getLaneSoloID(lane));
+        if (soloParam != nullptr)
+            soloAttachments[lane] = std::make_unique<juce::ButtonParameterAttachment>(*soloParam, *soloBtn, nullptr);
+        addAndMakeVisible(soloBtn.get());
+        soloButtons[lane] = std::move(soloBtn);
     }
 }
 
@@ -231,7 +255,12 @@ void StepGrid::resized()
             cells[lane][step]->setBounds(laneBounds.removeFromLeft(stepWidth).reduced(2));
         }
 
-        mixKnobs[lane]->setBounds(knobBounds.reduced(2, 3));
+        auto knobArea = knobBounds.reduced(2, 3);
+        auto btnRow = knobArea.removeFromTop(16);
+        muteButtons[lane]->setBounds(btnRow.removeFromLeft(btnRow.getWidth() / 2).reduced(1, 0));
+        soloButtons[lane]->setBounds(btnRow.reduced(1, 0));
+        knobArea.removeFromTop(2);
+        mixKnobs[lane]->setBounds(knobArea);
     }
 }
 
@@ -312,10 +341,14 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
     if (lane < 0)
         return;
 
-    isPainting    = true;
-    paintMode     = !cells[lane][step]->getToggleState();
+    isPainting = true;
     lastPaintedLane = lane;
     lastPaintedStep = step;
+
+    if (e.mods.isPopupMenu())
+        paintMode = false;
+    else
+        paintMode = true;
 
     applyPaintToCell(lane, step);
 

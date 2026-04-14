@@ -84,6 +84,8 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 - **Step resolution**: 1/8, 1/4, 1/2 note (configurable, 2/4/8 bar total loops)
 - **Reorderable lanes**: Users can drag lane headers to change signal flow
 - **Per-lane dry/wet**: Mix control for each FX lane
+- **Per-lane mute/solo**: M (`warning` amber) and S (`neonGreen`) buttons on each lane header; solo logic gates the audio engine signal flow
+- **Tie steps**: Visually rendered as a continuous rounded bar across tied cells in the step grid
 
 ### Signal Flow (Default)
 ```
@@ -174,6 +176,8 @@ Inline SVG strings are parsed via `juce::parseXML()` → `juce::Drawable::create
 - Output Gain
 - Per-lane Dry/Wet (6 params)
 - Per-lane Enable (6 params)
+- Per-lane Mute (6 params)
+- Per-lane Solo (6 params)
 - Clock Source (Host/Free)
 - Tempo (Free mode)
 - Step Resolution

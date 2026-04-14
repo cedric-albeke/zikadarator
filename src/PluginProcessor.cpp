@@ -326,6 +326,28 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     sequencerEngine.advance(numSamples);
     const int sequencerStep = sequencerEngine.getCurrentStep();
 
+    float laneMix[6] = {};
+    bool laneMuted[6] = {};
+    bool laneSoloed[6] = {};
+    bool anySolo = false;
+
+    for (int lane = 0; lane < 6; ++lane)
+    {
+        if (auto* p = state.getValueTreeState().getRawParameterValue(getLaneMixID(lane)))
+            laneMix[lane] = p->load() / 100.0f;
+        else
+            laneMix[lane] = 1.0f;
+
+        if (auto* p = state.getValueTreeState().getRawParameterValue(getLaneMuteID(lane)))
+            laneMuted[lane] = p->load() > 0.5f;
+
+        if (auto* p = state.getValueTreeState().getRawParameterValue(getLaneSoloID(lane)))
+        {
+            laneSoloed[lane] = p->load() > 0.5f;
+            if (laneSoloed[lane]) anySolo = true;
+        }
+    }
+
     const auto& sliceStep = sequencerState.getStepData(kSliceLane, sequencerStep);
     const auto& loopStep = sequencerState.getStepData(kLoopLane, sequencerStep);
     const auto& envelopeStep = sequencerState.getStepData(kEnvelopeLane, sequencerStep);
@@ -381,7 +403,25 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         wetRight[static_cast<size_t>(i)] = rightChannel[i];
     }
 
-    if (sliceStep.active && sliceStep.presetIndex > 0)
+    auto isLaneActive = [&](int lane) -> bool
+    {
+        if (laneMuted[lane]) return false;
+        if (anySolo && !laneSoloed[lane]) return false;
+        return true;
+    };
+
+    auto applyLaneMix = [&](int lane, float* left, float* right, int n)
+    {
+        const float mix = laneMix[lane];
+        if (mix >= 0.999f) return;
+        for (int i = 0; i < n; ++i)
+        {
+            left[i] *= mix;
+            right[i] *= mix;
+        }
+    };
+
+    if (sliceStep.active && sliceStep.presetIndex > 0 && isLaneActive(kSliceLane))
     {
         std::vector<float> sliceLeft(static_cast<size_t>(numSamples), 0.0f);
         std::vector<float> sliceRight(static_cast<size_t>(numSamples), 0.0f);
@@ -389,26 +429,34 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         wetLeft = std::move(sliceLeft);
         wetRight = std::move(sliceRight);
         applyGainPan(wetLeft.data(), wetRight.data(), numSamples, sliceSlot.volume, sliceSlot.pan);
+        applyLaneMix(kSliceLane, wetLeft.data(), wetRight.data(), numSamples);
     }
 
     loopEngine.captureInput(wetLeft.data(), wetRight.data(), numSamples);
 
-    if (loopStep.active && loopStep.presetIndex > 0)
+    if (loopStep.active && loopStep.presetIndex > 0 && isLaneActive(kLoopLane))
     {
         loopEngine.process(wetLeft.data(), wetRight.data(), numSamples);
         applyGainPan(wetLeft.data(), wetRight.data(), numSamples, loopSlot.volume, loopSlot.pan);
+        applyLaneMix(kLoopLane, wetLeft.data(), wetRight.data(), numSamples);
     }
 
-    if (envelopeStep.active && envelopeStep.presetIndex > 0)
+    if (envelopeStep.active && envelopeStep.presetIndex > 0 && isLaneActive(kEnvelopeLane))
+    {
         applyEnvelopeShape(wetLeft.data(), wetRight.data(), numSamples, envelopeStep.presetIndex,
                            stepPhaseStart, phaseDelta, envelopeSlot.volume, envelopeSlot.pan);
+        applyLaneMix(kEnvelopeLane, wetLeft.data(), wetRight.data(), numSamples);
+    }
 
-    if (fx1Step.active && fx1Step.presetIndex > 0)
+    if (fx1Step.active && fx1Step.presetIndex > 0 && isLaneActive(kFX1Lane))
+    {
         processFxLane(wetLeft.data(), wetRight.data(), numSamples, fx1Step.presetIndex, fx1Slot,
                       fx1DelayEngine, fx1ReverbEngine, fx1BitcrushEngine, fx1PitchEngine, fx1ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
+        applyLaneMix(kFX1Lane, wetLeft.data(), wetRight.data(), numSamples);
+    }
 
-    if (filterStep.active && filterStep.presetIndex > 0)
+    if (filterStep.active && filterStep.presetIndex > 0 && isLaneActive(kFilterLane))
     {
         for (int i = 0; i < numSamples; ++i)
         {
@@ -425,12 +473,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         }
 
         applyGainPan(wetLeft.data(), wetRight.data(), numSamples, filterSlot.volume, filterSlot.pan);
+        applyLaneMix(kFilterLane, wetLeft.data(), wetRight.data(), numSamples);
     }
 
-    if (fx2Step.active && fx2Step.presetIndex > 0)
+    if (fx2Step.active && fx2Step.presetIndex > 0 && isLaneActive(kFX2Lane))
+    {
         processFxLane(wetLeft.data(), wetRight.data(), numSamples, fx2Step.presetIndex, fx2Slot,
                       fx2DelayEngine, fx2ReverbEngine, fx2BitcrushEngine, fx2PitchEngine, fx2ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
+        applyLaneMix(kFX2Lane, wetLeft.data(), wetRight.data(), numSamples);
+    }
 
     for (int i = 0; i < numSamples; ++i)
     {

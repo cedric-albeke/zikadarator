@@ -142,6 +142,9 @@ Users can drag lane headers vertically to change the processing order.
 ### Per-Lane Mix
 Each lane has an independent dry/wet control on the far right of the sequencer row.
 
+### Per-Lane Mute / Solo
+Each lane header provides **M** (mute) and **S** (solo) toggle buttons. Solo logic gates the audio engine: only soloed lanes pass signal, and muted lanes are always silent. Mute/solo states are exposed as automated DAW parameters.
+
 ### Global Mix
 - **Dry/Wet slider**: Master blend
 - **Blend modes**:
@@ -258,6 +261,8 @@ Six modes that intelligently fill the entire grid:
 - Real-time INPUT waveform with slice markers
 - Animated playhead across the step grid
 - Lane colors indicate active effects at a glance
+- **Tie steps** rendered as a continuous colored bar spanning tied cells
+- **Mute/Solo buttons** on each lane header: M (amber warning) and S (neon green)
 - Subtle neon glow on hovered/selected elements
 - In-header preset strip reflects the active preset, favorite state, and dirty state
 
