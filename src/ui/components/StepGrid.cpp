@@ -21,6 +21,8 @@ void StepGrid::timerCallback()
     for (int lane = 0; lane < numLanes; ++lane)
         for (int step = 0; step < numSteps; ++step)
             cells[lane][step]->setChainAnimPhase(chainAnimPhase);
+
+    repaint();
 }
 
 int StepGrid::findChainRoot(int lane, int step) const

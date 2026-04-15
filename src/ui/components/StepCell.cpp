@@ -213,8 +213,6 @@ void StepCell::setHovered(bool h)
 
 void StepCell::setChainAnimPhase(int phase)
 {
-    if (tied && chainAnimPhase != phase)
-        repaint();
     chainAnimPhase = phase;
 }
 
