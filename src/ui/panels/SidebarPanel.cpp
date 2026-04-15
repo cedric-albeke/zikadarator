@@ -8,6 +8,18 @@ namespace {
     constexpr int kButtonGap = 5;
     constexpr int kHeaderH = 98;
     constexpr int kInfoH = 72;
+
+    void rebuildSidebarLayoutAsync(juce::Component::SafePointer<SidebarPanel> panel)
+    {
+        juce::MessageManager::callAsync([panel]
+        {
+            if (panel == nullptr)
+                return;
+
+            panel->resized();
+            panel->repaint();
+        });
+    }
 }
 
 SidebarPanel::SidebarPanel()
@@ -185,6 +197,11 @@ void SidebarPanel::buildPresetGrid()
         btn->setColour(juce::TextButton::buttonOnColourId, laneColour);
         btn->setColour(juce::TextButton::textColourOffId, juce::Colours::transparentBlack);
         btn->setColour(juce::TextButton::textColourOnId, juce::Colours::transparentBlack);
+        btn->onStateChange = [safePanel = juce::Component::SafePointer<SidebarPanel>(this)]
+        {
+            if (safePanel != nullptr)
+                safePanel->repaint();
+        };
         addAndMakeVisible(btn.get());
         btn->addMouseListener(this, true);
         presetButtons.push_back(std::move(btn));
@@ -192,7 +209,7 @@ void SidebarPanel::buildPresetGrid()
 
     hoveredPresetIndex = -1;
     updateInfoForHover(-1);
-    resized();
+    rebuildSidebarLayoutAsync(juce::Component::SafePointer<SidebarPanel>(this));
 }
 
 void SidebarPanel::highlightPresetButton(int presetIndex)
