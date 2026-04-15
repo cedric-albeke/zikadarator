@@ -10,6 +10,11 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 
 ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in real-time. Chop, stutter, filter, and reshape loops through 6 independent lanes, each with per-step preset assignment, footer-based user-slot editing, and an integrated preset/settings workspace.
 
+## Quickstart
+
+**Installer (Windows, MacOS & Linux)**
+- [`Alpha-v0.1.0`](/releases/tag/v0.1.0-alpha.1)
+
 ## Features
 
 - **16-step FX sequencer** with 6 reorderable lanes
