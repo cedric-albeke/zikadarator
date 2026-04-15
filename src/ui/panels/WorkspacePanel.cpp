@@ -416,8 +416,8 @@ void WorkspacePanel::applyVisibility()
     deleteButton.setVisible(showPresets);
     favoritePresetButton.setVisible(showPresets);
 
-    settingsLeadLabel.setVisible(!showPresets);
-    settingsDeviceTitle.setVisible(!showPresets);
+    settingsDeviceTitle.setVisible(!showPresets && standaloneDeviceSelector != nullptr);
+    settingsLeadLabel.setVisible(!showPresets && standaloneDeviceSelector != nullptr);
     settingsProductTitle.setVisible(!showPresets);
     settingsNotesTitle.setVisible(!showPresets);
     settingsNotesBody.setVisible(!showPresets);
@@ -442,14 +442,7 @@ void WorkspacePanel::applyVisibility()
 
 void WorkspacePanel::cyclePresetCategory()
 {
-    const auto numItems = presetCategoryBox.getNumItems();
-    if (numItems <= 0)
-        return;
-
-    const auto currentIndex = juce::jmax(0, presetCategoryBox.getSelectedItemIndex());
-    const auto nextIndex = (currentIndex + 1) % numItems;
-    presetCategoryBox.setSelectedItemIndex(nextIndex, juce::sendNotificationSync);
-    debugWorkspaceLog("cyclePresetCategory -> " + presetCategoryBox.getText());
+    cycleSettingsChoice(presetCategoryBox);
 }
 
 void WorkspacePanel::cycleSettingsChoice(juce::ComboBox& comboBox)
@@ -764,12 +757,24 @@ void WorkspacePanel::resized()
     }
     else
     {
-        const int topHeight = juce::jlimit(320, 520, bounds.getHeight() * 2 / 3);
-        settingsDeviceZone = bounds.removeFromTop(topHeight);
-        bounds.removeFromTop(14);
-        settingsProductZone = bounds.removeFromTop(190);
-        bounds.removeFromTop(14);
-        settingsNotesZone = bounds;
+        const bool hasStandaloneSelector = standaloneDeviceSelector != nullptr;
+
+        if (hasStandaloneSelector)
+        {
+            const int topHeight = juce::jlimit(320, 520, bounds.getHeight() * 2 / 3);
+            settingsDeviceZone = bounds.removeFromTop(topHeight);
+            bounds.removeFromTop(14);
+            settingsProductZone = bounds.removeFromTop(190);
+            bounds.removeFromTop(14);
+            settingsNotesZone = bounds;
+        }
+        else
+        {
+            settingsDeviceZone = {};
+            settingsProductZone = bounds.removeFromTop(230);
+            bounds.removeFromTop(14);
+            settingsNotesZone = bounds;
+        }
 
         auto deviceInner = settingsDeviceZone.reduced(18, 16);
         settingsDeviceTitle.setBounds(deviceInner.removeFromTop(20));
