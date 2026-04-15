@@ -9,6 +9,7 @@ namespace zikada {
 namespace {
 
 std::unique_ptr<juce::FileLogger> uiLogFile;
+std::atomic<int> nextEditorInstanceId{1};
 
 void ensureUiLogger()
 {
@@ -50,9 +51,10 @@ PluginEditor::PluginEditor(PluginProcessor& p)
       sequencerPanel(p.getPluginState().getValueTreeState(), p.getSequencerState()),
       footerPanel(processorRef.getPluginState().getValueTreeState()),
       sidebarPanel(),
-      workspacePanel()
+      workspacePanel(),
+      instanceId(nextEditorInstanceId.fetch_add(1))
 {
-    debugUiLog("PluginEditor constructed");
+    debugUiLog("PluginEditor#" + juce::String(instanceId) + " constructed");
     setOpaque(true);
     setLookAndFeel(&lookAndFeel);
 
@@ -221,6 +223,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
 PluginEditor::~PluginEditor()
 {
+    debugUiLog("PluginEditor#" + juce::String(instanceId) + " destructed");
     stopTimer();
     setLookAndFeel(nullptr);
 }
@@ -257,7 +260,7 @@ void PluginEditor::parentHierarchyChanged()
 {
     AudioProcessorEditor::parentHierarchyChanged();
     wineSafeRendererApplied = false;
-    debugUiLog("parentHierarchyChanged: peer reset requested");
+    debugUiLog("PluginEditor#" + juce::String(instanceId) + " parentHierarchyChanged: peer reset requested");
     applyWineSafeRenderingIfNeeded();
 }
 
@@ -267,7 +270,7 @@ void PluginEditor::visibilityChanged()
     if (isShowing())
         wineSafeRendererApplied = false;
 
-    debugUiLog("visibilityChanged: showing=" + juce::String(isShowing() ? 1 : 0));
+    debugUiLog("PluginEditor#" + juce::String(instanceId) + " visibilityChanged: showing=" + juce::String(isShowing() ? 1 : 0));
     applyWineSafeRenderingIfNeeded();
 }
 
@@ -325,7 +328,7 @@ void PluginEditor::setPage(Page page)
         && sequencerPanel.isVisible() == showSequencer
         && workspacePanel.isVisible() == !showSequencer)
     {
-        debugUiLog("setPage(" + juce::String(pageName) + "): already active, skipping");
+        debugUiLog("PluginEditor#" + juce::String(instanceId) + " setPage(" + juce::String(pageName) + "): already active, skipping");
         return;
     }
 
@@ -340,7 +343,7 @@ void PluginEditor::setPage(Page page)
     else if (page == Page::Settings)
         workspacePanel.setMode(WorkspacePanel::Mode::Settings);
 
-    debugUiLog("setPage(" + juce::String(pageName)
+    debugUiLog("PluginEditor#" + juce::String(instanceId) + " setPage(" + juce::String(pageName)
                + "): workspaceVisible=" + juce::String(workspacePanel.isVisible() ? 1 : 0)
                + ", sequencerVisible=" + juce::String(sequencerPanel.isVisible() ? 1 : 0));
 
@@ -385,7 +388,7 @@ void PluginEditor::showHeaderPresetMenu()
     if (items.empty())
         return;
 
-    debugUiLog("showHeaderPresetMenu: redirecting to preset browser instead of spawning PopupMenu, itemCount="
+    debugUiLog("PluginEditor#" + juce::String(instanceId) + " showHeaderPresetMenu: redirecting to preset browser instead of spawning PopupMenu, itemCount="
                + juce::String(static_cast<int>(items.size())));
     headerPanel.setSelectedPage(HeaderPanel::Page::Presets);
     setPage(Page::Presets);
@@ -544,20 +547,20 @@ void PluginEditor::applyWineSafeRenderingIfNeeded()
 
     if (peer == nullptr)
     {
-        debugUiLog("applyWineSafeRenderingIfNeeded: no peer yet");
+        debugUiLog("PluginEditor#" + juce::String(instanceId) + " applyWineSafeRenderingIfNeeded: no peer yet");
         return;
     }
 
     const auto engines = peer->getAvailableRenderingEngines();
     const auto softwareIndex = engines.indexOf("Software Renderer");
-    debugUiLog("applyWineSafeRenderingIfNeeded: engines=" + engines.joinIntoString(", ")
+    debugUiLog("PluginEditor#" + juce::String(instanceId) + " applyWineSafeRenderingIfNeeded: engines=" + engines.joinIntoString(", ")
                + ", current=" + juce::String(peer->getCurrentRenderingEngine())
                + ", softwareIndex=" + juce::String(softwareIndex));
 
     if (softwareIndex >= 0 && peer->getCurrentRenderingEngine() != softwareIndex)
     {
         peer->setCurrentRenderingEngine(softwareIndex);
-        debugUiLog("applyWineSafeRenderingIfNeeded: switched to software renderer");
+        debugUiLog("PluginEditor#" + juce::String(instanceId) + " applyWineSafeRenderingIfNeeded: switched to software renderer");
     }
 
     wineSafeRendererApplied = true;

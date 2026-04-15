@@ -27,6 +27,7 @@ public:
     void visibilityChanged() override;
 
     WaveformDisplay* getWaveformDisplay();
+    int getInstanceId() const noexcept { return instanceId; }
 
 private:
     enum class Page
@@ -73,6 +74,7 @@ private:
 
     int lastPlayingStep{-1};
     bool wineSafeRendererApplied{false};
+    int instanceId{0};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };
