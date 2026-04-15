@@ -13,7 +13,7 @@ ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in re
 ## Quickstart
 
 **Installer (Windows, MacOS & Linux)**
-- [`Alpha-v0.1.0`]([/releases/tag/v0.1.0-alpha.1](https://github.com/cedric-albeke/zikadarator/releases/tag/v0.1.0-alpha.1))
+- ([/releases/tag/v0.1.0-alpha.1](https://github.com/cedric-albeke/zikadarator/releases/tag/v0.1.0-alpha.1))
 
 ## Features
 
