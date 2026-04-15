@@ -160,12 +160,15 @@ void PresetManager::addUserPresets()
     const auto files = presetDirectory.findChildFiles(juce::File::findFiles, false, "*.xml");
     for (const auto& file : files)
     {
+        if (file == metadataFile)
+            continue;
+
         auto xml = juce::XmlDocument::parse(file);
         if (xml == nullptr)
             continue;
 
         auto state = juce::ValueTree::fromXml(*xml);
-        if (!state.isValid())
+        if (!state.isValid() || state.hasType("PresetMetadata"))
             continue;
 
         const auto presetName = file.getFileNameWithoutExtension().replaceCharacter('_', ' ').toUpperCase();
