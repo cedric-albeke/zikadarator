@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+
+for target in \
+  "/Library/Audio/Plug-Ins/VST3/ZIKADARATOR.vst3" \
+  "/Library/Audio/Plug-Ins/Components/ZIKADARATOR.component" \
+  "/Applications/ZIKADARATOR.app"
+do
+  if [ -e "$target" ]; then
+    xattr -dr com.apple.quarantine "$target" || true
+  fi
+done
+
+exit 0
