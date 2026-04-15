@@ -318,10 +318,18 @@ void PluginEditor::resized()
 
 void PluginEditor::setPage(Page page)
 {
-    currentPage = page;
     const auto pageName = pageToString(page);
-
     const bool showSequencer = page == Page::Sequencer;
+
+    if (page == currentPage
+        && sequencerPanel.isVisible() == showSequencer
+        && workspacePanel.isVisible() == !showSequencer)
+    {
+        debugUiLog("setPage(" + juce::String(pageName) + "): already active, skipping");
+        return;
+    }
+
+    currentPage = page;
     sequencerPanel.setVisible(showSequencer);
     footerPanel.setVisible(showSequencer);
     sidebarPanel.setVisible(showSequencer);
