@@ -2,6 +2,8 @@
 
 A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zikada brand identity.
 
+![ZIKADARATOR UI](docs/images/zikadarator-ui.png)
+
 ## Concept
 
 **"Sequence the signal."**
@@ -90,6 +92,30 @@ Tester docs:
 - [`docs/INSTALL.md`](docs/INSTALL.md)
 - [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
 - [`docs/RELEASE_TESTING.md`](docs/RELEASE_TESTING.md)
+
+## Quick Start
+
+### Windows
+
+1. Download **`ZIKADARATOR-windows-installer`** from the latest GitHub Actions run.
+2. Run `ZIKADARATOR-Setup.exe`.
+3. Keep the **VST3** component enabled.
+4. Open your DAW and rescan plugins if needed.
+5. Load **ZIKADARATOR** on an audio track and confirm the editor opens.
+
+Manual option: use **`ZIKADARATOR-windows-zip`** and copy `ZIKADARATOR.vst3` to `C:\Program Files\Common Files\VST3\`.
+
+### macOS
+
+1. Download **`ZIKADARATOR-macos-installer`** from the latest GitHub Actions run.
+2. In Finder, **right-click** the `.pkg` and choose **Open**.
+3. Complete the install.
+4. Open your DAW and rescan plugins if needed.
+5. Load **ZIKADARATOR** as a VST3 or AU plugin.
+
+Manual option: use **`ZIKADARATOR-macos-zip`**, copy the bundles into `/Library/Audio/Plug-Ins/`, then run the `xattr` commands from [`docs/INSTALL.md`](docs/INSTALL.md).
+
+For a tester-focused checklist, see [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
 ## Design System
 
