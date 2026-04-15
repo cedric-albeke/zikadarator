@@ -1,0 +1,83 @@
+name: Build macOS Packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos-packages:
+    runs-on: macos-14
+
+    env:
+      PRODUCT_NAME: ZIKADARATOR
+      PRODUCT_VERSION: 0.1.0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+
+      - name: Build plugin targets
+        run: cmake --build build --config Release --target ZikadaFX_All
+
+      - name: Stage macOS package contents
+        run: |
+          rm -rf packaging/macos/stage packaging/macos/artifacts
+          mkdir -p packaging/macos/stage/Library/Audio/Plug-Ins/VST3
+          mkdir -p packaging/macos/stage/Library/Audio/Plug-Ins/Components
+          mkdir -p packaging/macos/stage/Applications
+          mkdir -p packaging/macos/artifacts
+
+          cp -R "build/ZikadaFX_artefacts/Release/VST3/${PRODUCT_NAME}.vst3" "packaging/macos/stage/Library/Audio/Plug-Ins/VST3/"
+          cp -R "build/ZikadaFX_artefacts/Release/AU/${PRODUCT_NAME}.component" "packaging/macos/stage/Library/Audio/Plug-Ins/Components/"
+          cp -R "build/ZikadaFX_artefacts/Release/Standalone/${PRODUCT_NAME}.app" "packaging/macos/stage/Applications/"
+
+      - name: Build macOS ZIP package
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent packaging/macos/stage packaging/macos/artifacts/${PRODUCT_NAME}-macos.zip
+
+      - name: Build unsigned macOS installer package
+        run: |
+          pkgbuild \
+            --root packaging/macos/stage \
+            --identifier io.zikada.fx.installer \
+            --version "${PRODUCT_VERSION}" \
+            --scripts packaging/macos/scripts \
+            packaging/macos/artifacts/${PRODUCT_NAME}-Installer.pkg
+
+      - name: Upload macOS VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-macos-vst3
+          path: build/ZikadaFX_artefacts/Release/VST3
+          if-no-files-found: error
+
+      - name: Upload macOS AU artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-macos-au
+          path: build/ZikadaFX_artefacts/Release/AU
+          if-no-files-found: error
+
+      - name: Upload macOS ZIP package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-macos-zip
+          path: packaging/macos/artifacts/ZIKADARATOR-macos.zip
+          if-no-files-found: error
+
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-macos-installer
+          path: packaging/macos/artifacts/ZIKADARATOR-Installer.pkg
+          if-no-files-found: error

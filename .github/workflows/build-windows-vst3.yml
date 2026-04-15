@@ -1,4 +1,4 @@
-name: Build Windows VST3
+name: Build Windows Packages
 
 on:
   workflow_dispatch:
@@ -12,8 +12,12 @@ permissions:
   contents: read
 
 jobs:
-  build-windows-vst3:
+  build-windows-packages:
     runs-on: windows-latest
+
+    env:
+      PRODUCT_NAME: ZIKADARATOR
+      PRODUCT_VERSION: 0.1.0
 
     steps:
       - name: Checkout repository
@@ -27,12 +31,47 @@ jobs:
       - name: Configure CMake
         run: cmake -B build -G "Visual Studio 17 2022" -A x64
 
-      - name: Build VST3 target
-        run: cmake --build build --config Release --target ZikadaFX_VST3
+      - name: Build plugin targets
+        run: cmake --build build --config Release --target ZikadaFX_All
+
+      - name: Build Windows ZIP package
+        shell: pwsh
+        run: |
+          $packageRoot = "packaging\windows\package-root"
+          $artifactRoot = "packaging\windows\artifacts"
+          Remove-Item $packageRoot -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item $artifactRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+          New-Item -ItemType Directory -Force -Path "$packageRoot\VST3" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$packageRoot\Standalone" | Out-Null
+          New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
+
+          Copy-Item "build\ZikadaFX_artefacts\Release\VST3\$env:PRODUCT_NAME.vst3" "$packageRoot\VST3\" -Recurse -Force
+          Copy-Item "build\ZikadaFX_artefacts\Release\Standalone\$env:PRODUCT_NAME.exe" "$packageRoot\Standalone\" -Force
+
+          Compress-Archive -Path "$packageRoot\*" -DestinationPath "$artifactRoot\$env:PRODUCT_NAME-windows.zip" -Force
+
+      - name: Build Windows installer
+        run: |
+          iscc /DMyAppName="${{ env.PRODUCT_NAME }}" /DMyAppVersion="${{ env.PRODUCT_VERSION }}" /DMySourceDir="$PWD\\packaging\\windows\\package-root" /DMyOutputDir="$PWD\\packaging\\windows\\artifacts" "packaging\\windows\\ZIKADARATOR.iss"
 
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4
         with:
           name: ZIKADARATOR-windows-vst3
           path: build/ZikadaFX_artefacts/Release/VST3
+          if-no-files-found: error
+
+      - name: Upload Windows ZIP package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-windows-zip
+          path: packaging/windows/artifacts/ZIKADARATOR-windows.zip
+          if-no-files-found: error
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-windows-installer
+          path: packaging/windows/artifacts/ZIKADARATOR-Setup.exe
           if-no-files-found: error
