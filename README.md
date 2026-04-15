@@ -78,6 +78,19 @@ cmake -B build
 cmake --build build --target ZikadaFX_Standalone
 ```
 
+## Test Build Packaging
+
+GitHub Actions is set up to produce tester-facing artifacts for both platforms:
+
+- **Windows:** VST3 artifact, ZIP package, and Inno Setup installer
+- **macOS:** VST3 artifact, AU artifact, ZIP package, and unsigned PKG installer
+
+Tester docs:
+
+- [`docs/INSTALL.md`](docs/INSTALL.md)
+- [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- [`docs/RELEASE_TESTING.md`](docs/RELEASE_TESTING.md)
+
 ## Design System
 
 See [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) for exact brand tokens: colors, typography, spacing, and component specifications.
