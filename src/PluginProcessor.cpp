@@ -3,11 +3,47 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
 namespace zikada {
 
 namespace {
+
+std::unique_ptr<juce::FileLogger> processorLogFile;
+
+void ensureProcessorLogger()
+{
+    static bool initialised = false;
+
+    if (initialised)
+        return;
+
+    initialised = true;
+
+    if (juce::Logger::getCurrentLogger() != nullptr)
+        return;
+
+    if (auto* logger = juce::FileLogger::createDefaultAppLogger("ZIKADARATOR",
+                                                                "UI-Debug.log",
+                                                                "ZIKADARATOR UI debug log",
+                                                                512 * 1024))
+    {
+        processorLogFile.reset(logger);
+        juce::Logger::setCurrentLogger(processorLogFile.get());
+        juce::Logger::writeToLog("[ZIKADARATOR] logging to " + processorLogFile->getLogFile().getFullPathName());
+    }
+}
+
+void debugProcessorLog(const juce::String& message)
+{
+    ensureProcessorLogger();
+    juce::Logger::writeToLog("[ZIKADARATOR] PluginProcessor " + message);
+
+#if JUCE_DEBUG
+    DBG("[ZIKADARATOR] PluginProcessor " + message);
+#endif
+}
 
 constexpr int kSliceLane = 0;
 constexpr int kLoopLane = 1;
@@ -490,9 +526,13 @@ PluginProcessor::PluginProcessor()
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       state(*this)
 {
+    debugProcessorLog("constructed processor=" + juce::String::toHexString(static_cast<juce::int64>(reinterpret_cast<std::uintptr_t>(this))));
 }
 
-PluginProcessor::~PluginProcessor() = default;
+PluginProcessor::~PluginProcessor()
+{
+    debugProcessorLog("destructed processor=" + juce::String::toHexString(static_cast<juce::int64>(reinterpret_cast<std::uintptr_t>(this))));
+}
 
 void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
 {
@@ -764,7 +804,14 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
 juce::AudioProcessorEditor* PluginProcessor::createEditor()
 {
-    return new PluginEditor(*this);
+    auto* existingEditor = getActiveEditor();
+    debugProcessorLog("createEditor processor=" + juce::String::toHexString(static_cast<juce::int64>(reinterpret_cast<std::uintptr_t>(this)))
+                      + " activeEditor=" + juce::String::toHexString(static_cast<juce::int64>(reinterpret_cast<std::uintptr_t>(existingEditor))));
+
+    auto* editor = new PluginEditor(*this);
+    debugProcessorLog("createEditor produced editor#" + juce::String(editor->getInstanceId())
+                      + " ptr=" + juce::String::toHexString(static_cast<juce::int64>(reinterpret_cast<std::uintptr_t>(editor))));
+    return editor;
 }
 
 bool PluginProcessor::hasEditor() const
