@@ -320,7 +320,6 @@ struct PresetIcons
     static void drawFilterPresetIcon(juce::Graphics& g, int fx,
                                      juce::Rectangle<float> bounds, juce::Colour c)
     {
-        int base = fx / 2;
         int var = fx % 2;
         juce::Path p;
         float x = bounds.getX() + bounds.getWidth() * 0.08f;
@@ -638,7 +637,6 @@ struct PresetIcons
         {
             float h = b.getHeight() * (0.3f + 0.5f * ((i + var * 2) % 3) / 2.0f);
             float bx = x0 + i * (barW + gap);
-            float by = cy + h * 0.5f;
             g.setColour(c.withAlpha(0.7f + 0.3f * ((i + var) % 2)));
             g.fillRect(bx, cy - h * 0.5f, barW, h);
         }

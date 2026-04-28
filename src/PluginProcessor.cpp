@@ -221,13 +221,21 @@ void configureFilterForStep(FilterEngine& filterEngine, int presetIndex, const U
     switch (presetIndex)
     {
         case 5: filterEngine.setFilterType(FilterEngine::FilterType::LowPass12); break;
-        case 6: filterEngine.setFilterType(FilterEngine::FilterType::HighPass12); break;
-        case 7: filterEngine.setFilterType(FilterEngine::FilterType::BandPass); break;
-        case 8: filterEngine.setFilterType(FilterEngine::FilterType::BandReject); break;
-        case 9: filterEngine.setFilterType(FilterEngine::FilterType::Comb); break;
-        case 10: filterEngine.setFilterType(FilterEngine::FilterType::Comb); break;
-        case 11: filterEngine.setFilterType(FilterEngine::FilterType::BandPass); break;
+        case 6: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
+        case 7: filterEngine.setFilterType(FilterEngine::FilterType::HighPass12); break;
+        case 8: filterEngine.setFilterType(FilterEngine::FilterType::HighPass24); break;
+        case 9: filterEngine.setFilterType(FilterEngine::FilterType::BandPass); break;
+        case 10: filterEngine.setFilterType(FilterEngine::FilterType::BandReject); break;
+        case 11: filterEngine.setFilterType(FilterEngine::FilterType::Comb); break;
         case 12: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
+        case 13: filterEngine.setFilterType(FilterEngine::FilterType::LowPass12); break;
+        case 14: filterEngine.setFilterType(FilterEngine::FilterType::HighPass12); break;
+        case 15: filterEngine.setFilterType(FilterEngine::FilterType::BandPass); break;
+        case 16: filterEngine.setFilterType(FilterEngine::FilterType::BandReject); break;
+        case 17: filterEngine.setFilterType(FilterEngine::FilterType::Comb); break;
+        case 18: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
+        case 19: filterEngine.setFilterType(FilterEngine::FilterType::BandPass); break;
+        case 20: filterEngine.setFilterType(FilterEngine::FilterType::LowPass12); break;
         default: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
     }
 

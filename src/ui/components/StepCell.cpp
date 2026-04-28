@@ -12,6 +12,8 @@ StepCell::StepCell(int lane, int step)
 
 void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 {
+    juce::ignoreUnused(highlighted);
+
     const auto bounds       = getLocalBounds().toFloat().reduced(1.5f);
     const auto corner       = 4.0f;
     const bool isCellActive = active || getToggleState();

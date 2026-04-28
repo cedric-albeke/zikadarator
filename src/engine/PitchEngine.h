@@ -5,6 +5,8 @@
 
 namespace zikada {
 
+// Experimental pitch-color processor. This is not a production time-stretch,
+// granular, vinyl, or formant algorithm.
 class PitchEngine
 {
 public:

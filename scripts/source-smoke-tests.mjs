@@ -38,6 +38,7 @@ function extractFunction(source, signature) {
 const processor = read("src/PluginProcessor.cpp");
 const processorHeader = read("src/PluginProcessor.h");
 const editor = read("src/PluginEditor.cpp");
+const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
@@ -74,5 +75,17 @@ assertContains(processorHeader, "dryLeftBuffer", "processor must own reusable dr
 assertContains(processorHeader, "wetLeftBuffer", "processor must own reusable wet scratch buffers");
 assertContains(processorHeader, "ensureScratchBuffers", "processor must expose scratch-buffer sizing helper");
 assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resizing to a fixed aspect ratio");
+
+[
+  ["Grain", "sidebar must not advertise granular DSP until it exists"],
+  ["Vinyl", "sidebar must not advertise vinyl stop/scratch DSP until it exists"],
+  ["Stretch", "sidebar must not advertise time-stretch DSP until it exists"],
+  ["Chaos", "sidebar must not advertise chaos synth DSP until it exists"],
+  ["Formant", "sidebar must not advertise formant DSP until it exists"],
+  ["Vowel", "sidebar must not advertise vowel filter DSP until it exists"],
+  ["Talk", "sidebar must not advertise talk-box DSP until it exists"],
+].forEach(([needle, message]) => {
+  if (sidebar.includes(needle)) fail(message);
+});
 
 if (!process.exitCode) console.log("source smoke tests passed");
