@@ -39,6 +39,7 @@ const processor = read("src/PluginProcessor.cpp");
 const processorHeader = read("src/PluginProcessor.h");
 const editor = read("src/PluginEditor.cpp");
 const sidebar = read("src/ui/panels/SidebarPanel.cpp");
+const footer = read("src/ui/panels/FooterPanel.cpp");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
@@ -87,5 +88,9 @@ assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resi
 ].forEach(([needle, message]) => {
   if (sidebar.includes(needle)) fail(message);
 });
+
+if (footer.includes("setSelectedSlot lane=")) {
+  fail("footer must not log setSelectedSlot on hot UI selection paths");
+}
 
 if (!process.exitCode) console.log("source smoke tests passed");

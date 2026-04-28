@@ -75,3 +75,13 @@ After Task 8, do Task 9:
 1. Create `scripts/ableton-log-scan.ps1`.
 2. Update `docs/RELEASE_TESTING.md` and `docs/QUICKSTART.md`.
 3. Run it after an Ableton Live 12 manual loop test.
+
+## Ableton Log Scan
+
+Windows log scanner:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1
+```
+
+It locates the newest Ableton Live 12 log under `%APPDATA%\Ableton`, scans `%APPDATA%\ZIKADARATOR\UI-Debug.log`, and lists recent Ableton usage logs. Treat crash/fatal/exception/restore-failure lines as blockers before sharing tester builds.

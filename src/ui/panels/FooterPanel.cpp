@@ -282,7 +282,7 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
     {
         const auto laneCol = laneInfos[selectedLane].colour;
         g.setColour(laneCol.withAlpha(0.90f));
-        g.fillRoundedRectangle(inner.withWidth(3.5f).withTrimmedTop(6.0f).withTrimmedBottom(6.0f).toFloat(), 1.5f);
+        g.fillRoundedRectangle(inner.toFloat().withWidth(3.5f).withTrimmedTop(6.0f).withTrimmedBottom(6.0f), 1.5f);
     }
 
     auto labelRow = inner.removeFromTop(kLabelH).toFloat();
@@ -449,10 +449,6 @@ void FooterPanel::resized()
 
 void FooterPanel::setSelectedSlot(int lane, int slot, const UserSlotData& data, const juce::String& laneName)
 {
-    debugFooterLog("setSelectedSlot lane=" + juce::String(lane)
-                   + " slot=" + juce::String(slot)
-                   + " modMode=" + juce::String(modModeActive ? 1 : 0));
-
     hasSelection     = true;
     selectedLane     = lane;
     selectedSlot     = slot;

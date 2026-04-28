@@ -22,6 +22,7 @@ Move ZIKADARATOR from a UI-heavy prototype toward a realtime-safe, host-synced F
   - Band reject is dry minus bandpass, not negative bandpass.
   - Comb has an implemented fractional-delay path.
 - Fixed the plugin editor to a 3:2 aspect ratio.
+- Added `scripts/ableton-log-scan.ps1` for Windows Ableton/ZIKADARATOR log review.
 
 ## Current Verification
 
@@ -53,6 +54,6 @@ Expected results:
 ## Next Tasks
 
 1. Align pitch/time/grain/vinyl/chaos UI labels with implemented DSP.
-2. Add Ableton log scanner and manual Live 12 acceptance checklist.
+2. Run the Ableton Live 12 manual acceptance test and archive scanner output.
 3. Freeze alpha preset/state scope around implemented processors.
 4. Update factory presets to favor stable slice, loop, envelope, delay, filter, reverb, and bitcrush behavior.

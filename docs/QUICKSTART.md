@@ -94,6 +94,14 @@ If you are testing a debug-enabled build, collect:
 - `%APPDATA%\ZIKADARATOR\UI-Debug.log`
 - `%APPDATA%\Ableton\Live 12.3.7\Preferences\Log.txt` when testing Ableton Live 12
 
+On Windows, developers can summarize those logs with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1
+```
+
+For a clean manual test, archive or delete `%APPDATA%\ZIKADARATOR\UI-Debug.log` before launching the DAW.
+
 ### macOS
 
 If available in a debug-enabled build, check the app support/config folder for `UI-Debug.log`.
