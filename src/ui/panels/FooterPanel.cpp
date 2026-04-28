@@ -38,6 +38,9 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     dryWetSlider.setValue(100.0);
     dryWetSlider.onValueChange = [this] { repaint(); };
     addAndMakeVisible(dryWetSlider);
+    dryWetAttachment = std::make_unique<
+        juce::AudioProcessorValueTreeState::SliderAttachment>(
+            apvts, ParameterIDs::dryWet, dryWetSlider);
 
     mixModeLabel.setText("LINEAR", juce::dontSendNotification);
     mixModeLabel.setJustificationType(juce::Justification::centred);
@@ -57,6 +60,9 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     bypassButton.setColour(juce::TextButton::textColourOffId,   Colours::white85);
     bypassButton.setColour(juce::TextButton::textColourOnId,    Colours::bgPrimary);
     addAndMakeVisible(bypassButton);
+    bypassAttachment = std::make_unique<
+        juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            apvts, ParameterIDs::bypass, bypassButton);
 
     stepResLabel.setText("STEP RES", juce::dontSendNotification);
     stepResLabel.setJustificationType(juce::Justification::centredLeft);

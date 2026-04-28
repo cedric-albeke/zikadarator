@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/CircularAudioBuffer.h"
+#include "engine/RealtimeRingBuffer.h"
 
 namespace zikada {
 
@@ -21,8 +21,8 @@ public:
 
 private:
     double sampleRate{44100.0};
-    CircularAudioBuffer bufferL;
-    CircularAudioBuffer bufferR;
+    RealtimeRingBuffer bufferL;
+    RealtimeRingBuffer bufferR;
     int historySizeSamples{0};
     int loopLengthSamples{1};
     float rate{1.0f};
@@ -31,7 +31,7 @@ private:
     bool enabled{false};
     float phase{0.0f};
 
-    float readLoopSample(const CircularAudioBuffer& buffer, int phaseIndex) const;
+    float readLoopSample(const RealtimeRingBuffer& buffer, float phaseIndex) const;
 };
 
 } // namespace zikada

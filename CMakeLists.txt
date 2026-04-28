@@ -29,10 +29,13 @@ set_target_properties(ZikadaFXAssets PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
 
-set(ZIKADA_COPY_PLUGIN_AFTER_BUILD TRUE)
+option(ZIKADA_COPY_PLUGIN_AFTER_BUILD
+    "Copy built plugins to system plugin folders after local builds"
+    OFF)
 
 if(DEFINED ENV{CI})
-    set(ZIKADA_COPY_PLUGIN_AFTER_BUILD FALSE)
+    set(ZIKADA_COPY_PLUGIN_AFTER_BUILD OFF CACHE BOOL
+        "Copy built plugins to system plugin folders after local builds" FORCE)
 endif()
 
 # Plugin target
@@ -113,6 +116,38 @@ target_compile_options(ZikadaFX PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
 )
+
+enable_testing()
+
+add_executable(ZikadaEngineTests
+    tests/engine/EngineTestMain.cpp
+    tests/engine/RealtimeRingBufferTests.cpp
+    tests/engine/StepSchedulerTests.cpp
+    tests/engine/LaneTransitionTests.cpp
+)
+
+target_include_directories(ZikadaEngineTests
+    PRIVATE
+        src
+)
+
+target_sources(ZikadaEngineTests
+    PRIVATE
+        src/engine/CircularAudioBuffer.cpp
+        src/engine/DelayEngine.cpp
+        src/engine/FilterEngine.cpp
+        src/engine/LoopEngine.cpp
+)
+
+target_link_libraries(ZikadaEngineTests
+    PRIVATE
+        juce::juce_audio_basics
+        juce::juce_dsp
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+)
+
+add_test(NAME ZikadaEngineTests COMMAND ZikadaEngineTests)
 
 # Linux: Add GTK3, WebKit includes and link libraries
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

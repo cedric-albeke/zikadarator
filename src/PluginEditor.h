@@ -10,6 +10,7 @@
 #include "ui/panels/WorkspacePanel.h"
 #include "ui/components/WaveformDisplay.h"
 
+#include <array>
 #include <vector>
 
 namespace zikada {
@@ -75,6 +76,7 @@ private:
     int lastPlayingStep{-1};
     bool wineSafeRendererApplied{false};
     int instanceId{0};
+    std::array<float, 2048> waveformScratch{};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

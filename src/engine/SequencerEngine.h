@@ -15,6 +15,7 @@ public:
     void setPlaying(bool playing);
 
     int getCurrentStep() const { return currentStep; }
+    double getStepPhase() const { return samplesPerStep > 0.0 ? sampleCounter / samplesPerStep : 0.0; }
     void advance(int numSamples);
 
 private:

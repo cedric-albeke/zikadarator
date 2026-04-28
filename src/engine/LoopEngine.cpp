@@ -1,5 +1,7 @@
 #include "engine/LoopEngine.h"
 
+#include <juce_core/juce_core.h>
+
 namespace zikada {
 
 void LoopEngine::prepare(double newSampleRate, int maxBlockSize)
@@ -42,13 +44,16 @@ void LoopEngine::captureInput(const float* left, const float* right, int numSamp
     bufferR.write(right, numSamples);
 }
 
-float LoopEngine::readLoopSample(const CircularAudioBuffer& buffer, int phaseIndex) const
+float LoopEngine::readLoopSample(const RealtimeRingBuffer& buffer, float phaseIndex) const
 {
     if (loopLengthSamples <= 1)
         return 0.0f;
 
-    const int safeIndex = reverse ? phaseIndex : (loopLengthSamples - 1 - phaseIndex);
-    return buffer.getSample(safeIndex);
+    const float safeIndex = reverse
+        ? phaseIndex
+        : static_cast<float>(loopLengthSamples - 1) - phaseIndex;
+
+    return buffer.getSampleAgoLinear(juce::jlimit(0.0f, static_cast<float>(loopLengthSamples - 1), safeIndex));
 }
 
 void LoopEngine::process(float* left, float* right, int numSamples)
@@ -58,7 +63,7 @@ void LoopEngine::process(float* left, float* right, int numSamples)
 
     for (int i = 0; i < numSamples; ++i)
     {
-        const int phaseIndex = juce::jlimit(0, loopLengthSamples - 1, static_cast<int>(phase));
+        const float phaseIndex = juce::jlimit(0.0f, static_cast<float>(loopLengthSamples - 1), phase);
         const float loopL = readLoopSample(bufferL, phaseIndex);
         const float loopR = readLoopSample(bufferR, phaseIndex);
 

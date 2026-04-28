@@ -68,6 +68,70 @@ double getBeatSeconds(double bpm)
     return bpm > 0.0 ? 60.0 / bpm : 0.5;
 }
 
+float getParameterValue(const juce::AudioProcessorValueTreeState& apvts,
+                        const juce::String& parameterID,
+                        float fallback)
+{
+    if (auto* parameter = apvts.getRawParameterValue(parameterID))
+        return parameter->load();
+
+    return fallback;
+}
+
+int getChoiceIndex(const juce::AudioProcessorValueTreeState& apvts,
+                   const juce::String& parameterID,
+                   int fallback)
+{
+    return juce::roundToInt(getParameterValue(apvts, parameterID, static_cast<float>(fallback)));
+}
+
+double getPpqPerStepForResolution(int resolutionIndex)
+{
+    switch (resolutionIndex)
+    {
+        case 0: return 0.5; // 1/8 note
+        case 1: return 1.0; // 1/4 note
+        case 2: return 2.0; // 1/2 note
+        default: return 0.5;
+    }
+}
+
+float blendGlobalMixSample(float dry, float wet, int mixMode, float wetAmount)
+{
+    wetAmount = juce::jlimit(0.0f, 1.0f, wetAmount);
+
+    float modeSignal = wet;
+    switch (mixMode)
+    {
+        case 1: // Ducking
+        {
+            const float detector = juce::jlimit(0.0f, 1.0f, std::abs(wet));
+            const float duckedDry = dry * (1.0f - detector * wetAmount * 0.75f);
+            return duckedDry * (1.0f - wetAmount) + wet * wetAmount;
+        }
+        case 2: // Sidechain
+        {
+            const float trigger = juce::jlimit(0.0f, 1.0f, std::abs(dry));
+            return dry * (1.0f - wetAmount) + wet * (wetAmount * trigger);
+        }
+        case 3: // Multiply
+            modeSignal = dry * wet;
+            break;
+        case 4: // Screen-style blend for bipolar audio.
+            modeSignal = dry + wet - dry * wet;
+            break;
+        case 5: // Difference
+            modeSignal = wet >= dry ? wet - dry : dry - wet;
+            break;
+        case 0:
+        default:
+            modeSignal = wet;
+            break;
+    }
+
+    return dry * (1.0f - wetAmount) + modeSignal * wetAmount;
+}
+
 int getSliceIndexForPreset(int presetIndex, int currentStep)
 {
     int divisions = 16;
@@ -553,7 +617,26 @@ void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
     fx2ToneFilter.prepare(newSampleRate, samplesPerBlock);
     modulationEngine.prepare(newSampleRate);
     gainPanEngine.prepare(newSampleRate, samplesPerBlock);
+    waveformTap.prepare(static_cast<int>(newSampleRate * 2.0));
+    ensureScratchBuffers(samplesPerBlock);
     lastEffectiveSteps.fill(-1);
+}
+
+void PluginProcessor::ensureScratchBuffers(int numSamples)
+{
+    const auto requiredSize = static_cast<size_t>(juce::jmax(0, numSamples));
+    auto ensureSize = [requiredSize](std::vector<float>& buffer)
+    {
+        if (buffer.size() < requiredSize)
+            buffer.resize(requiredSize, 0.0f);
+    };
+
+    ensureSize(dryLeftBuffer);
+    ensureSize(dryRightBuffer);
+    ensureSize(wetLeftBuffer);
+    ensureSize(wetRightBuffer);
+    ensureSize(sliceLeftBuffer);
+    ensureSize(sliceRightBuffer);
 }
 
 void PluginProcessor::releaseResources() {}
@@ -576,30 +659,90 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     juce::ScopedNoDenormals noDenormals;
 
     const int numSamples = buffer.getNumSamples();
+    if (numSamples <= 0 || buffer.getNumChannels() <= 0)
+        return;
+
+    ensureScratchBuffers(numSamples);
+
     auto* leftChannel = buffer.getWritePointer(0);
     auto* rightChannel = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : leftChannel;
 
-    auto currentPlayHead = getPlayHead();
-    if (currentPlayHead != nullptr)
+    std::copy(leftChannel, leftChannel + numSamples, dryLeftBuffer.begin());
+    std::copy(rightChannel, rightChannel + numSamples, dryRightBuffer.begin());
+    waveformTap.pushFromAudioThread(dryLeftBuffer.data(), numSamples);
+
+    auto& apvts = state.getValueTreeState();
+    const float globalDryWet = juce::jlimit(0.0f, 1.0f, getParameterValue(apvts, ParameterIDs::dryWet, 100.0f) / 100.0f);
+    const float outputGain = std::pow(10.0f, getParameterValue(apvts, ParameterIDs::outputGain, 0.0f) / 20.0f);
+    const int globalMixMode = juce::jlimit(0, 5, getChoiceIndex(apvts, ParameterIDs::mixMode, 0));
+    const bool bypassed = getParameterValue(apvts, ParameterIDs::bypass, 0.0f) > 0.5f;
+    const int clockSource = juce::jlimit(0, 1, getChoiceIndex(apvts, ParameterIDs::clockSource, 0));
+    const float freeTempo = juce::jlimit(20.0f, 300.0f, getParameterValue(apvts, ParameterIDs::tempo, 120.0f));
+    const int stepResolutionIndex = juce::jlimit(0, 2, getChoiceIndex(apvts, ParameterIDs::stepResolution, 0));
+    const double blockPpqPerStep = getPpqPerStepForResolution(stepResolutionIndex);
+    ppqPerStep = blockPpqPerStep;
+    sequencerEngine.setStepResolution(stepResolutionIndex);
+
+    double bpm = freeTempo;
+    bool useFreeClock = clockSource == 1;
+    bool blockIsPlaying = false;
+    double blockStartPpq = ppqPosition;
+
+    if (auto currentPlayHead = getPlayHead(); currentPlayHead != nullptr && !useFreeClock)
     {
-        juce::AudioPlayHead::CurrentPositionInfo posInfo;
-        currentPlayHead->getCurrentPosition(posInfo);
-
-        isPlayingFlag = posInfo.isPlaying;
-        currentBPM = posInfo.bpm;
-
-        if (posInfo.isPlaying && posInfo.ppqPosition >= 0.0)
+        if (const auto posInfo = currentPlayHead->getPosition())
         {
-            ppqPosition = posInfo.ppqPosition;
-            currentStep = static_cast<int>(ppqPosition / ppqPerStep) % 16;
+            blockIsPlaying = posInfo->getIsPlaying();
+            isPlayingFlag = blockIsPlaying;
+
+            if (const auto hostBpm = posInfo->getBpm(); hostBpm && *hostBpm > 0.0)
+                bpm = *hostBpm;
+
+            if (const auto hostPpq = posInfo->getPpqPosition(); hostPpq && *hostPpq >= 0.0)
+            {
+                blockStartPpq = *hostPpq;
+                ppqPosition = blockStartPpq;
+            }
+        }
+        else
+        {
+            isPlayingFlag = false;
         }
 
-        sequencerEngine.setTempo(currentBPM);
-        sequencerEngine.setPlaying(isPlayingFlag);
+        currentBPM = bpm;
+        sequencerEngine.setTempo(bpm);
+        sequencerEngine.setPlaying(false);
+    }
+    else
+    {
+        useFreeClock = true;
+        currentBPM = bpm;
+        blockStartPpq = ppqPosition;
+        blockIsPlaying = true;
+        isPlayingFlag = true;
+        sequencerEngine.setTempo(bpm);
+        sequencerEngine.setPlaying(true);
     }
 
-    sequencerEngine.advance(numSamples);
-    const int sequencerStep = sequencerEngine.getCurrentStep();
+    StepScheduler::Segment segments[64]{};
+    const int segmentCount = stepScheduler.makeHostSegments({sampleRate,
+                                                             bpm,
+                                                             blockPpqPerStep,
+                                                             blockStartPpq,
+                                                             numSamples,
+                                                             blockIsPlaying},
+                                                            segments,
+                                                            static_cast<int>(std::size(segments)));
+    if (segmentCount <= 0)
+        return;
+
+    currentStep = segments[segmentCount - 1].stepIndex;
+
+    if (useFreeClock)
+        ppqPosition = blockStartPpq + ((bpm / 60.0) / sampleRate) * static_cast<double>(numSamples);
+
+    if (bypassed)
+        return;
 
     float laneMix[6] = {};
     bool laneMuted[6] = {};
@@ -622,6 +765,54 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             if (laneSoloed[lane]) anySolo = true;
         }
     }
+
+    const bool hasRightChannel = buffer.getNumChannels() > 1;
+    for (int i = 0; i < segmentCount; ++i)
+    {
+        const auto& segment = segments[i];
+        processSegment(leftChannel + segment.startSample,
+                       rightChannel + segment.startSample,
+                       dryLeftBuffer.data() + segment.startSample,
+                       dryRightBuffer.data() + segment.startSample,
+                       segment.numSamples,
+                       hasRightChannel,
+                       segment,
+                       bpm,
+                       blockPpqPerStep,
+                       laneMix,
+                       laneMuted,
+                       laneSoloed,
+                       anySolo,
+                       globalMixMode,
+                       globalDryWet,
+                       outputGain);
+    }
+}
+
+void PluginProcessor::processSegment(float* leftChannel,
+                                     float* rightChannel,
+                                     const float* dryLeft,
+                                     const float* dryRight,
+                                     int numSamples,
+                                     bool hasRightChannel,
+                                     const StepScheduler::Segment& segment,
+                                     double bpm,
+                                     double blockPpqPerStep,
+                                     const float* laneMix,
+                                     const bool* laneMuted,
+                                     const bool* laneSoloed,
+                                     bool anySolo,
+                                     int globalMixMode,
+                                     float globalDryWet,
+                                     float outputGain)
+{
+    if (numSamples <= 0)
+        return;
+
+    const int sequencerStep = segment.stepIndex;
+    const double stepPhaseStart = segment.phaseStart;
+    const double phaseDelta = segment.phaseDelta;
+    currentStep = sequencerStep;
 
     auto getEffectiveStep = [&](int lane, int rawStep) -> int
     {
@@ -658,11 +849,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const auto filterSlot   = getSlotDataForStep(sequencerState, kFilterLane,   filterStep);
     const auto fx2Slot      = getSlotDataForStep(sequencerState, kFX2Lane,      fx2Step);
 
-    const double bpm = currentBPM.load();
-    const double stepDurationSeconds = getBeatSeconds(bpm) * ppqPerStep;
-    const double samplesPerStep = juce::jmax(1.0, stepDurationSeconds * sampleRate);
-    const double stepPhaseStart = std::fmod(ppqPosition / ppqPerStep, 1.0);
-    const double phaseDelta = 1.0 / samplesPerStep;
+    const double stepDurationSeconds = getBeatSeconds(bpm) * blockPpqPerStep;
 
     if (effSliceStep != lastEffectiveSteps[kSliceLane])
     {
@@ -697,12 +884,12 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     sliceEngine.writeToBuffer(leftChannel, rightChannel, numSamples);
 
-    std::vector<float> wetLeft(static_cast<size_t>(numSamples), 0.0f);
-    std::vector<float> wetRight(static_cast<size_t>(numSamples), 0.0f);
+    auto* wetLeft = wetLeftBuffer.data();
+    auto* wetRight = wetRightBuffer.data();
     for (int i = 0; i < numSamples; ++i)
     {
-        wetLeft[static_cast<size_t>(i)] = leftChannel[i];
-        wetRight[static_cast<size_t>(i)] = rightChannel[i];
+        wetLeft[i] = leftChannel[i];
+        wetRight[i] = rightChannel[i];
     }
 
     auto isLaneActive = [&](int lane) -> bool
@@ -725,37 +912,37 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     if (sliceStep.active && sliceStep.presetIndex > 0 && isLaneActive(kSliceLane))
     {
-        std::vector<float> sliceLeft(static_cast<size_t>(numSamples), 0.0f);
-        std::vector<float> sliceRight(static_cast<size_t>(numSamples), 0.0f);
-        sliceEngine.process(sliceLeft.data(), sliceRight.data(), numSamples);
-        wetLeft = std::move(sliceLeft);
-        wetRight = std::move(sliceRight);
-        applyGainPan(wetLeft.data(), wetRight.data(), numSamples, sliceSlot.volume, sliceSlot.pan);
-        applyLaneMix(kSliceLane, wetLeft.data(), wetRight.data(), numSamples);
+        auto* sliceLeft = sliceLeftBuffer.data();
+        auto* sliceRight = sliceRightBuffer.data();
+        sliceEngine.process(sliceLeft, sliceRight, numSamples);
+        std::copy(sliceLeft, sliceLeft + numSamples, wetLeft);
+        std::copy(sliceRight, sliceRight + numSamples, wetRight);
+        applyGainPan(wetLeft, wetRight, numSamples, sliceSlot.volume, sliceSlot.pan);
+        applyLaneMix(kSliceLane, wetLeft, wetRight, numSamples);
     }
 
-    loopEngine.captureInput(wetLeft.data(), wetRight.data(), numSamples);
+    loopEngine.captureInput(wetLeft, wetRight, numSamples);
 
     if (loopStep.active && loopStep.presetIndex > 0 && isLaneActive(kLoopLane))
     {
-        loopEngine.process(wetLeft.data(), wetRight.data(), numSamples);
-        applyGainPan(wetLeft.data(), wetRight.data(), numSamples, loopSlot.volume, loopSlot.pan);
-        applyLaneMix(kLoopLane, wetLeft.data(), wetRight.data(), numSamples);
+        loopEngine.process(wetLeft, wetRight, numSamples);
+        applyGainPan(wetLeft, wetRight, numSamples, loopSlot.volume, loopSlot.pan);
+        applyLaneMix(kLoopLane, wetLeft, wetRight, numSamples);
     }
 
     if (envelopeStep.active && envelopeStep.presetIndex > 0 && isLaneActive(kEnvelopeLane))
     {
-        applyEnvelopeShape(wetLeft.data(), wetRight.data(), numSamples, envelopeStep.presetIndex,
+        applyEnvelopeShape(wetLeft, wetRight, numSamples, envelopeStep.presetIndex,
                            stepPhaseStart, phaseDelta, envelopeSlot.volume, envelopeSlot.pan);
-        applyLaneMix(kEnvelopeLane, wetLeft.data(), wetRight.data(), numSamples);
+        applyLaneMix(kEnvelopeLane, wetLeft, wetRight, numSamples);
     }
 
     if (fx1Step.active && fx1Step.presetIndex > 0 && isLaneActive(kFX1Lane))
     {
-        processFxLane(wetLeft.data(), wetRight.data(), numSamples, kFX1Lane, fx1Step.presetIndex, fx1Slot,
+        processFxLane(wetLeft, wetRight, numSamples, kFX1Lane, fx1Step.presetIndex, fx1Slot,
                       fx1DelayEngine, fx1ReverbEngine, fx1BitcrushEngine, fx1PitchEngine, fx1ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
-        applyLaneMix(kFX1Lane, wetLeft.data(), wetRight.data(), numSamples);
+        applyLaneMix(kFX1Lane, wetLeft, wetRight, numSamples);
     }
 
     if (filterStep.active && filterStep.presetIndex > 0 && isLaneActive(kFilterLane))
@@ -763,41 +950,42 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         for (int i = 0; i < numSamples; ++i)
         {
             float modValues[ModulationEngine::NumTargets]{};
-            modulationEngine.processSample(wetLeft[static_cast<size_t>(i)], wetRight[static_cast<size_t>(i)], modValues);
+            modulationEngine.processSample(wetLeft[i], wetRight[i], modValues);
 
             const float cutoffMod = modValues[static_cast<int>(ModulationTarget::FilterCutoff)];
             const float modCutoff = filterSlot.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
             filterEngine.setCutoff(modCutoff);
             filterEngine.setResonance(filterSlot.filterResonance);
 
-            wetLeft[static_cast<size_t>(i)] = filterEngine.processSampleLeft(wetLeft[static_cast<size_t>(i)]);
-            wetRight[static_cast<size_t>(i)] = filterEngine.processSampleRight(wetRight[static_cast<size_t>(i)]);
+            wetLeft[i] = filterEngine.processSampleLeft(wetLeft[i]);
+            wetRight[i] = filterEngine.processSampleRight(wetRight[i]);
         }
 
-        applyGainPan(wetLeft.data(), wetRight.data(), numSamples, filterSlot.volume, filterSlot.pan);
-        applyLaneMix(kFilterLane, wetLeft.data(), wetRight.data(), numSamples);
+        applyGainPan(wetLeft, wetRight, numSamples, filterSlot.volume, filterSlot.pan);
+        applyLaneMix(kFilterLane, wetLeft, wetRight, numSamples);
     }
 
     if (fx2Step.active && fx2Step.presetIndex > 0 && isLaneActive(kFX2Lane))
     {
-        processFxLane(wetLeft.data(), wetRight.data(), numSamples, kFX2Lane, fx2Step.presetIndex, fx2Slot,
+        processFxLane(wetLeft, wetRight, numSamples, kFX2Lane, fx2Step.presetIndex, fx2Slot,
                       fx2DelayEngine, fx2ReverbEngine, fx2BitcrushEngine, fx2PitchEngine, fx2ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
-        applyLaneMix(kFX2Lane, wetLeft.data(), wetRight.data(), numSamples);
+        applyLaneMix(kFX2Lane, wetLeft, wetRight, numSamples);
     }
 
     for (int i = 0; i < numSamples; ++i)
     {
-        leftChannel[i] = wetLeft[static_cast<size_t>(i)];
-        rightChannel[i] = wetRight[static_cast<size_t>(i)];
-    }
+        leftChannel[i] = blendGlobalMixSample(dryLeft[static_cast<size_t>(i)],
+                                              wetLeft[i],
+                                              globalMixMode,
+                                              globalDryWet) * outputGain;
 
-    if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
-    {
-        if (auto* waveform = editor->getWaveformDisplay())
+        if (hasRightChannel)
         {
-            waveform->pushSamples(buffer.getReadPointer(0), buffer.getNumSamples());
-            waveform->setPlayheadPosition(static_cast<float>(currentStep) / 16.0f);
+            rightChannel[i] = blendGlobalMixSample(dryRight[static_cast<size_t>(i)],
+                                                   wetRight[i],
+                                                   globalMixMode,
+                                                   globalDryWet) * outputGain;
         }
     }
 }

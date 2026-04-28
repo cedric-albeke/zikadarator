@@ -1,7 +1,6 @@
 #pragma once
 
 #include <juce_dsp/juce_dsp.h>
-#include <vector>
 
 namespace zikada {
 
@@ -27,14 +26,13 @@ private:
     float delayTimeSec{0.5f};
     float feedback{0.4f};
     float mix{0.5f};
+    float maxDelaySamples{1.0f};
+    bool hasProcessed{false};
 
-    std::vector<float> bufferL;
-    std::vector<float> bufferR;
-    int bufferSize{0};
-    int writeIndexL{0};
-    int writeIndexR{0};
-
-    int getDelaySamples() const;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLine;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> delaySamplesSmoothed;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> feedbackSmoothed;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> mixSmoothed;
 };
 
 }

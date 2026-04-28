@@ -43,6 +43,10 @@ private:
     juce::TextButton stepResolutionButton{"1/8"};
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
         stepResolutionAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
+        dryWetAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
+        bypassAttachment;
 
     std::array<std::unique_ptr<Knob>, 7> stepKnobs;
 

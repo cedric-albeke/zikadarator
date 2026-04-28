@@ -33,6 +33,10 @@ Thumbs.db
 # Generated
 src/BinaryData.h
 src/BinaryData.cpp
+/packaging/windows/artifacts/
+/packaging/windows/package-root/
+/packaging/macos/artifacts/
+/packaging/macos/stage/
 
 # User-specific
 *.user
@@ -40,6 +44,7 @@ src/BinaryData.cpp
 
 # Local worktrees
 .worktrees/
+.tools/
 
 # Superpowers plugin artifacts
 .superpowers/

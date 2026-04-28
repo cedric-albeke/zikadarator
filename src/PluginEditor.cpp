@@ -10,6 +10,13 @@ namespace {
 
 std::unique_ptr<juce::FileLogger> uiLogFile;
 std::atomic<int> nextEditorInstanceId{1};
+constexpr int kDefaultEditorWidth = 1200;
+constexpr int kDefaultEditorHeight = 800;
+constexpr int kMinEditorWidth = 900;
+constexpr int kMinEditorHeight = 600;
+constexpr int kMaxEditorWidth = 2400;
+constexpr int kMaxEditorHeight = 1600;
+constexpr double kEditorAspectRatio = static_cast<double>(kDefaultEditorWidth) / static_cast<double>(kDefaultEditorHeight);
 
 void ensureUiLogger()
 {
@@ -211,9 +218,11 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     setCurrentPresetIndex(0, false);
     updateHistoryButtons();
 
-    setSize(1200, 800);
     setResizable(true, true);
-    setResizeLimits(900, 600, 2400, 1600);
+    setResizeLimits(kMinEditorWidth, kMinEditorHeight, kMaxEditorWidth, kMaxEditorHeight);
+    if (auto* boundsConstrainer = getConstrainer())
+        boundsConstrainer->setFixedAspectRatio(kEditorAspectRatio);
+    setSize(kDefaultEditorWidth, kDefaultEditorHeight);
 
     setPage(Page::Sequencer);
     applyWineSafeRenderingIfNeeded();
@@ -238,6 +247,12 @@ void PluginEditor::timerCallback()
 
     const bool isPlaying = processorRef.isPlaying();
     const int  step      = processorRef.getCurrentStep();
+    auto& waveformDisplay = sequencerPanel.getWaveformDisplay();
+    const int copied = processorRef.getWaveformTap().popForUi(waveformScratch.data(),
+                                                              static_cast<int>(waveformScratch.size()));
+    if (copied > 0)
+        waveformDisplay.pushSamples(waveformScratch.data(), copied);
+    waveformDisplay.setPlayheadPosition(static_cast<float>(step) / 16.0f);
 
     if (!isPlaying)
     {

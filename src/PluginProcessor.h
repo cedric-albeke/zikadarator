@@ -14,6 +14,11 @@
 #include "engine/PitchEngine.h"
 #include "engine/ModulationEngine.h"
 #include "engine/GainPanEngine.h"
+#include "engine/WaveformTap.h"
+#include "engine/StepScheduler.h"
+
+#include <array>
+#include <vector>
 
 namespace zikada {
 
@@ -59,6 +64,7 @@ public:
     const SequencerState& getSequencerState() const { return sequencerState; }
     PresetManager& getPresetManager() { return presetManager; }
     const PresetManager& getPresetManager() const { return presetManager; }
+    WaveformTap& getWaveformTap() { return waveformTap; }
 
     juce::ValueTree exportFullState();
     void applyFullState(const juce::ValueTree& stateTree);
@@ -68,6 +74,24 @@ public:
     int getCurrentStep() const { return currentStep; }
 
 private:
+    void ensureScratchBuffers(int numSamples);
+    void processSegment(float* leftChannel,
+                        float* rightChannel,
+                        const float* dryLeft,
+                        const float* dryRight,
+                        int numSamples,
+                        bool hasRightChannel,
+                        const StepScheduler::Segment& segment,
+                        double bpm,
+                        double blockPpqPerStep,
+                        const float* laneMix,
+                        const bool* laneMuted,
+                        const bool* laneSoloed,
+                        bool anySolo,
+                        int globalMixMode,
+                        float globalDryWet,
+                        float outputGain);
+
     PluginState state;
     PresetManager presetManager;
     SequencerState sequencerState;
@@ -87,14 +111,21 @@ private:
     FilterEngine fx2ToneFilter;
     ModulationEngine modulationEngine;
     GainPanEngine gainPanEngine;
+    WaveformTap waveformTap;
+    StepScheduler stepScheduler;
     std::atomic<bool> isPlayingFlag{false};
     std::atomic<double> currentBPM{120.0};
     std::atomic<int> currentStep{0};
     std::array<int, 6> lastEffectiveSteps{-1, -1, -1, -1, -1, -1};
     double sampleRate{44100.0};
-    juce::AudioPlayHead::CurrentPositionInfo lastPosInfo;
     double ppqPosition{0.0};
-    double ppqPerStep{0.25};
+    double ppqPerStep{0.5};
+    std::vector<float> dryLeftBuffer;
+    std::vector<float> dryRightBuffer;
+    std::vector<float> wetLeftBuffer;
+    std::vector<float> wetRightBuffer;
+    std::vector<float> sliceLeftBuffer;
+    std::vector<float> sliceRightBuffer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

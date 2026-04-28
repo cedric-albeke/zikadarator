@@ -62,8 +62,8 @@ void SliceEngine::triggerSlice(int sliceIndex)
     
     for (int i = 0; i < playbackLength; ++i)
     {
-        playbackBufferLeft[i] = leftBuffer.getSample(sliceStartSamples + (playbackLength - 1 - i));
-        playbackBufferRight[i] = rightBuffer.getSample(sliceStartSamples + (playbackLength - 1 - i));
+        playbackBufferLeft[i] = leftBuffer.getSampleAgo(sliceStartSamples + (playbackLength - 1 - i));
+        playbackBufferRight[i] = rightBuffer.getSampleAgo(sliceStartSamples + (playbackLength - 1 - i));
     }
     
     playbackPosition = 0;

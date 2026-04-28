@@ -1,6 +1,8 @@
 #pragma once
 
-#include "CircularAudioBuffer.h"
+#include "engine/RealtimeRingBuffer.h"
+
+#include <vector>
 
 namespace zikada {
 
@@ -25,8 +27,8 @@ private:
     double samplesPerSlice{0.0};
     int maxSliceSamples{0};
 
-    CircularAudioBuffer leftBuffer;
-    CircularAudioBuffer rightBuffer;
+    RealtimeRingBuffer leftBuffer;
+    RealtimeRingBuffer rightBuffer;
 
     std::vector<float> playbackBufferLeft;
     std::vector<float> playbackBufferRight;

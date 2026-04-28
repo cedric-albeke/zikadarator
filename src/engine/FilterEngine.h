@@ -41,10 +41,17 @@ private:
     float cutoffFreq{2000.0f};
     float resonance{0.707f};
 
-    juce::dsp::StateVariableTPTFilter<float> filterLeft;
-    juce::dsp::StateVariableTPTFilter<float> filterRight;
+    juce::dsp::StateVariableTPTFilter<float> filterLeftA;
+    juce::dsp::StateVariableTPTFilter<float> filterRightA;
+    juce::dsp::StateVariableTPTFilter<float> filterLeftB;
+    juce::dsp::StateVariableTPTFilter<float> filterRightB;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> combDelayLine;
+    float maxCombDelaySamples{1.0f};
 
     void updateFilter();
+    float processSample(int channel, float input);
+    float processCombSample(int channel, float input);
+    bool isCascadedType() const;
 };
 
 }
