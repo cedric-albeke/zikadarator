@@ -53,6 +53,14 @@ Please test these first:
 4. Presets page renders and preset switching works
 5. Settings page renders
 6. Audio changes when steps/presets are edited
+7. Editor resizing keeps a fixed 3:2 aspect ratio
+
+For audio-engine rebuild test focus, prefer:
+
+- SLICE and LOOP steps with transport running
+- Delay and filter presets on FX1/FILTER/FX2
+- Host sync at 120 BPM with 128 or 256 sample buffer
+- Two minutes of playback without hard step-boundary clicks
 
 ## 4. Quick per-platform notes
 
@@ -84,6 +92,7 @@ When filing feedback, include:
 If you are testing a debug-enabled build, collect:
 
 - `%APPDATA%\ZIKADARATOR\UI-Debug.log`
+- `%APPDATA%\Ableton\Live 12.3.7\Preferences\Log.txt` when testing Ableton Live 12
 
 ### macOS
 

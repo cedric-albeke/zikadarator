@@ -17,11 +17,16 @@ ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in re
 
 ## Features
 
-- **16-step FX sequencer** with 6 reorderable lanes
+- **16-step FX sequencer** with 6 sequenced FX lanes
+- **Sample-accurate step segmentation** driven by host PPQ or free clock
+- **Realtime history buffers** for slice and loop playback
+- **Corrected delay/filter DSP contracts**: fractional delay, real notch behavior, cascaded 24 dB filters, and implemented comb filtering
+- **Realtime-safe waveform telemetry** via an audio-thread-to-UI tap
 - **Right-sidebar preset grid** for per-step assignment
 - **Footer detail dock** for U1-U4 slot editing and modulation
 - **Preset browser + Settings tabs** embedded directly in the main editor
 - **Header preset dropdown** with favorites, recents, and direct loading
+- **Fixed 3:2 editor aspect ratio** with 900x600 to 2400x1600 resize limits
 - **Standalone device settings in-tab** — audio device, sample rate, buffer size, and MIDI inputs now live inside the Settings page
 - **Zikada-native UI**: Neon green (`#00FF85`) on deep teal-black, VCR OSD Mono typography, vector-based custom components
 - **VST3 / AU / Standalone** formats
@@ -85,6 +90,18 @@ cmake -B build
 cmake --build build --target ZikadaFX_Standalone
 ```
 
+## Local Verification
+
+On Windows, the repo currently uses the Visual Studio Build Tools CMake/CTest binaries when `cmake` is not on `PATH`.
+
+```powershell
+node scripts\source-smoke-tests.mjs
+& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Debug --target ZikadaEngineTests
+& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\ctest.exe' --test-dir build -C Debug --output-on-failure
+& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Release --target ZikadaFX_VST3
+.tools\pluginval\pluginval.exe --validate-in-process --strictness-level 5 --validate "C:\Development\zikadarator\build\ZikadaFX_artefacts\Release\VST3\ZIKADARATOR.vst3"
+```
+
 ## Test Build Packaging
 
 GitHub Actions is set up to produce tester-facing artifacts for both platforms:
@@ -129,6 +146,10 @@ See [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) for exact brand tokens: col
 ## Architecture
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full technical architecture.
+
+For the current engine rebuild status and known DSP limitations, see [`docs/ENGINE_REBUILD.md`](docs/ENGINE_REBUILD.md).
+
+For future AI/developer handoffs, see [`docs/LLM_WIKI.md`](docs/LLM_WIKI.md).
 
 ## Product Spec
 

@@ -15,6 +15,20 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 - **Language**: C++20
 - **UI**: Custom JUCE components (vector-based, no stock LookAndFeel)
 
+## Current Rebuild Status
+
+As of 2026-04-28, the Windows-native engine rebuild has completed the first realtime-safety pass:
+
+- `processBlock` is split into sample-accurate scheduler segments through `StepScheduler`.
+- `SliceEngine` and `LoopEngine` use `RealtimeRingBuffer` history instead of FIFO-readiness semantics.
+- Waveform UI data crosses from audio thread to message thread through `WaveformTap`; `processBlock` no longer touches the active editor.
+- `DelayEngine` uses JUCE fractional delay with smoothed delay, mix, and feedback targets.
+- `FilterEngine` now has distinct 12 dB and cascaded 24 dB modes, real band-reject behavior, and an implemented comb path.
+- The editor is constrained to a fixed 3:2 aspect ratio.
+- Regression coverage lives in `ZikadaEngineTests` plus `scripts/source-smoke-tests.mjs`.
+
+Known limitation: advanced pitch/time/grain/vinyl labels still need to be aligned with implemented DSP or replaced by a real time-stretch/pitch library.
+
 ---
 
 ## Directory Structure
@@ -93,12 +107,21 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 ```
 
 ### Processing Model
-- `SliceEngine` operates on a shared circular audio buffer (2+ bars)
-- `LoopEngine` captures recent audio history and replays micro-loops per step
-- Each subsequent engine receives the output of the previous
-- `EnvelopeEngine` applies per-step amplitude curves
-- `FxRack` hosts 2 independent effect lanes (FX1, FX2)
-- Final `MixEngine` blends dry/wet with multiple blend modes
+- `PluginProcessor::processBlock` snapshots parameters once per block, builds fixed-stack scheduler segments, and calls `processSegment` for each step-owned sample range.
+- `StepScheduler` converts host/free-clock PPQ into sample offsets, step index, phase start, and phase delta.
+- `SliceEngine` and `LoopEngine` capture input/history through `RealtimeRingBuffer`, allowing deterministic overwrite history and interpolated reads.
+- `Envelope` processing applies per-step amplitude curves using scheduler phase.
+- FX1 and FX2 host delay, reverb, bitcrush, pitch-color, and tone-filter paths.
+- `FilterEngine` is used both as the dedicated FILTER lane and as an internal tone shaper for FX presets.
+- Final global mixing applies dry/wet, mix mode, and output gain after lane processing.
+- Waveform display samples are pushed into `WaveformTap` on the audio thread and popped by `PluginEditor::timerCallback` on the UI thread.
+
+### Realtime Rules
+
+- No `getActiveEditor()` calls from `processBlock`.
+- No `juce::Logger::writeToLog` calls from `processBlock`.
+- No `std::vector<float>` allocation inside `processBlock`; processor scratch buffers are owned and resized outside normal segment work.
+- `juce::AbstractFifo` is acceptable for UI telemetry, but not for audio history semantics.
 
 ### Modulation System (Layer 3)
 Each user parameter can be driven by:
@@ -151,7 +174,7 @@ Inline SVG strings are parsed via `juce::parseXML()` → `juce::Drawable::create
 - **60fps animations**: Smooth playhead, waveform updates, parameter transitions
 - **Immediate feedback**: Every interaction has a visual response within 1 frame
 - **Keyboard + mouse**: Scroll wheel cycles presets, drag-to-paint, shift+tie, right-click delete
-- **Resizable**: Editor scales from 75% to 200%
+- **Resizable**: Editor scales from 900x600 to 2400x1600 while preserving a fixed 3:2 aspect ratio
 - **Standalone integration**: Audio device, sample rate, buffer size, and MIDI routing are embedded inside the Settings tab via JUCE standalone host APIs
 - **Preset access**: Header dropdown and browser both read from the same metadata-backed preset ordering
 
