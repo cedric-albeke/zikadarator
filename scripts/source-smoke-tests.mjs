@@ -40,6 +40,7 @@ const processorHeader = read("src/PluginProcessor.h");
 const editor = read("src/PluginEditor.cpp");
 const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const footer = read("src/ui/panels/FooterPanel.cpp");
+const presetManager = read("src/state/PresetManager.cpp");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
@@ -92,5 +93,15 @@ assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resi
 if (footer.includes("setSelectedSlot lane=")) {
   fail("footer must not log setSelectedSlot on hot UI selection paths");
 }
+
+[
+  "DELAY PULSE",
+  "FILTER CUTS",
+  "CRUSH GRID",
+  "LOOP CHOP",
+  "NOTCH MOTION",
+].forEach((presetName) => {
+  if (!presetManager.includes(presetName)) fail(`missing alpha factory preset: ${presetName}`);
+});
 
 if (!process.exitCode) console.log("source smoke tests passed");

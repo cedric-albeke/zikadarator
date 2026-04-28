@@ -153,6 +153,11 @@ void PresetManager::addFactoryPresets()
     items.push_back({"INIT", "Utility", "Factory · clean starting point", true, isFavorite("INIT"), recentPresetNames.indexOf("INIT"), {}, createInitFactoryState()});
     items.push_back({"NEON GATE", "Glitch", "Factory · gated stutter rhythm", true, isFavorite("NEON GATE"), recentPresetNames.indexOf("NEON GATE"), {}, createNeonGateFactoryState()});
     items.push_back({"SPACE BLOOM", "Ambient", "Factory · airy delay and filter trail", true, isFavorite("SPACE BLOOM"), recentPresetNames.indexOf("SPACE BLOOM"), {}, createSpaceBloomFactoryState()});
+    items.push_back({"DELAY PULSE", "Delay", "Factory - synced delay pattern", true, isFavorite("DELAY PULSE"), recentPresetNames.indexOf("DELAY PULSE"), {}, createDelayPulseFactoryState()});
+    items.push_back({"FILTER CUTS", "Filter", "Factory - stepped filter movement", true, isFavorite("FILTER CUTS"), recentPresetNames.indexOf("FILTER CUTS"), {}, createFilterCutsFactoryState()});
+    items.push_back({"CRUSH GRID", "Texture", "Factory - bitcrush and drive rhythm", true, isFavorite("CRUSH GRID"), recentPresetNames.indexOf("CRUSH GRID"), {}, createCrushGridFactoryState()});
+    items.push_back({"LOOP CHOP", "Loop", "Factory - micro-loop cuts", true, isFavorite("LOOP CHOP"), recentPresetNames.indexOf("LOOP CHOP"), {}, createLoopChopFactoryState()});
+    items.push_back({"NOTCH MOTION", "Filter", "Factory - notch and tremolo motion", true, isFavorite("NOTCH MOTION"), recentPresetNames.indexOf("NOTCH MOTION"), {}, createNotchMotionFactoryState()});
 }
 
 void PresetManager::addUserPresets()
@@ -340,6 +345,128 @@ juce::ValueTree PresetManager::createSpaceBloomFactoryState()
     setUserSlot(sequencerState, 3, 0, 5600.0f, 0.8f, 0.48f, 0.55f, 0.5f, 0.9f, -0.2f);
     setUserSlot(sequencerState, 4, 0, 780.0f, 2.6f, 0.2f, 0.22f, 0.36f, 1.0f, 0.0f);
     setUserSlot(sequencerState, 5, 0, 6400.0f, 0.65f, 0.4f, 0.35f, 0.56f, 0.92f, 0.25f);
+
+    state.addChild(sequencerState.toValueTree(), -1, nullptr);
+    return state;
+}
+
+juce::ValueTree PresetManager::createDelayPulseFactoryState()
+{
+    auto state = createBaseState();
+    SequencerState sequencerState;
+
+    for (int step = 0; step < 16; step += 4)
+        setStep(sequencerState, 3, step, 5);
+
+    for (int step = 2; step < 16; step += 4)
+        setStep(sequencerState, 5, step, 11);
+
+    setStep(sequencerState, 2, 0, 7);
+    setStep(sequencerState, 2, 8, 10);
+    setStep(sequencerState, 4, 4, 6);
+    setStep(sequencerState, 4, 12, 7);
+
+    setUserSlot(sequencerState, 3, 0, 4800.0f, 0.8f, 0.25f, 0.45f, 0.46f, 0.94f, -0.12f);
+    setUserSlot(sequencerState, 5, 0, 5200.0f, 0.7f, 0.38f, 0.36f, 0.38f, 0.88f, 0.18f);
+    setUserSlot(sequencerState, 4, 0, 1800.0f, 0.9f, 0.20f, 0.25f, 0.32f, 1.0f, 0.0f);
+
+    state.addChild(sequencerState.toValueTree(), -1, nullptr);
+    return state;
+}
+
+juce::ValueTree PresetManager::createFilterCutsFactoryState()
+{
+    auto state = createBaseState();
+    SequencerState sequencerState;
+
+    setStep(sequencerState, 4, 0, 5);
+    setStep(sequencerState, 4, 2, 6);
+    setStep(sequencerState, 4, 4, 9);
+    setStep(sequencerState, 4, 6, 10);
+    setStep(sequencerState, 4, 8, 7);
+    setStep(sequencerState, 4, 10, 8);
+    setStep(sequencerState, 4, 12, 11);
+    setStep(sequencerState, 4, 14, 18);
+    setStep(sequencerState, 2, 1, 12);
+    setStep(sequencerState, 2, 5, 11);
+    setStep(sequencerState, 2, 9, 12);
+    setStep(sequencerState, 2, 13, 11);
+
+    setUserSlot(sequencerState, 4, 0, 1400.0f, 2.4f, 0.18f, 0.2f, 0.44f, 1.0f, 0.0f);
+    setUserSlot(sequencerState, 2, 0, 2400.0f, 0.707f, 0.12f, 0.22f, 0.40f, 0.95f, 0.0f);
+
+    state.addChild(sequencerState.toValueTree(), -1, nullptr);
+    return state;
+}
+
+juce::ValueTree PresetManager::createCrushGridFactoryState()
+{
+    auto state = createBaseState();
+    SequencerState sequencerState;
+
+    for (int step = 0; step < 16; step += 4)
+        setStep(sequencerState, 5, step, 5);
+
+    for (int step = 2; step < 16; step += 4)
+        setStep(sequencerState, 5, step, 6);
+
+    setStep(sequencerState, 3, 6, 17);
+    setStep(sequencerState, 3, 7, 18);
+    setStep(sequencerState, 3, 14, 17);
+    setStep(sequencerState, 3, 15, 18);
+    setStep(sequencerState, 4, 8, 10);
+    setStep(sequencerState, 4, 12, 11);
+
+    setUserSlot(sequencerState, 5, 0, 3600.0f, 5.0f, 0.32f, 0.28f, 0.65f, 0.86f, 0.0f);
+    setUserSlot(sequencerState, 3, 0, 2600.0f, 2.0f, 0.12f, 0.2f, 0.55f, 0.80f, 0.0f);
+    setUserSlot(sequencerState, 4, 0, 950.0f, 3.0f, 0.18f, 0.25f, 0.42f, 1.0f, 0.0f);
+
+    state.addChild(sequencerState.toValueTree(), -1, nullptr);
+    return state;
+}
+
+juce::ValueTree PresetManager::createLoopChopFactoryState()
+{
+    auto state = createBaseState();
+    SequencerState sequencerState;
+
+    setStep(sequencerState, 1, 0, 5);
+    setStep(sequencerState, 1, 4, 6);
+    setStep(sequencerState, 1, 8, 9);
+    setStep(sequencerState, 1, 12, 10);
+    setStep(sequencerState, 0, 2, 8);
+    setStep(sequencerState, 0, 6, 11);
+    setStep(sequencerState, 0, 10, 12);
+    setStep(sequencerState, 0, 14, 9);
+    setStep(sequencerState, 2, 0, 9);
+    setStep(sequencerState, 2, 8, 12);
+
+    setUserSlot(sequencerState, 0, 0, 2800.0f, 0.707f, 0.16f, 0.18f, 0.40f, 1.0f, 0.0f);
+    setUserSlot(sequencerState, 1, 0, 2200.0f, 0.9f, 0.10f, 0.30f, 0.72f, 0.92f, 0.0f);
+    setUserSlot(sequencerState, 2, 0, 1800.0f, 1.0f, 0.12f, 0.20f, 0.38f, 0.90f, 0.0f);
+
+    state.addChild(sequencerState.toValueTree(), -1, nullptr);
+    return state;
+}
+
+juce::ValueTree PresetManager::createNotchMotionFactoryState()
+{
+    auto state = createBaseState();
+    SequencerState sequencerState;
+
+    for (int step = 0; step < 16; step += 2)
+        setStep(sequencerState, 4, step, 10);
+
+    setStep(sequencerState, 3, 3, 15);
+    setStep(sequencerState, 3, 7, 16);
+    setStep(sequencerState, 3, 11, 15);
+    setStep(sequencerState, 3, 15, 16);
+    setStep(sequencerState, 5, 4, 13);
+    setStep(sequencerState, 5, 12, 15);
+
+    setUserSlot(sequencerState, 4, 0, 1200.0f, 4.0f, 0.20f, 0.25f, 0.52f, 0.98f, 0.0f);
+    setUserSlot(sequencerState, 3, 0, 3400.0f, 1.3f, 0.14f, 0.22f, 0.48f, 0.90f, -0.15f);
+    setUserSlot(sequencerState, 5, 0, 4200.0f, 2.5f, 0.18f, 0.30f, 0.46f, 0.88f, 0.16f);
 
     state.addChild(sequencerState.toValueTree(), -1, nullptr);
     return state;

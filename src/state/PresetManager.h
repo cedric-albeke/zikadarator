@@ -51,6 +51,11 @@ private:
     static juce::ValueTree createInitFactoryState();
     static juce::ValueTree createNeonGateFactoryState();
     static juce::ValueTree createSpaceBloomFactoryState();
+    static juce::ValueTree createDelayPulseFactoryState();
+    static juce::ValueTree createFilterCutsFactoryState();
+    static juce::ValueTree createCrushGridFactoryState();
+    static juce::ValueTree createLoopChopFactoryState();
+    static juce::ValueTree createNotchMotionFactoryState();
 };
 
 } // namespace zikada

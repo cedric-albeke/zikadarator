@@ -23,6 +23,7 @@ Move ZIKADARATOR from a UI-heavy prototype toward a realtime-safe, host-synced F
   - Comb has an implemented fractional-delay path.
 - Fixed the plugin editor to a 3:2 aspect ratio.
 - Added `scripts/ableton-log-scan.ps1` for Windows Ableton/ZIKADARATOR log review.
+- Expanded the alpha factory bank to eight presets that use only implemented DSP paths.
 
 ## Current Verification
 
@@ -46,14 +47,13 @@ Expected results:
 
 ## Known Limitations
 
-- Pitch/time/stretch/grain/vinyl style behavior is still experimental or mislabeled in places. For alpha reliability, either rename these presets to what the current DSP actually does or integrate a proper pitch/time library such as Signalsmith Stretch in a later branch.
+- Pitch/time/stretch/grain/vinyl style families are intentionally not advertised in the alpha UI until real DSP exists.
 - Lane processors are still orchestrated in `PluginProcessor.cpp`; a cleaner lane-processor split remains planned.
 - Ableton Live 12 manual audio acceptance still needs a documented pass after the next installed build is tested in-session.
-- Preset/state contract still needs an alpha freeze so the factory set only promises implemented DSP.
+- Advanced pitch/time/grain preset families remain deferred until a real library is integrated.
 
 ## Next Tasks
 
-1. Align pitch/time/grain/vinyl/chaos UI labels with implemented DSP.
-2. Run the Ableton Live 12 manual acceptance test and archive scanner output.
-3. Freeze alpha preset/state scope around implemented processors.
-4. Update factory presets to favor stable slice, loop, envelope, delay, filter, reverb, and bitcrush behavior.
+1. Run the Ableton Live 12 manual acceptance test and archive scanner output.
+2. Run the factory bank through Ableton and remove or revise any preset that clicks or underperforms.
+3. Continue splitting lane processors out of `PluginProcessor.cpp` once audible behavior is stable.

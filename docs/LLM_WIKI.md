@@ -59,22 +59,31 @@ The source guard in `scripts/source-smoke-tests.mjs` checks the most important i
 - `PitchEngine` is a simple experimental ring-buffer pitch-color processor, not production time-stretch or granular DSP.
 - Dedicated lane processor classes are still deferred; orchestration still lives mostly in `PluginProcessor.cpp`.
 - Ableton Live 12 manual acceptance needs to be repeated after each installed VST3 build.
-- Factory presets need an alpha pass so labels and audible behavior match implemented DSP.
+- Alpha factory presets are intentionally limited to implemented DSP paths.
+
+## Alpha Factory Bank
+
+Current embedded factory presets:
+
+- `INIT`
+- `NEON GATE`
+- `SPACE BLOOM`
+- `DELAY PULSE`
+- `FILTER CUTS`
+- `CRUSH GRID`
+- `LOOP CHOP`
+- `NOTCH MOTION`
+
+These should stay conservative until the next Ableton acceptance pass confirms they are click-safe and musically useful.
 
 ## Best Next Task
 
-Continue with the rebuild plan Task 8:
+Task 8 and the factory-bank slice of Task 10 are done. Best next task:
 
-1. Rename misleading preset labels in `src/ui/panels/SidebarPanel.cpp`.
-2. Add source-smoke checks that block `Stretch`, `Grain`, `Vinyl`, and `Chaos` labels until real DSP exists.
-3. Document `PitchEngine` as experimental.
-4. Build Release VST3 and run pluginval.
-
-After Task 8, do Task 9:
-
-1. Create `scripts/ableton-log-scan.ps1`.
-2. Update `docs/RELEASE_TESTING.md` and `docs/QUICKSTART.md`.
-3. Run it after an Ableton Live 12 manual loop test.
+1. Install the pushed VST3 into the system VST3 folder.
+2. Run the Ableton Live 12 acceptance loop with a clean `UI-Debug.log`.
+3. Use `scripts/ableton-log-scan.ps1` to review logs.
+4. Fix any audible clicks, restore issues, or log storms found in Live.
 
 ## Ableton Log Scan
 
