@@ -71,6 +71,7 @@ private:
     void notifySlotDataChanged();
     void cycleStepResolution();
     void syncInlineControlState();
+    void applyKnobConfigForLane(int lane);
 
     void setupModulationControls();
     void updateModulationControlsFromData(const ModulationData& modData);

@@ -65,6 +65,7 @@ public:
     PresetManager& getPresetManager() { return presetManager; }
     const PresetManager& getPresetManager() const { return presetManager; }
     WaveformTap& getWaveformTap() { return waveformTap; }
+    WaveformTap& getProcessedWaveformTap() { return processedWaveformTap; }
 
     juce::ValueTree exportFullState();
     void applyFullState(const juce::ValueTree& stateTree);
@@ -112,6 +113,7 @@ private:
     ModulationEngine modulationEngine;
     GainPanEngine gainPanEngine;
     WaveformTap waveformTap;
+    WaveformTap processedWaveformTap;
     StepScheduler stepScheduler;
     std::atomic<bool> isPlayingFlag{false};
     std::atomic<double> currentBPM{120.0};
@@ -126,6 +128,8 @@ private:
     std::vector<float> wetRightBuffer;
     std::vector<float> sliceLeftBuffer;
     std::vector<float> sliceRightBuffer;
+    std::vector<float> laneInputLeftBuffer;
+    std::vector<float> laneInputRightBuffer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

@@ -60,7 +60,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
 
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
         ParameterIDs::stepResolution, "Step Resolution",
-        juce::StringArray{"1/8", "1/4", "1/2"}, 0));
+        juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1));
 
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         ParameterIDs::bypass, "Bypass", false));

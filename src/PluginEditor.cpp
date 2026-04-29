@@ -248,10 +248,16 @@ void PluginEditor::timerCallback()
     const bool isPlaying = processorRef.isPlaying();
     const int  step      = processorRef.getCurrentStep();
     auto& waveformDisplay = sequencerPanel.getWaveformDisplay();
-    const int copied = processorRef.getWaveformTap().popForUi(waveformScratch.data(),
-                                                              static_cast<int>(waveformScratch.size()));
-    if (copied > 0)
-        waveformDisplay.pushSamples(waveformScratch.data(), copied);
+    const int inputCopied = processorRef.getWaveformTap().popForUi(inputWaveformScratch.data(),
+                                                                   static_cast<int>(inputWaveformScratch.size()));
+    if (inputCopied > 0)
+        waveformDisplay.pushInputSamples(inputWaveformScratch.data(), inputCopied);
+
+    const int outputCopied = processorRef.getProcessedWaveformTap().popForUi(outputWaveformScratch.data(),
+                                                                             static_cast<int>(outputWaveformScratch.size()));
+    if (outputCopied > 0)
+        waveformDisplay.pushOutputSamples(outputWaveformScratch.data(), outputCopied);
+
     waveformDisplay.setPlayheadPosition(static_cast<float>(step) / 16.0f);
 
     if (!isPlaying)
@@ -555,7 +561,16 @@ bool PluginEditor::isRunningUnderWine()
 
 void PluginEditor::applyWineSafeRenderingIfNeeded()
 {
-    if (wineSafeRendererApplied || !isRunningUnderWine())
+    if (wineSafeRendererApplied)
+        return;
+
+    if (!wineEnvironmentChecked)
+    {
+        runningUnderWineCached = isRunningUnderWine();
+        wineEnvironmentChecked = true;
+    }
+
+    if (!runningUnderWineCached)
         return;
 
     auto* peer = getPeer();

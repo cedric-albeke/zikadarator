@@ -18,6 +18,12 @@ namespace {
     constexpr std::array<const char*, 7> kKnobLabel = {
         "CUTOFF", "RESON", "DELAY", "FEEDBK", "MIX", "VOL", "PAN"
     };
+    constexpr std::array<double, 7> kLoopKnobMin  = { 0.25, 0.25, 0.0, 0.0, 0.0, 0.0, -1.0 };
+    constexpr std::array<double, 7> kLoopKnobMax  = { 4.0,  4.0,  1.0, 1.0, 1.0, 2.0,  1.0 };
+    constexpr std::array<double, 7> kLoopKnobDef  = { 0.5,  1.0,  0.0, 0.45, 0.65, 1.0, 0.0 };
+    constexpr std::array<const char*, 7> kLoopKnobLabel = {
+        "LEN", "RATE", "REV", "FADE", "MIX", "VOL", "PAN"
+    };
 
     void debugFooterLog(const juce::String& message)
     {
@@ -70,7 +76,7 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     stepResLabel.setColour(juce::Label::textColourId, Colours::white50);
     addAndMakeVisible(stepResLabel);
 
-    stepResolutionBox.addItemList({"1/8", "1/4", "1/2"}, 1);
+    stepResolutionBox.addItemList({"1/16", "1/8", "1/4", "1/2"}, 1);
     stepResolutionBox.setColour(juce::ComboBox::backgroundColourId,    Colours::bgSurface);
     stepResolutionBox.setColour(juce::ComboBox::textColourId,           Colours::neonGreen);
     stepResolutionBox.setColour(juce::ComboBox::outlineColourId,        Colours::white50.withAlpha(0.35f));
@@ -119,6 +125,22 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     setupModulationControls();
     refreshGlobalControlLabels();
     syncInlineControlState();
+}
+
+void FooterPanel::applyKnobConfigForLane(int lane)
+{
+    const bool loopLane = lane == 1;
+    const auto& mins = loopLane ? kLoopKnobMin : kKnobMin;
+    const auto& maxes = loopLane ? kLoopKnobMax : kKnobMax;
+    const auto& defaults = loopLane ? kLoopKnobDef : kKnobDef;
+    const auto& labels = loopLane ? kLoopKnobLabel : kKnobLabel;
+
+    for (int i = 0; i < 7; ++i)
+    {
+        stepKnobs[i]->setRange(mins[static_cast<size_t>(i)], maxes[static_cast<size_t>(i)]);
+        stepKnobs[i]->setDefaultValue(defaults[static_cast<size_t>(i)]);
+        stepKnobs[i]->setLabel(labels[static_cast<size_t>(i)]);
+    }
 }
 
 void FooterPanel::refreshGlobalControlLabels()
@@ -455,22 +477,36 @@ void FooterPanel::setSelectedSlot(int lane, int slot, const UserSlotData& data, 
     selectedLaneName = laneName;
 
     const auto laneColour = laneInfos[lane].colour;
+    auto displayData = data;
+    const bool legacyLoopSlot = lane == 1
+                             && (data.filterCutoff < 0.25f || data.filterCutoff > 4.0f
+                                 || data.filterResonance < 0.25f || data.filterResonance > 4.0f);
+
+    if (legacyLoopSlot)
+    {
+        displayData.filterCutoff = 0.5f;
+        displayData.filterResonance = 1.0f;
+        displayData.delayTime = 0.0f;
+        displayData.delayFeedback = 0.45f;
+        displayData.delayMix = juce::jlimit(0.0f, 1.0f, data.delayMix);
+    }
 
     updatingFromState = true;
+    applyKnobConfigForLane(lane);
     stepKnobs[0]->setColour(laneColour);
-    stepKnobs[0]->setValue(static_cast<double>(data.filterCutoff));
+    stepKnobs[0]->setValue(static_cast<double>(displayData.filterCutoff));
     stepKnobs[1]->setColour(laneColour);
-    stepKnobs[1]->setValue(static_cast<double>(data.filterResonance));
+    stepKnobs[1]->setValue(static_cast<double>(displayData.filterResonance));
     stepKnobs[2]->setColour(laneColour.withAlpha(0.80f).brighter(0.15f));
-    stepKnobs[2]->setValue(static_cast<double>(data.delayTime));
+    stepKnobs[2]->setValue(static_cast<double>(displayData.delayTime));
     stepKnobs[3]->setColour(laneColour.withAlpha(0.80f).brighter(0.15f));
-    stepKnobs[3]->setValue(static_cast<double>(data.delayFeedback));
+    stepKnobs[3]->setValue(static_cast<double>(displayData.delayFeedback));
     stepKnobs[4]->setColour(Colours::neonGreen);
-    stepKnobs[4]->setValue(static_cast<double>(data.delayMix));
+    stepKnobs[4]->setValue(static_cast<double>(displayData.delayMix));
     stepKnobs[5]->setColour(Colours::neonGreen);
-    stepKnobs[5]->setValue(static_cast<double>(data.volume));
+    stepKnobs[5]->setValue(static_cast<double>(displayData.volume));
     stepKnobs[6]->setColour(Colours::neonGreen.withAlpha(0.80f));
-    stepKnobs[6]->setValue(static_cast<double>(data.pan));
+    stepKnobs[6]->setValue(static_cast<double>(displayData.pan));
 
     updateModulationControlsFromData(data.modulation);
     updatingFromState = false;

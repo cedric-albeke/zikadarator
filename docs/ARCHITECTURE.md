@@ -17,14 +17,17 @@ A 2026-worthy VST FX plugin inspired by Sugarbytes Looperator, built for the Zik
 
 ## Current Rebuild Status
 
-As of 2026-04-28, the Windows-native engine rebuild has completed the first realtime-safety pass:
+As of 2026-04-29, the Windows-native engine rebuild has completed the first realtime-safety/routing pass:
 
 - `processBlock` is split into sample-accurate scheduler segments through `StepScheduler`.
 - `SliceEngine` and `LoopEngine` use `RealtimeRingBuffer` history instead of FIFO-readiness semantics.
-- Waveform UI data crosses from audio thread to message thread through `WaveformTap`; `processBlock` no longer touches the active editor.
+- `LoopEngine` freezes triggered loops into owned snapshot buffers, so playback repeats the captured audio window instead of following later rolling input.
+- Per-lane mix snapshots the signal entering each lane, processes that lane, then blends lane output against lane input. A lane mix below 100% must not reduce previous lanes or the full track output.
+- Waveform UI data crosses from audio thread to message thread through `WaveformTap`; `processBlock` no longer touches the active editor. The processor publishes separate input and processed-output taps for the stacked signal display.
 - `DelayEngine` uses JUCE fractional delay with smoothed delay, mix, and feedback targets.
 - `FilterEngine` now has distinct 12 dB and cascaded 24 dB modes, real band-reject behavior, and an implemented comb path.
 - The editor is constrained to a fixed 3:2 aspect ratio.
+- The step-grid chain animation avoids full-grid timer repaint; UI timers should repaint only the components whose visual state changed.
 - Regression coverage lives in `ZikadaEngineTests` plus `scripts/source-smoke-tests.mjs`.
 
 Known limitation: advanced pitch/time/grain/vinyl labels still need to be aligned with implemented DSP or replaced by a real time-stretch/pitch library.
@@ -95,9 +98,9 @@ Known limitation: advanced pitch/time/grain/vinyl labels still need to be aligne
 
 ### Sequencer Core
 - **Fixed 16 steps**, tempo-synced to host or internal clock
-- **Step resolution**: 1/8, 1/4, 1/2 note (configurable, 2/4/8 bar total loops)
+- **Step resolution**: 1/16, 1/8, 1/4, 1/2 note (configurable 1, 2, 4, or 8 bar total loops across 16 steps)
 - **Reorderable lanes**: Users can drag lane headers to change signal flow
-- **Per-lane dry/wet**: Mix control for each FX lane
+- **Per-lane dry/wet**: Mix control for each FX lane, scoped to that lane's input/output pair
 - **Per-lane mute/solo**: M (`warning` amber) and S (`neonGreen`) buttons on each lane header; solo logic gates the audio engine signal flow
 - **Tie steps**: Visually rendered as a continuous rounded bar across tied cells in the step grid
 
@@ -110,11 +113,13 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 - `PluginProcessor::processBlock` snapshots parameters once per block, builds fixed-stack scheduler segments, and calls `processSegment` for each step-owned sample range.
 - `StepScheduler` converts host/free-clock PPQ into sample offsets, step index, phase start, and phase delta.
 - `SliceEngine` and `LoopEngine` capture input/history through `RealtimeRingBuffer`, allowing deterministic overwrite history and interpolated reads.
+- `LoopEngine::trigger()` creates a frozen loop snapshot from the history buffer. Playback reads the snapshot with interpolation and wrap smoothing.
 - `Envelope` processing applies per-step amplitude curves using scheduler phase.
 - FX1 and FX2 host delay, reverb, bitcrush, pitch-color, and tone-filter paths.
 - `FilterEngine` is used both as the dedicated FILTER lane and as an internal tone shaper for FX presets.
 - Final global mixing applies dry/wet, mix mode, and output gain after lane processing.
-- Waveform display samples are pushed into `WaveformTap` on the audio thread and popped by `PluginEditor::timerCallback` on the UI thread.
+- Input waveform samples are pushed into `waveformTap`; processed output samples are pushed into `processedWaveformTap`. `PluginEditor::timerCallback` pops both streams and feeds `WaveformDisplay` as two stacked waveform lanes.
+- `WaveformDisplay` draws rolling min/max waveform bins for input and output with display-only normalization. It is a UI diagnostic path only and must not feed back into DSP.
 
 ### Realtime Rules
 
@@ -185,7 +190,7 @@ The right sidebar (`SidebarPanel`) is a reactive FX preset selector with three k
 - **Preset icon grid** — 5-column square button grid. Each lane now exposes **16 factory presets + 4 user slots (U1–U4) = 20 total buttons**. Buttons have no text; preset identity is communicated entirely through procedural icons drawn in `paintOverChildren()`.
 - **Icon system** — `PresetIcons.h` provides a pure `juce::Path` / `juce::Graphics` drawing library (no raster assets). It defines:
   - **Lane category icons** (`drawSliceIcon`, `drawLoopIcon`, `drawEnvelopeIcon`, `drawFxIcon`, `drawFilterIcon`) used in both the sidebar header and the StepGrid lane chips.
-  - **Preset icons** per lane type — parameterized shapes such as slice-count dots, loop direction arrows, envelope waveforms, FX effect symbols, and filter response curves.
+  - **Preset icons** per lane type — parameterized shapes such as slice-count dots, loop waveform windows, reverse arrows, speed chops, envelope waveforms, FX effect symbols, and filter response curves.
 
 **Layout flow (left → right in sequencer page):**
 1. **Step grid** — 6 lanes × 16 steps, each lane chip shows the category icon + lane name + `ROW N`

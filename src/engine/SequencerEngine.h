@@ -25,7 +25,7 @@ private:
     double sampleCounter{0.0};
     int currentStep{0};
     bool isPlaying{false};
-    int stepResolution{0};
+    int stepResolution{1};
 };
 
 }

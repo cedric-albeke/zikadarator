@@ -26,9 +26,10 @@ void SequencerEngine::setTempo(double bpm)
     
     switch (stepResolution)
     {
-        case 0: stepDuration *= 0.5; break;
-        case 1: stepDuration *= 1.0; break;
-        case 2: stepDuration *= 2.0; break;
+        case 0: stepDuration *= 0.25; break;
+        case 1: stepDuration *= 0.5; break;
+        case 2: stepDuration *= 1.0; break;
+        case 3: stepDuration *= 2.0; break;
         default: break;
     }
     

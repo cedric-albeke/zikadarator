@@ -18,11 +18,18 @@ StepGrid::~StepGrid()
 void StepGrid::timerCallback()
 {
     chainAnimPhase = (chainAnimPhase + 1) % 16;
-    for (int lane = 0; lane < numLanes; ++lane)
-        for (int step = 0; step < numSteps; ++step)
-            cells[lane][step]->setChainAnimPhase(chainAnimPhase);
 
-    repaint();
+    for (int lane = 0; lane < numLanes; ++lane)
+    {
+        for (int step = 0; step < numSteps; ++step)
+        {
+            if (!isStepConsumedByChain(lane, step))
+                continue;
+
+            cells[lane][step]->setChainAnimPhase(chainAnimPhase);
+            cells[lane][step]->repaint();
+        }
+    }
 }
 
 int StepGrid::findChainRoot(int lane, int step) const

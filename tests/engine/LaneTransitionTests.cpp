@@ -1,6 +1,7 @@
 #include "engine/DelayEngine.h"
 #include "engine/FilterEngine.h"
 #include "engine/LoopEngine.h"
+#include "engine/MixUtils.h"
 
 #include <algorithm>
 #include <cmath>
@@ -39,6 +40,16 @@ namespace zikada::tests {
 
 void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<void()>>>& tests)
 {
+    tests.push_back({"Lane mix blends lane output without attenuating lane input", []
+    {
+        requireNear(blendLaneMixSample(1.0f, 0.0f, 0.0f), 1.0f, 0.0001f,
+                    "zero lane mix should preserve the lane input");
+        requireNear(blendLaneMixSample(1.0f, 0.0f, 0.5f), 0.5f, 0.0001f,
+                    "half lane mix should crossfade between lane input and lane output");
+        requireNear(blendLaneMixSample(1.0f, 0.0f, 1.0f), 0.0f, 0.0001f,
+                    "full lane mix should use the lane output");
+    }});
+
     tests.push_back({"LoopEngine replays newest audio after history wraps", []
     {
         constexpr double sampleRate = 48000.0;
@@ -62,6 +73,68 @@ void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<voi
         const auto sum = std::accumulate(left.begin(), left.end(), 0.0f,
                                          [](float total, float sample) { return total + std::abs(sample); });
         require(sum > 100.0f, "loop output should contain recently captured ones after history wrap");
+    }});
+
+    tests.push_back({"LoopEngine smooths playback discontinuities at loop wrap", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int loopSamples = 96;
+        LoopEngine loop;
+        loop.prepare(sampleRate, loopSamples);
+
+        std::vector<float> ramp(static_cast<size_t>(loopSamples), 0.0f);
+        for (int i = 0; i < loopSamples; ++i)
+            ramp[static_cast<size_t>(i)] = -1.0f + 2.0f * static_cast<float>(i) / static_cast<float>(loopSamples - 1);
+
+        loop.captureInput(ramp.data(), ramp.data(), loopSamples);
+        loop.setLoopParameters(static_cast<float>(loopSamples / sampleRate), 1.0f, false, 1.0f);
+        loop.setEnabled(true);
+        loop.trigger();
+
+        std::vector<float> left(static_cast<size_t>(loopSamples * 2), 0.0f);
+        std::vector<float> right(static_cast<size_t>(loopSamples * 2), 0.0f);
+        loop.process(left.data(), right.data(), static_cast<int>(left.size()));
+
+        float largestJump = 0.0f;
+        for (size_t i = 1; i < left.size(); ++i)
+            largestJump = std::max(largestJump, std::abs(left[i] - left[i - 1]));
+
+        require(largestJump < 1.25f, "loop wrap should be crossfaded instead of hard jumping between unrelated endpoints");
+    }});
+
+    tests.push_back({"LoopEngine freezes triggered audio instead of chasing rolling input", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int loopSamples = 64;
+        LoopEngine loop;
+        loop.prepare(sampleRate, loopSamples);
+
+        std::vector<float> pattern(loopSamples, 0.0f);
+        for (int i = 0; i < loopSamples; ++i)
+            pattern[static_cast<size_t>(i)] = static_cast<float>(i + 1) / static_cast<float>(loopSamples);
+
+        loop.captureInput(pattern.data(), pattern.data(), loopSamples);
+        loop.setLoopParameters(static_cast<float>(loopSamples / sampleRate), 1.0f, false, 1.0f, 0.0f);
+        loop.setEnabled(true);
+        loop.trigger();
+
+        std::vector<float> first(loopSamples, 0.0f);
+        std::vector<float> firstRight(loopSamples, 0.0f);
+        loop.process(first.data(), firstRight.data(), loopSamples);
+
+        std::vector<float> zeros(loopSamples, 0.0f);
+        loop.captureInput(zeros.data(), zeros.data(), loopSamples);
+
+        std::vector<float> second(loopSamples, 0.0f);
+        std::vector<float> secondRight(loopSamples, 0.0f);
+        loop.process(second.data(), secondRight.data(), loopSamples);
+
+        float totalDifference = 0.0f;
+        for (int i = 0; i < loopSamples; ++i)
+            totalDifference += std::abs(first[static_cast<size_t>(i)] - second[static_cast<size_t>(i)]);
+
+        require(rms(first) > 0.5f, "triggered loop should contain the captured pattern");
+        require(totalDifference < 0.001f, "triggered loop should keep repeating the frozen pattern after later input changes");
     }});
 
     tests.push_back({"DelayEngine interpolates fractional delay times", []

@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "engine/MixUtils.h"
 
 #include <algorithm>
 #include <cmath>
@@ -68,6 +69,50 @@ double getBeatSeconds(double bpm)
     return bpm > 0.0 ? 60.0 / bpm : 0.5;
 }
 
+bool isSemanticLoopSlot(const UserSlotData& slotData)
+{
+    return slotData.filterCutoff >= 0.25f && slotData.filterCutoff <= 4.0f
+        && slotData.filterResonance >= 0.25f && slotData.filterResonance <= 4.0f;
+}
+
+float getLoopSlotLengthBeats(const UserSlotData& slotData)
+{
+    if (isSemanticLoopSlot(slotData))
+        return juce::jlimit(0.25f, 4.0f, slotData.filterCutoff);
+
+    return 0.5f;
+}
+
+float getLoopSlotRate(const UserSlotData& slotData)
+{
+    if (isSemanticLoopSlot(slotData))
+        return juce::jlimit(0.25f, 4.0f, slotData.filterResonance);
+
+    return 1.0f;
+}
+
+bool getLoopSlotReverse(const UserSlotData& slotData)
+{
+    if (!isSemanticLoopSlot(slotData))
+        return false;
+
+    return slotData.delayTime >= 0.5f;
+}
+
+float getLoopSlotMix(const UserSlotData& slotData, float baseMix)
+{
+    const float userMix = juce::jlimit(0.0f, 1.0f, slotData.delayMix);
+    return juce::jlimit(0.0f, 0.95f, baseMix * (0.55f + userMix * 0.45f));
+}
+
+float getLoopSlotSmooth(const UserSlotData& slotData)
+{
+    if (!isSemanticLoopSlot(slotData))
+        return 0.45f;
+
+    return juce::jlimit(0.0f, 1.0f, slotData.delayFeedback);
+}
+
 float getParameterValue(const juce::AudioProcessorValueTreeState& apvts,
                         const juce::String& parameterID,
                         float fallback)
@@ -89,9 +134,10 @@ double getPpqPerStepForResolution(int resolutionIndex)
 {
     switch (resolutionIndex)
     {
-        case 0: return 0.5; // 1/8 note
-        case 1: return 1.0; // 1/4 note
-        case 2: return 2.0; // 1/2 note
+        case 0: return 0.25; // 1/16 note
+        case 1: return 0.5; // 1/8 note
+        case 2: return 1.0; // 1/4 note
+        case 3: return 2.0; // 1/2 note
         default: return 0.5;
     }
 }
@@ -553,39 +599,79 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
 }
 
 void configureLoopEngineForPreset(LoopEngine& loopEngine, int presetIndex, const UserSlotData& slotData,
-                                  double stepDurationSeconds)
+                                  double beatSeconds)
 {
-    juce::ignoreUnused(slotData);
     loopEngine.setEnabled(true);
+
+    const auto sixteenth = static_cast<float>(beatSeconds * 0.25);
+    const auto eighth    = static_cast<float>(beatSeconds * 0.5);
+    const auto quarter   = static_cast<float>(beatSeconds);
+    const auto half      = static_cast<float>(beatSeconds * 2.0);
+    const auto fourBeat  = static_cast<float>(beatSeconds * 4.0);
+    const auto eightBeat = static_cast<float>(beatSeconds * 8.0);
+
+    if (presetIndex >= 1 && presetIndex <= 4)
+    {
+        loopEngine.setLoopParameters(static_cast<float>(beatSeconds) * getLoopSlotLengthBeats(slotData),
+                                     getLoopSlotRate(slotData),
+                                     getLoopSlotReverse(slotData),
+                                     getLoopSlotMix(slotData, 0.92f),
+                                     getLoopSlotSmooth(slotData));
+        return;
+    }
 
     switch (presetIndex)
     {
         case 5:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 1.0f, false, 0.75f);
+            loopEngine.setLoopParameters(sixteenth, 1.0f, false, getLoopSlotMix(slotData, 0.56f), getLoopSlotSmooth(slotData));
             break;
         case 6:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 2.0f, false, 0.80f);
+            loopEngine.setLoopParameters(eighth, 1.0f, false, getLoopSlotMix(slotData, 0.62f), getLoopSlotSmooth(slotData));
             break;
         case 7:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 2.0), 1.0f, false, 0.92f);
+            loopEngine.setLoopParameters(quarter, 1.0f, false, getLoopSlotMix(slotData, 0.68f), getLoopSlotSmooth(slotData));
             break;
         case 8:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 4.0), 1.0f, false, 1.0f);
+            loopEngine.setLoopParameters(half, 1.0f, false, getLoopSlotMix(slotData, 0.74f), getLoopSlotSmooth(slotData));
             break;
         case 9:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 1.0f, true, 1.0f);
+            loopEngine.setLoopParameters(sixteenth, 1.0f, true, getLoopSlotMix(slotData, 0.58f), getLoopSlotSmooth(slotData));
             break;
         case 10:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 2.0f, true, 1.0f);
+            loopEngine.setLoopParameters(eighth, 1.0f, true, getLoopSlotMix(slotData, 0.64f), getLoopSlotSmooth(slotData));
             break;
         case 11:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 8.0), 1.0f, false, 1.0f);
+            loopEngine.setLoopParameters(quarter, 1.0f, true, getLoopSlotMix(slotData, 0.70f), getLoopSlotSmooth(slotData));
             break;
         case 12:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds * 16.0), 1.0f, false, 1.0f);
+            loopEngine.setLoopParameters(half, 1.0f, true, getLoopSlotMix(slotData, 0.76f), getLoopSlotSmooth(slotData));
+            break;
+        case 13:
+            loopEngine.setLoopParameters(eighth, 2.0f, false, getLoopSlotMix(slotData, 0.62f), getLoopSlotSmooth(slotData));
+            break;
+        case 14:
+            loopEngine.setLoopParameters(eighth, 4.0f, false, getLoopSlotMix(slotData, 0.58f), getLoopSlotSmooth(slotData));
+            break;
+        case 15:
+            loopEngine.setLoopParameters(quarter, 0.5f, false, getLoopSlotMix(slotData, 0.64f), getLoopSlotSmooth(slotData));
+            break;
+        case 16:
+            loopEngine.setLoopParameters(quarter, 0.25f, false, getLoopSlotMix(slotData, 0.62f), getLoopSlotSmooth(slotData));
+            break;
+        case 17:
+            loopEngine.setLoopParameters(sixteenth, 2.0f, true, getLoopSlotMix(slotData, 0.60f), getLoopSlotSmooth(slotData));
+            break;
+        case 18:
+            loopEngine.setLoopParameters(sixteenth, 4.0f, true, getLoopSlotMix(slotData, 0.56f), getLoopSlotSmooth(slotData));
+            break;
+        case 19:
+            loopEngine.setLoopParameters(fourBeat, 1.0f, false, getLoopSlotMix(slotData, 0.64f), getLoopSlotSmooth(slotData));
+            break;
+        case 20:
+            loopEngine.setLoopParameters(eightBeat, 1.0f, false, getLoopSlotMix(slotData, 0.60f), getLoopSlotSmooth(slotData));
             break;
         default:
-            loopEngine.setLoopParameters(static_cast<float>(stepDurationSeconds), 1.0f, false, 0.0f);
+            loopEngine.setLoopParameters(eighth, 1.0f, false, 0.0f);
             break;
     }
 }
@@ -626,6 +712,7 @@ void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
     modulationEngine.prepare(newSampleRate);
     gainPanEngine.prepare(newSampleRate, samplesPerBlock);
     waveformTap.prepare(static_cast<int>(newSampleRate * 2.0));
+    processedWaveformTap.prepare(static_cast<int>(newSampleRate * 2.0));
     ensureScratchBuffers(samplesPerBlock);
     lastEffectiveSteps.fill(-1);
 }
@@ -645,6 +732,8 @@ void PluginProcessor::ensureScratchBuffers(int numSamples)
     ensureSize(wetRightBuffer);
     ensureSize(sliceLeftBuffer);
     ensureSize(sliceRightBuffer);
+    ensureSize(laneInputLeftBuffer);
+    ensureSize(laneInputRightBuffer);
 }
 
 void PluginProcessor::releaseResources() {}
@@ -686,7 +775,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const bool bypassed = getParameterValue(apvts, ParameterIDs::bypass, 0.0f) > 0.5f;
     const int clockSource = juce::jlimit(0, 1, getChoiceIndex(apvts, ParameterIDs::clockSource, 0));
     const float freeTempo = juce::jlimit(20.0f, 300.0f, getParameterValue(apvts, ParameterIDs::tempo, 120.0f));
-    const int stepResolutionIndex = juce::jlimit(0, 2, getChoiceIndex(apvts, ParameterIDs::stepResolution, 0));
+    const int stepResolutionIndex = juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1));
     const double blockPpqPerStep = getPpqPerStepForResolution(stepResolutionIndex);
     ppqPerStep = blockPpqPerStep;
     sequencerEngine.setStepResolution(stepResolutionIndex);
@@ -742,7 +831,10 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
                                                             segments,
                                                             static_cast<int>(std::size(segments)));
     if (segmentCount <= 0)
+    {
+        processedWaveformTap.pushFromAudioThread(leftChannel, numSamples);
         return;
+    }
 
     currentStep = segments[segmentCount - 1].stepIndex;
 
@@ -750,7 +842,10 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         ppqPosition = blockStartPpq + ((bpm / 60.0) / sampleRate) * static_cast<double>(numSamples);
 
     if (bypassed)
+    {
+        processedWaveformTap.pushFromAudioThread(leftChannel, numSamples);
         return;
+    }
 
     float laneMix[6] = {};
     bool laneMuted[6] = {};
@@ -795,6 +890,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
                        globalDryWet,
                        outputGain);
     }
+
+    processedWaveformTap.pushFromAudioThread(leftChannel, numSamples);
 }
 
 void PluginProcessor::processSegment(float* leftChannel,
@@ -857,7 +954,8 @@ void PluginProcessor::processSegment(float* leftChannel,
     const auto filterSlot   = getSlotDataForStep(sequencerState, kFilterLane,   filterStep);
     const auto fx2Slot      = getSlotDataForStep(sequencerState, kFX2Lane,      fx2Step);
 
-    const double stepDurationSeconds = getBeatSeconds(bpm) * blockPpqPerStep;
+    const double beatSeconds = getBeatSeconds(bpm);
+    const double stepDurationSeconds = beatSeconds * blockPpqPerStep;
 
     if (effSliceStep != lastEffectiveSteps[kSliceLane])
     {
@@ -871,7 +969,7 @@ void PluginProcessor::processSegment(float* leftChannel,
         lastEffectiveSteps[kLoopLane] = effLoopStep;
         if (loopStep.active && loopStep.presetIndex > 0)
         {
-            configureLoopEngineForPreset(loopEngine, loopStep.presetIndex, loopSlot, stepDurationSeconds);
+            configureLoopEngineForPreset(loopEngine, loopStep.presetIndex, loopSlot, beatSeconds);
             loopEngine.trigger();
         }
         else
@@ -907,54 +1005,64 @@ void PluginProcessor::processSegment(float* leftChannel,
         return true;
     };
 
-    auto applyLaneMix = [&](int lane, float* left, float* right, int n)
+    auto captureLaneInput = [&](int n)
     {
-        const float mix = laneMix[lane];
-        if (mix >= 0.999f) return;
-        for (int i = 0; i < n; ++i)
-        {
-            left[i] *= mix;
-            right[i] *= mix;
-        }
+        std::copy(wetLeft, wetLeft + n, laneInputLeftBuffer.data());
+        std::copy(wetRight, wetRight + n, laneInputRightBuffer.data());
+    };
+
+    auto blendLaneOutput = [&](int lane, int n)
+    {
+        applyLaneMix(wetLeft,
+                     wetRight,
+                     laneInputLeftBuffer.data(),
+                     laneInputRightBuffer.data(),
+                     n,
+                     laneMix[lane]);
     };
 
     if (sliceStep.active && sliceStep.presetIndex > 0 && isLaneActive(kSliceLane))
     {
+        captureLaneInput(numSamples);
         auto* sliceLeft = sliceLeftBuffer.data();
         auto* sliceRight = sliceRightBuffer.data();
         sliceEngine.process(sliceLeft, sliceRight, numSamples);
         std::copy(sliceLeft, sliceLeft + numSamples, wetLeft);
         std::copy(sliceRight, sliceRight + numSamples, wetRight);
         applyGainPan(wetLeft, wetRight, numSamples, sliceSlot.volume, sliceSlot.pan);
-        applyLaneMix(kSliceLane, wetLeft, wetRight, numSamples);
+        blendLaneOutput(kSliceLane, numSamples);
     }
 
     loopEngine.captureInput(wetLeft, wetRight, numSamples);
 
     if (loopStep.active && loopStep.presetIndex > 0 && isLaneActive(kLoopLane))
     {
+        captureLaneInput(numSamples);
         loopEngine.process(wetLeft, wetRight, numSamples);
         applyGainPan(wetLeft, wetRight, numSamples, loopSlot.volume, loopSlot.pan);
-        applyLaneMix(kLoopLane, wetLeft, wetRight, numSamples);
+        blendLaneOutput(kLoopLane, numSamples);
     }
 
     if (envelopeStep.active && envelopeStep.presetIndex > 0 && isLaneActive(kEnvelopeLane))
     {
+        captureLaneInput(numSamples);
         applyEnvelopeShape(wetLeft, wetRight, numSamples, envelopeStep.presetIndex,
                            stepPhaseStart, phaseDelta, envelopeSlot.volume, envelopeSlot.pan);
-        applyLaneMix(kEnvelopeLane, wetLeft, wetRight, numSamples);
+        blendLaneOutput(kEnvelopeLane, numSamples);
     }
 
     if (fx1Step.active && fx1Step.presetIndex > 0 && isLaneActive(kFX1Lane))
     {
+        captureLaneInput(numSamples);
         processFxLane(wetLeft, wetRight, numSamples, kFX1Lane, fx1Step.presetIndex, fx1Slot,
                       fx1DelayEngine, fx1ReverbEngine, fx1BitcrushEngine, fx1PitchEngine, fx1ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
-        applyLaneMix(kFX1Lane, wetLeft, wetRight, numSamples);
+        blendLaneOutput(kFX1Lane, numSamples);
     }
 
     if (filterStep.active && filterStep.presetIndex > 0 && isLaneActive(kFilterLane))
     {
+        captureLaneInput(numSamples);
         for (int i = 0; i < numSamples; ++i)
         {
             float modValues[ModulationEngine::NumTargets]{};
@@ -970,15 +1078,16 @@ void PluginProcessor::processSegment(float* leftChannel,
         }
 
         applyGainPan(wetLeft, wetRight, numSamples, filterSlot.volume, filterSlot.pan);
-        applyLaneMix(kFilterLane, wetLeft, wetRight, numSamples);
+        blendLaneOutput(kFilterLane, numSamples);
     }
 
     if (fx2Step.active && fx2Step.presetIndex > 0 && isLaneActive(kFX2Lane))
     {
+        captureLaneInput(numSamples);
         processFxLane(wetLeft, wetRight, numSamples, kFX2Lane, fx2Step.presetIndex, fx2Slot,
                       fx2DelayEngine, fx2ReverbEngine, fx2BitcrushEngine, fx2PitchEngine, fx2ToneFilter,
                       bpm, stepPhaseStart, phaseDelta);
-        applyLaneMix(kFX2Lane, wetLeft, wetRight, numSamples);
+        blendLaneOutput(kFX2Lane, numSamples);
     }
 
     for (int i = 0; i < numSamples; ++i)

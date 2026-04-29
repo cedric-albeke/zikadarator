@@ -40,10 +40,29 @@ const processorHeader = read("src/PluginProcessor.h");
 const editor = read("src/PluginEditor.cpp");
 const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const footer = read("src/ui/panels/FooterPanel.cpp");
+const stepGrid = read("src/ui/components/StepGrid.cpp");
 const presetManager = read("src/state/PresetManager.cpp");
+const parameterIDs = read("src/state/ParameterIDs.h");
+const sequencerEngine = read("src/engine/SequencerEngine.cpp");
+const loopEngine = read("src/engine/LoopEngine.cpp");
+const loopEngineHeader = read("src/engine/LoopEngine.h");
+const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
+const waveformDisplay = read("src/ui/components/WaveformDisplay.cpp");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
+);
+const processSegment = extractFunction(
+  processor,
+  "void PluginProcessor::processSegment(float* leftChannel,",
+);
+const loopPresetMapping = extractFunction(
+  processor,
+  "void configureLoopEngineForPreset(LoopEngine& loopEngine, int presetIndex, const UserSlotData& slotData,",
+);
+const stepGridTimer = extractFunction(
+  stepGrid,
+  "void StepGrid::timerCallback()",
 );
 
 [
@@ -75,8 +94,29 @@ if (processBlock.includes("Logger::writeToLog")) {
 
 assertContains(processorHeader, "dryLeftBuffer", "processor must own reusable dry scratch buffers");
 assertContains(processorHeader, "wetLeftBuffer", "processor must own reusable wet scratch buffers");
+assertContains(processorHeader, "laneInputLeftBuffer", "processor must own reusable per-lane input scratch buffers");
 assertContains(processorHeader, "ensureScratchBuffers", "processor must expose scratch-buffer sizing helper");
+if (processSegment.includes("left[i] *= mix") || processSegment.includes("right[i] *= mix")) {
+  fail("lane mix must dry/wet blend the lane result, not multiply the whole shared wet chain");
+}
+assertContains(processSegment, "blendLaneOutput", "processSegment must blend each lane output against that lane input");
 assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resizing to a fixed aspect ratio");
+assertContains(parameterIDs, 'juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1', "step resolution choices must include 1/16 while defaulting to 1/8");
+assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must map step resolution index 0 to 1/16");
+assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");
+assertContains(sequencerEngine, "case 0: stepDuration *= 0.25; break;", "SequencerEngine must support 1/16 timing");
+assertContains(processorHeader, "processedWaveformTap", "processor must own a processed-output waveform tap");
+assertContains(editor, "getProcessedWaveformTap().popForUi", "editor must read processed waveform samples from the processor");
+assertContains(waveformDisplayHeader, "pushInputSamples", "waveform display must expose an input waveform feed");
+assertContains(waveformDisplayHeader, "pushOutputSamples", "waveform display must expose a processed-output waveform feed");
+assertContains(waveformDisplayHeader, "historyData", "waveform display must retain rolling sample history");
+assertContains(waveformDisplayHeader, "displayGain", "waveform display must normalize quiet waveform windows for readability");
+assertContains(waveformDisplay, "rebuildDisplayBins", "waveform display must render bins from rolling history, not only the latest timer chunk");
+assertContains(waveformDisplay, "targetGain", "waveform display must compute a display-only waveform normalization gain");
+assertContains(processBlock, "processedWaveformTap.pushFromAudioThread(leftChannel, numSamples)", "processBlock must publish processed output waveform samples");
+if (stepGridTimer.includes("\n    repaint();")) {
+  fail("StepGrid timer must not repaint the whole grid on every animation tick");
+}
 
 [
   ["Grain", "sidebar must not advertise granular DSP until it exists"],
@@ -93,6 +133,28 @@ assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resi
 if (footer.includes("setSelectedSlot lane=")) {
   fail("footer must not log setSelectedSlot on hot UI selection paths");
 }
+
+if (sidebar.includes("Loop Alt")) {
+  fail("loop lane must not advertise placeholder Loop Alt presets");
+}
+
+[
+  "Forward 1/16",
+  "Reverse 1/16",
+  "Speed x4",
+  "Tail 8x",
+].forEach((presetName) => {
+  if (!sidebar.includes(presetName)) fail(`missing loop lane preset: ${presetName}`);
+});
+
+assertContains(loopPresetMapping, "case 20:", "loop engine preset mapping must cover preset 20");
+assertContains(loopPresetMapping, "beatSeconds * 0.25", "loop engine preset mapping must include 1/16 note windows");
+assertContains(loopPresetMapping, "presetIndex >= 1 && presetIndex <= 4", "loop user slots must configure real loop parameters instead of falling through to dry defaults");
+assertContains(loopEngineHeader, "loopBufferL", "LoopEngine must keep a frozen snapshot buffer for triggered loop playback");
+assertContains(loopEngine, "refreshLoopSnapshot", "LoopEngine must refresh a frozen loop snapshot on trigger");
+assertContains(loopEngine, "std::round(loopLengthSeconds * sampleRate)", "LoopEngine must round loop durations to sample counts instead of truncating");
+assertContains(footer, '"LEN"', "loop footer controls must use loop-specific labels");
+assertContains(footer, '"RATE"', "loop footer controls must use loop-specific labels");
 
 [
   "DELAY PULSE",

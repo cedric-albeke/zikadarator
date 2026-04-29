@@ -74,9 +74,12 @@ private:
     int lastFooterHistorySlot{-1};
 
     int lastPlayingStep{-1};
+    bool wineEnvironmentChecked{false};
+    bool runningUnderWineCached{false};
     bool wineSafeRendererApplied{false};
     int instanceId{0};
-    std::array<float, 2048> waveformScratch{};
+    std::array<float, 2048> inputWaveformScratch{};
+    std::array<float, 2048> outputWaveformScratch{};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

@@ -18,10 +18,13 @@ ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in re
 ## Features
 
 - **16-step FX sequencer** with 6 sequenced FX lanes
-- **Sample-accurate step segmentation** driven by host PPQ or free clock
+- **Sample-accurate step segmentation** driven by host PPQ or free clock, with 1/16, 1/8, 1/4, and 1/2 step resolutions
 - **Realtime history buffers** for slice and loop playback
+- **Frozen loop snapshots** so LOOP presets repeat a captured audio window instead of chasing the live rolling input
+- **Correct per-lane mix routing** so lane mix blends that lane's result without turning down the whole track
+- **Implemented LOOP lane preset families** for forward/reverse windows, speed variants, slow variants, reverse speed variants, and long tails
 - **Corrected delay/filter DSP contracts**: fractional delay, real notch behavior, cascaded 24 dB filters, and implemented comb filtering
-- **Realtime-safe waveform telemetry** via an audio-thread-to-UI tap
+- **Realtime-safe stacked signal monitor** via separate input and processed-output audio-thread-to-UI taps, rolling waveform bins, and display-only normalization
 - **Right-sidebar preset grid** for per-step assignment
 - **Footer detail dock** for U1-U4 slot editing and modulation
 - **Preset browser + Settings tabs** embedded directly in the main editor
@@ -96,8 +99,9 @@ On Windows, the repo currently uses the Visual Studio Build Tools CMake/CTest bi
 
 ```powershell
 node scripts\source-smoke-tests.mjs
-& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Debug --target ZikadaEngineTests
-& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\ctest.exe' --test-dir build -C Debug --output-on-failure
+& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Release --target ZikadaEngineTests
+.\build\Release\ZikadaEngineTests.exe
+& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\ctest.exe' --test-dir build -C Release --output-on-failure
 & 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Release --target ZikadaFX_VST3
 .tools\pluginval\pluginval.exe --validate-in-process --strictness-level 5 --validate "C:\Development\zikadarator\build\ZikadaFX_artefacts\Release\VST3\ZIKADARATOR.vst3"
 ```

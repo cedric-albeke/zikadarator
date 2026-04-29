@@ -59,22 +59,22 @@ std::vector<LanePresetDef> SidebarPanel::getPresetsForLane(int lane) const
             break;
         case 1:
             presets = {
-                {">",    "Forward 1/8",    "Loop forward at 1/8 note resolution", 5},
-                {">>",   "Forward 1/4",    "Loop forward at 1/4 note resolution", 6},
-                {">>>",  "Forward 1/2",    "Loop forward at 1/2 note resolution", 7},
-                {"2",    "2 beat",         "2-beat forward loop", 8},
-                {"4",    "4 beat",         "4-beat forward loop", 9},
-                {"8",    "8 beat",         "8-beat forward loop", 10},
-                {"16",   "16 beat",        "16-beat forward loop", 11},
-                {"<",    "Reverse 1/8",    "Loop reversed at 1/8 note resolution", 12},
-                {"<<",   "Reverse 1/4",    "Loop reversed at 1/4 note resolution", 13},
-                {"<<<",  "Reverse 1/2",    "Loop reversed at 1/2 note resolution", 14},
-                {"L-A",  "Loop Alt A",     "Alpha loop slot using the current loop engine", 15},
-                {"L-B",  "Loop Alt B",     "Alpha loop slot using the current loop engine", 16},
-                {"L-C",  "Loop Alt C",     "Alpha loop slot using the current loop engine", 17},
-                {"L-D",  "Loop Alt D",     "Alpha loop slot using the current loop engine", 18},
-                {"L-E",  "Loop Alt E",     "Alpha loop slot using the current loop engine", 19},
-                {"L-F",  "Loop Alt F",     "Alpha loop slot using the current loop engine", 20},
+                {"F16",  "Forward 1/16",   "Loop forward over a 1/16 note window", 5},
+                {"F8",   "Forward 1/8",    "Loop forward over a 1/8 note window", 6},
+                {"F4",   "Forward 1/4",    "Loop forward over a 1/4 note window", 7},
+                {"F2",   "Forward 1/2",    "Loop forward over a 1/2 note window", 8},
+                {"R16",  "Reverse 1/16",   "Loop reversed over a 1/16 note window", 9},
+                {"R8",   "Reverse 1/8",    "Loop reversed over a 1/8 note window", 10},
+                {"R4",   "Reverse 1/4",    "Loop reversed over a 1/4 note window", 11},
+                {"R2",   "Reverse 1/2",    "Loop reversed over a 1/2 note window", 12},
+                {"X2",   "Speed x2",       "Forward loop at double playback speed", 13},
+                {"X4",   "Speed x4",       "Forward loop at quadruple playback speed", 14},
+                {"S2",   "Slow x1/2",      "Forward loop at half playback speed", 15},
+                {"S4",   "Slow x1/4",      "Forward loop at quarter playback speed", 16},
+                {"RX2",  "Reverse x2",     "Reverse loop at double playback speed", 17},
+                {"RX4",  "Reverse x4",     "Reverse loop at quadruple playback speed", 18},
+                {"T4",   "Tail 4x",        "Long four-beat forward loop", 19},
+                {"T8",   "Tail 8x",        "Long eight-beat forward loop", 20},
             };
             break;
         case 2:

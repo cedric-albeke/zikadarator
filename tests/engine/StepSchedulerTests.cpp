@@ -40,6 +40,24 @@ void addStepSchedulerTests(std::vector<std::pair<std::string, std::function<void
         require(segments[1].stepIndex == 1, "second segment belongs to step 1");
     }});
 
+    tests.push_back({"StepScheduler supports sixteenth-note step boundaries", []
+    {
+        StepScheduler scheduler;
+        const auto segments = scheduler.makeHostSegments({
+            48000.0,
+            120.0,
+            0.25,
+            0.249,
+            128,
+            true
+        });
+
+        require(segments.size() == 2, "1/16 block crossing a step boundary should produce two segments");
+        require(segments[0].stepIndex == 0, "first 1/16 segment belongs to step 0");
+        require(segments[1].stepIndex == 1, "second 1/16 segment belongs to step 1");
+        require(segments[0].numSamples < 40, "1/16 boundary should be close to the block start");
+    }});
+
     tests.push_back({"StepScheduler returns one stopped segment when host is stopped", []
     {
         StepScheduler scheduler;

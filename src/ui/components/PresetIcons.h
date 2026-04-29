@@ -200,51 +200,115 @@ struct PresetIcons
     static void drawLoopPresetIcon(juce::Graphics& g, int fx,
                                    juce::Rectangle<float> bounds, juce::Colour c)
     {
-        int base = fx / 2;
-        int var = fx % 2;
-        float cx = bounds.getCentreX();
-        float cy = bounds.getCentreY();
-        float r = bounds.getWidth() * 0.22f;
-        juce::Path ring;
-        ring.addEllipse(cx - r, cy - r * 0.7f, r * 2.0f, r * 1.4f);
-        g.setColour(c.withAlpha(0.4f));
-        g.strokePath(ring, juce::PathStrokeType(2.0f));
-        if (base < 4)
+        const int preset = juce::jlimit(0, 15, fx);
+        const auto area = bounds.reduced(bounds.getWidth() * 0.12f, bounds.getHeight() * 0.20f);
+        const float cy = area.getCentreY();
+        const float laneH = area.getHeight() * 0.74f;
+
+        const auto drawArrow = [&](bool reverse, float y, float alpha)
         {
-            bool rev = (base >= 2);
-            int beats = (base % 2 == 0) ? 1 : 2;
-            float x1 = rev ? cx + r * 0.6f : cx - r * 0.6f;
-            float x2 = rev ? cx - r * 0.6f : cx + r * 0.6f;
-            float y = cy + (beats - 1) * 3.0f;
+            const float left = area.getX() + area.getWidth() * 0.12f;
+            const float right = area.getRight() - area.getWidth() * 0.12f;
+            const float x1 = reverse ? right : left;
+            const float x2 = reverse ? left : right;
+            const float head = reverse ? 4.2f : -4.2f;
             juce::Path arrow;
             arrow.startNewSubPath(x1, y);
             arrow.lineTo(x2, y);
-            float hx = rev ? x2 + 4.0f : x2 - 4.0f;
-            arrow.startNewSubPath(hx, y - 3.0f);
+            arrow.startNewSubPath(x2 + head, y - 3.6f);
             arrow.lineTo(x2, y);
-            arrow.lineTo(hx, y + 3.0f);
-            g.setColour(c);
-            g.strokePath(arrow, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-        }
-        else if (base < 6)
+            arrow.lineTo(x2 + head, y + 3.6f);
+            g.setColour(c.withAlpha(alpha));
+            g.strokePath(arrow, juce::PathStrokeType(1.9f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        };
+
+        const auto drawWaveBars = [&](int bars, bool reverse, float rate, float alpha)
         {
-            juce::Path zig;
-            zig.startNewSubPath(cx - r * 0.5f, cy);
-            for (int i = 1; i <= 6; ++i)
+            const int safeBars = juce::jlimit(4, 18, bars);
+            const float gap = juce::jmax(1.0f, area.getWidth() * 0.018f);
+            const float barW = (area.getWidth() - gap * static_cast<float>(safeBars - 1)) / static_cast<float>(safeBars);
+            for (int i = 0; i < safeBars; ++i)
             {
-                float nx = cx - r * 0.5f + i * (r / 3.0f);
-                float ny = cy + ((i % 2) * 2.0f - 1.0f) * 3.0f;
-                zig.lineTo(nx, ny);
+                const int waveIndex = reverse ? safeBars - 1 - i : i;
+                const float phase = static_cast<float>(waveIndex) / static_cast<float>(juce::jmax(1, safeBars - 1));
+                const float env = 0.25f + 0.75f * (1.0f - std::abs(phase * 2.0f - 1.0f));
+                const float flutter = 0.68f + 0.32f * std::sin((phase * 5.0f + rate) * juce::MathConstants<float>::pi);
+                const float h = laneH * juce::jlimit(0.18f, 1.0f, env * flutter);
+                const float x = area.getX() + static_cast<float>(i) * (barW + gap);
+                g.setColour(c.withAlpha(alpha * (0.55f + 0.45f * phase)));
+                g.fillRoundedRectangle(x, cy - h * 0.5f, barW, h, 1.2f);
             }
-            g.setColour(c);
-            g.strokePath(zig, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-        }
-        else
+        };
+
+        const auto drawChops = [&](int chops, bool reverse)
         {
-            g.setColour(c);
-            g.fillEllipse(cx - 3.0f, cy - 3.0f, 6.0f, 6.0f);
+            const int safeChops = juce::jlimit(2, 6, chops);
+            const float gap = area.getWidth() * 0.035f;
+            const float cellW = (area.getWidth() - gap * static_cast<float>(safeChops - 1)) / static_cast<float>(safeChops);
+            for (int i = 0; i < safeChops; ++i)
+            {
+                const int shape = reverse ? safeChops - 1 - i : i;
+                const float x = area.getX() + static_cast<float>(i) * (cellW + gap);
+                const float h = laneH * (0.42f + 0.14f * static_cast<float>((shape + 1) % 3));
+                juce::Path tri;
+                if (reverse)
+                    tri.addTriangle(x + cellW, cy - h * 0.5f, x + cellW, cy + h * 0.5f, x, cy);
+                else
+                    tri.addTriangle(x, cy - h * 0.5f, x, cy + h * 0.5f, x + cellW, cy);
+                g.setColour(c.withAlpha(0.72f));
+                g.fillPath(tri);
+            }
+        };
+
+        g.setColour(c.withAlpha(0.12f));
+        g.drawRoundedRectangle(area, 2.0f, 1.0f);
+
+        if (preset <= 3)
+        {
+            const int bars[] = {5, 8, 12, 16};
+            drawWaveBars(bars[preset], false, 1.0f, 0.82f);
+            drawArrow(false, area.getBottom() - 2.0f, 0.95f);
+            return;
         }
-        drawVariationBadge(g, bounds, var, c);
+
+        if (preset <= 7)
+        {
+            const int bars[] = {5, 8, 12, 16};
+            drawWaveBars(bars[preset - 4], true, 1.0f, 0.82f);
+            drawArrow(true, area.getBottom() - 2.0f, 0.95f);
+            return;
+        }
+
+        if (preset <= 9)
+        {
+            drawChops(preset == 8 ? 4 : 6, false);
+            drawArrow(false, area.getBottom() - 2.0f, 0.95f);
+            return;
+        }
+
+        if (preset <= 11)
+        {
+            drawWaveBars(preset == 10 ? 7 : 5, false, preset == 10 ? 0.45f : 0.25f, 0.70f);
+            g.setColour(c.withAlpha(0.95f));
+            g.drawLine(area.getX() + area.getWidth() * 0.18f,
+                       cy,
+                       area.getRight() - area.getWidth() * 0.18f,
+                       cy,
+                       2.6f);
+            return;
+        }
+
+        if (preset <= 13)
+        {
+            drawChops(preset == 12 ? 4 : 6, true);
+            drawArrow(true, area.getBottom() - 2.0f, 0.95f);
+            return;
+        }
+
+        drawWaveBars(preset == 14 ? 14 : 18, false, 0.8f, 0.76f);
+        g.setColour(c.withAlpha(0.18f));
+        g.fillRoundedRectangle(area.getX(), area.getY(), area.getWidth(), area.getHeight(), 2.0f);
+        drawArrow(false, area.getBottom() - 2.0f, 0.95f);
     }
 
     static void drawEnvelopePresetIcon(juce::Graphics& g, int fx,

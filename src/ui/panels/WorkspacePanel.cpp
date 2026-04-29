@@ -242,7 +242,7 @@ WorkspacePanel::WorkspacePanel()
     clockSourceBox.addItemList({"Host", "Free"}, 1);
     clockSourceBox.onChange = [this] { syncInlineChoiceButtons(); };
     configureCombo(stepResolutionBox);
-    stepResolutionBox.addItemList({"1/8", "1/4", "1/2"}, 1);
+    stepResolutionBox.addItemList({"1/16", "1/8", "1/4", "1/2"}, 1);
     stepResolutionBox.onChange = [this] { syncInlineChoiceButtons(); };
     configureInlineChoiceButton(mixModeButton);
     configureInlineChoiceButton(clockSourceButton);

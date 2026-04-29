@@ -33,7 +33,9 @@ Unlike simple on/off step sequencers, each step selects *which variant* of an ef
 ### 3. LOOP — Stutter & Repeat
 - **Function**: Micro-looping and stutter effects per step
 - **Engine model**: Dedicated micro-loop engine with captured audio history, retrigger, reverse, and variable playback rate
-- **Presets**: Double, Triple, Reverse, Rhythmic subdivisions (1/32–1/4), Pitch-shifted loops, Granular freeze
+- **Implemented presets**: Forward 1/16, 1/8, 1/4, 1/2; Reverse 1/16, 1/8, 1/4, 1/2; Speed x2/x4; Slow x1/2/x1/4; Reverse x2/x4; Tail 4x/8x
+- **User controls**: LEN, RATE, REV, FADE, MIX, VOL, PAN
+- **Visual contract**: Each LOOP preset icon must depict its audible behavior with waveform windows, direction arrows, chopped speed markers, or long-tail blocks.
 - **Creative use**: Build tension with rhythmic stutters before drops
 
 ### 4. ENVELOPE — Per-Step Dynamics
@@ -165,6 +167,7 @@ Each lane header provides **M** (mute) and **S** (solo) toggle buttons. Solo log
 2. **FREE** — Internal clock with BPM control
 
 ### Step Resolution
+- **1/16 note** = 1-bar loop
 - **1/8 note** = 2-bar loop
 - **1/4 note** = 4-bar loop
 - **1/2 note** = 8-bar loop

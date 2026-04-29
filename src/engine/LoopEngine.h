@@ -2,6 +2,8 @@
 
 #include "engine/RealtimeRingBuffer.h"
 
+#include <vector>
+
 namespace zikada {
 
 class LoopEngine
@@ -12,7 +14,11 @@ public:
     void prepare(double sampleRate, int maxBlockSize);
     void reset();
 
-    void setLoopParameters(float loopLengthSeconds, float playbackRate, bool reversePlayback, float wetMix);
+    void setLoopParameters(float loopLengthSeconds,
+                           float playbackRate,
+                           bool reversePlayback,
+                           float wetMix,
+                           float smoothingAmount = 0.5f);
     void setEnabled(bool enabled);
     void trigger();
 
@@ -30,8 +36,18 @@ private:
     bool reverse{false};
     bool enabled{false};
     float phase{0.0f};
+    int edgeFadeSamples{0};
+    int triggerFadeSamples{0};
+    int triggerFadePosition{0};
+    bool snapshotPending{false};
+    bool hasSnapshot{false};
+    std::vector<float> loopBufferL;
+    std::vector<float> loopBufferR;
 
-    float readLoopSample(const RealtimeRingBuffer& buffer, float phaseIndex) const;
+    void ensureLoopBufferSize();
+    void refreshLoopSnapshot();
+    float readRawLoopSample(const std::vector<float>& buffer, float phaseIndex) const;
+    float readLoopSample(const std::vector<float>& buffer, float phaseIndex) const;
 };
 
 } // namespace zikada

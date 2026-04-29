@@ -277,7 +277,7 @@ juce::ValueTree PresetManager::createBaseState()
     state.setProperty(ParameterIDs::mixMode, 0, nullptr);
     state.setProperty(ParameterIDs::clockSource, 0, nullptr);
     state.setProperty(ParameterIDs::tempo, 120.0f, nullptr);
-    state.setProperty(ParameterIDs::stepResolution, 0, nullptr);
+    state.setProperty(ParameterIDs::stepResolution, 1, nullptr);
     state.setProperty(ParameterIDs::bypass, false, nullptr);
 
     for (int lane = 0; lane < 6; ++lane)
