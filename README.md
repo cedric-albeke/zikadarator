@@ -24,7 +24,7 @@ ZIKADARATOR is a 16-step multi-FX sequencer that transforms incoming audio in re
 - **Correct per-lane mix routing** so lane mix blends that lane's result without turning down the whole track
 - **Implemented LOOP lane preset families** for forward/reverse windows, speed variants, slow variants, reverse speed variants, and long tails
 - **Corrected delay/filter DSP contracts**: fractional delay, real notch behavior, cascaded 24 dB filters, and implemented comb filtering
-- **Realtime-safe stacked signal monitor** via separate input and processed-output audio-thread-to-UI taps, rolling waveform bins, and display-only normalization
+- **Realtime-safe stacked signal monitor** via separate input and processed-output audio-thread-to-UI taps, 16-step rolling waveform bins, and display-only normalization
 - **Right-sidebar preset grid** for per-step assignment
 - **Footer detail dock** for U1-U4 slot editing and modulation
 - **Preset browser + Settings tabs** embedded directly in the main editor

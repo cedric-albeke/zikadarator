@@ -106,9 +106,12 @@ assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must m
 assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");
 assertContains(sequencerEngine, "case 0: stepDuration *= 0.25; break;", "SequencerEngine must support 1/16 timing");
 assertContains(processorHeader, "processedWaveformTap", "processor must own a processed-output waveform tap");
+assertContains(processorHeader, "getCurrentPpqPerStep", "processor must expose current musical step duration to the UI waveform");
 assertContains(editor, "getProcessedWaveformTap().popForUi", "editor must read processed waveform samples from the processor");
+assertContains(editor, "setVisibleSampleCount", "editor must sync waveform visible window to the 16-step musical loop span");
 assertContains(waveformDisplayHeader, "pushInputSamples", "waveform display must expose an input waveform feed");
 assertContains(waveformDisplayHeader, "pushOutputSamples", "waveform display must expose a processed-output waveform feed");
+assertContains(waveformDisplayHeader, "setVisibleSampleCount", "waveform display must support a musical visible sample window");
 assertContains(waveformDisplayHeader, "historyData", "waveform display must retain rolling sample history");
 assertContains(waveformDisplayHeader, "displayGain", "waveform display must normalize quiet waveform windows for readability");
 assertContains(waveformDisplay, "rebuildDisplayBins", "waveform display must render bins from rolling history, not only the latest timer chunk");

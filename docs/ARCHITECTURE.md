@@ -119,7 +119,7 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 - `FilterEngine` is used both as the dedicated FILTER lane and as an internal tone shaper for FX presets.
 - Final global mixing applies dry/wet, mix mode, and output gain after lane processing.
 - Input waveform samples are pushed into `waveformTap`; processed output samples are pushed into `processedWaveformTap`. `PluginEditor::timerCallback` pops both streams and feeds `WaveformDisplay` as two stacked waveform lanes.
-- `WaveformDisplay` draws rolling min/max waveform bins for input and output with display-only normalization. It is a UI diagnostic path only and must not feed back into DSP.
+- `WaveformDisplay` draws rolling min/max waveform bins for input and output over the current 16-step musical loop span, with display-only normalization. It is a UI diagnostic path only and must not feed back into DSP.
 
 ### Realtime Rules
 

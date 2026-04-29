@@ -20,6 +20,7 @@ public:
     void pushInputSamples(const float* samples, int numSamples);
     void pushOutputSamples(const float* samples, int numSamples);
     void setPlayheadPosition(float normalizedPosition);
+    void setVisibleSampleCount(int sampleCount);
 
     static constexpr int numSlices = 16;
 
@@ -48,6 +49,7 @@ private:
 
     WaveLane inputLane;
     WaveLane outputLane;
+    int visibleSampleCount{historySampleCount};
     std::atomic<float> playheadPos{0.0f};
     std::atomic<bool> needsRepaint{false};
 };

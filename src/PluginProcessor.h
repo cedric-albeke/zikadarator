@@ -72,6 +72,8 @@ public:
 
     bool isPlaying() const { return isPlayingFlag; }
     double getCurrentBPM() const { return currentBPM; }
+    double getCurrentPpqPerStep() const { return currentPpqPerStep; }
+    double getCurrentSampleRate() const { return sampleRate; }
     int getCurrentStep() const { return currentStep; }
 
 private:
@@ -117,6 +119,7 @@ private:
     StepScheduler stepScheduler;
     std::atomic<bool> isPlayingFlag{false};
     std::atomic<double> currentBPM{120.0};
+    std::atomic<double> currentPpqPerStep{0.5};
     std::atomic<int> currentStep{0};
     std::array<int, 6> lastEffectiveSteps{-1, -1, -1, -1, -1, -1};
     double sampleRate{44100.0};

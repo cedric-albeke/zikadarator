@@ -114,6 +114,18 @@ void WaveformDisplay::setPlayheadPosition(float normalizedPosition)
     needsRepaint = true;
 }
 
+void WaveformDisplay::setVisibleSampleCount(int sampleCount)
+{
+    const int nextVisibleSampleCount = juce::jlimit(displayBinCount, historySampleCount, sampleCount);
+    if (visibleSampleCount == nextVisibleSampleCount)
+        return;
+
+    visibleSampleCount = nextVisibleSampleCount;
+    rebuildDisplayBins(inputLane);
+    rebuildDisplayBins(outputLane);
+    needsRepaint = true;
+}
+
 void WaveformDisplay::timerCallback()
 {
     if (!needsRepaint.exchange(false))
@@ -131,7 +143,7 @@ void WaveformDisplay::rebuildDisplayBins(WaveLane& lane)
         return;
     }
 
-    const int visibleSamples = lane.samplesAvailable;
+    const int visibleSamples = juce::jmin(lane.samplesAvailable, visibleSampleCount);
     const int oldestIndex = (lane.writePosition - visibleSamples + historySampleCount) % historySampleCount;
     float peak = 0.0f;
 

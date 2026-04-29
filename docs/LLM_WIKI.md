@@ -40,7 +40,7 @@ node scripts\source-smoke-tests.mjs
 - LOOP lane presets 5-20 are implemented as forward/reverse note windows, speed variants, slow variants, reverse speed variants, and 4x/8x tails. Do not reintroduce placeholder "Loop Alt" labels.
 - LOOP lane U1-U4 slots are semantic: `filterCutoff` stores length in beats, `filterResonance` stores playback rate, `delayTime` stores reverse amount, `delayFeedback` stores fade/smoothing, and `delayMix` stores wet mix.
 - `LoopEngine` has frozen trigger snapshots, loop-wrap smoothing, trigger-edge smoothing, and rounded loop-duration sample counts. Keep the snapshot/discontinuity regression tests in `LaneTransitionTests.cpp` when changing playback.
-- `WaveformDisplay` has two stacked rolling min/max waveform lanes and display-only normalization through `displayGain`.
+- `WaveformDisplay` has two stacked rolling min/max waveform lanes, a visible sample window synced to the current 16-step musical loop span, and display-only normalization through `displayGain`.
 - `StepGrid::timerCallback()` must not repaint the whole grid. It only repaints tied/chain-consumed cells for chain animation.
 
 ## Realtime Constraints
@@ -71,7 +71,7 @@ The source guard in `scripts/source-smoke-tests.mjs` checks the most important i
 - Dedicated lane processor classes are still deferred; orchestration still lives mostly in `PluginProcessor.cpp`.
 - Ableton Live 12 manual acceptance needs to be repeated after each installed VST3 build. If Live is open with an unsaved set, build and pluginval the artifact but do not force-replace the system VST3.
 - Alpha factory presets are intentionally limited to implemented DSP paths.
-- The signal display now has stacked rolling input/output waveform lanes with display-only normalization, but it still needs richer per-effect visual annotation during playback.
+- The signal display now has stacked rolling input/output waveform lanes over the current 16-step musical loop span with display-only normalization, but it still needs richer per-effect visual annotation during playback.
 
 ## Alpha Factory Bank
 

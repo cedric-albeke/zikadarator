@@ -778,6 +778,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const int stepResolutionIndex = juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1));
     const double blockPpqPerStep = getPpqPerStepForResolution(stepResolutionIndex);
     ppqPerStep = blockPpqPerStep;
+    currentPpqPerStep = blockPpqPerStep;
     sequencerEngine.setStepResolution(stepResolutionIndex);
 
     double bpm = freeTempo;

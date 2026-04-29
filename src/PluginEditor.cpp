@@ -4,6 +4,8 @@
  #include <windows.h>
 #endif
 
+#include <cmath>
+
 namespace zikada {
 
 namespace {
@@ -257,6 +259,16 @@ void PluginEditor::timerCallback()
                                                                              static_cast<int>(outputWaveformScratch.size()));
     if (outputCopied > 0)
         waveformDisplay.pushOutputSamples(outputWaveformScratch.data(), outputCopied);
+
+    const double bpm = processorRef.getCurrentBPM();
+    const double ppqPerStep = processorRef.getCurrentPpqPerStep();
+    const double sampleRate = processorRef.getCurrentSampleRate();
+    if (bpm > 0.0 && ppqPerStep > 0.0 && sampleRate > 0.0)
+    {
+        const double stepSeconds = (60.0 / bpm) * ppqPerStep;
+        const auto visibleSamples = static_cast<int>(std::round(stepSeconds * WaveformDisplay::numSlices * sampleRate));
+        waveformDisplay.setVisibleSampleCount(visibleSamples);
+    }
 
     waveformDisplay.setPlayheadPosition(static_cast<float>(step) / 16.0f);
 

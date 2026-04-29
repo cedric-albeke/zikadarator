@@ -30,7 +30,7 @@ Move ZIKADARATOR from a UI-heavy prototype toward a realtime-safe, host-synced F
   - Comb has an implemented fractional-delay path.
 - Fixed the plugin editor to a 3:2 aspect ratio.
 - Improved UI hot paths by avoiding full-grid repaint from the chain-animation timer and caching the Windows/Wine renderer check.
-- The stacked signal display now keeps rolling input/output waveform histories and applies display-only normalization so quiet material still reads as waveform shape instead of a flat meter line.
+- The stacked signal display now keeps rolling input/output waveform histories, displays one BPM/step-resolution-derived 16-step window, and applies display-only normalization so quiet material still reads as waveform shape instead of a flat meter line.
 - Added `scripts/ableton-log-scan.ps1` for Windows Ableton/ZIKADARATOR log review.
 - Expanded the alpha factory bank to eight presets that use only implemented DSP paths.
 
@@ -73,7 +73,7 @@ Expected results:
 - Pitch/time/stretch/grain/vinyl style families are intentionally not advertised in the alpha UI until real DSP exists.
 - Lane processors are still orchestrated in `PluginProcessor.cpp`; a cleaner lane-processor split remains planned.
 - Ableton Live 12 manual audio acceptance still needs a documented pass after the next installed build is tested in-session. Do not replace the system VST3 while Live is open with an unsaved project.
-- The signal display now shows two stacked rolling waveform lanes with display-only normalization. The next step is stronger per-effect visual annotation so loop/reverse/stutter actions read more explicitly during playback.
+- The signal display now shows two stacked rolling waveform lanes over one musical 16-step window with display-only normalization. The next step is stronger per-effect visual annotation so loop/reverse/stutter actions read more explicitly during playback.
 - Advanced pitch/time/grain preset families remain deferred until a real library is integrated.
 
 ## Next Tasks
