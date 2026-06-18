@@ -38,6 +38,7 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Ableton log scanning now treats a missing ZIKADARATOR UI log as expected for quiet release builds, with `-RequireZikadaLog` available for strict diagnostic-log passes.
 - Windows tester packages now include and self-verify `SHA256SUMS.txt` so the standalone, VST3 binary, and module metadata can be checked after transfer.
 - Windows ZIP install docs now match the package root layout, and `install.bat` reports Program Files copy failures instead of printing a false success.
+- Windows tester packages now include `BUILD_INFO.txt` with git/build metadata for traceable handoff builds.
 - Validation scripts now auto-discover Steinberg VST3 validator on common Windows/macOS paths.
 - Windows CI now syntax-checks the macOS validation script via Bash (`bash -n`).
 - Processor regression tests now cover host-state roundtrip (`exportFullState` / `applyFullState`) and host-layout changes (mono → stereo → mono).

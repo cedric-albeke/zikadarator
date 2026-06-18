@@ -160,6 +160,8 @@ assertContains(windowsPackageScript, "Test-PackageChecksums", "Windows package s
 assertContains(windowsPackageScript, "Checksum mismatch", "Windows package checksum verification must fail on stale or corrupt artifacts");
 assertContains(windowsPackageScript, "ERROR: VST3 install failed", "Windows package install.bat must fail loudly when VST3 copy is blocked");
 assertContains(windowsPackageScript, "Run this script as Administrator", "Windows package install.bat must tell testers how to fix Program Files write failures");
+assertContains(windowsPackageScript, "BUILD_INFO.txt", "Windows package script must include git/build metadata for tester traceability");
+assertContains(windowsPackageScript, "rev-parse", "Windows package build metadata must include the git commit");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }

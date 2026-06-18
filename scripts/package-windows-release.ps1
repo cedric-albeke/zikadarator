@@ -57,6 +57,7 @@ function Write-PackageChecksums {
         @{ Label = "ZIKADARATOR.exe"; Path = Join-Path $PackagePath "ZIKADARATOR.exe" },
         @{ Label = "ZIKADARATOR.vst3/Contents/x86_64-win/ZIKADARATOR.vst3"; Path = Join-Path $PackagePath "ZIKADARATOR.vst3/Contents/x86_64-win/ZIKADARATOR.vst3" },
         @{ Label = "ZIKADARATOR.vst3/Contents/Resources/moduleinfo.json"; Path = Join-Path $PackagePath "ZIKADARATOR.vst3/Contents/Resources/moduleinfo.json" },
+        @{ Label = "BUILD_INFO.txt"; Path = Join-Path $PackagePath "BUILD_INFO.txt" },
         @{ Label = "install.bat"; Path = Join-Path $PackagePath "install.bat" },
         @{ Label = "README.txt"; Path = Join-Path $PackagePath "README.txt" }
     )
@@ -110,6 +111,53 @@ function Test-PackageChecksums {
             throw "Checksum mismatch for $($parts[1]): expected $expectedHash, got $actualHash"
         }
     }
+}
+
+function Get-GitValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]] $Arguments,
+        [Parameter(Mandatory = $true)]
+        [string] $Fallback
+    )
+
+    try {
+        $value = (& git @Arguments 2>$null | Select-Object -First 1)
+        if (-not [string]::IsNullOrWhiteSpace($value)) {
+            return $value.Trim()
+        }
+    } catch {
+    }
+
+    return $Fallback
+}
+
+function Write-BuildInfo {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $PackagePath,
+        [Parameter(Mandatory = $true)]
+        [string] $BuildDir,
+        [Parameter(Mandatory = $true)]
+        [string] $Configuration
+    )
+
+    $commit = Get-GitValue -Arguments @("rev-parse", "HEAD") -Fallback "unknown"
+    $branch = Get-GitValue -Arguments @("branch", "--show-current") -Fallback "unknown"
+    $trackedStatus = (& git status --short --untracked-files=no 2>$null)
+    $trackedTreeState = if ($trackedStatus) { "dirty" } else { "clean" }
+
+    @"
+ZIKADARATOR V1 Windows Test Package
+Generated: $(Get-Date -Format o)
+Git commit: $commit
+Git branch: $branch
+Tracked tree: $trackedTreeState
+Build dir: $BuildDir
+Configuration: $Configuration
+
+Generated package files and release ZIP directories are intentionally not tracked.
+"@ | Set-Content -LiteralPath (Join-Path $PackagePath "BUILD_INFO.txt") -Encoding ASCII
 }
 
 $script:RepoRoot = [System.IO.Path]::GetFullPath((Resolve-Path (Join-Path $PSScriptRoot "..")).Path)
@@ -193,10 +241,14 @@ If Windows Application Control blocks JUCE's VST3 helper, this package script re
 a tracked moduleinfo.json fallback before packaging so the bundle is not left with a
 zero-byte manifest.
 
+BUILD_INFO.txt records the git commit, branch, tracked tree state, build directory,
+and configuration used to create this tester package.
+
 SHA256SUMS.txt lists checksums for the standalone, VST3 binary, moduleinfo, installer
-helper, and this README so tester downloads can be verified after transfer.
+helper, build info, and this README so tester downloads can be verified after transfer.
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "README.txt") -Encoding ASCII
 
+Write-BuildInfo -PackagePath $packagePath -BuildDir $BuildDir -Configuration $Configuration
 Write-PackageChecksums -PackagePath $packagePath
 Test-PackageChecksums -PackagePath $packagePath
 
