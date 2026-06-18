@@ -4,6 +4,23 @@
 
 namespace zikada {
 
+enum class KnobDisplayMode
+{
+    NormalizedPercent,
+    Percent,
+    Hertz,
+    Decimal,
+    Seconds,
+    Gain,
+    Pan
+};
+
+enum class KnobScaleMode
+{
+    Linear,
+    Logarithmic
+};
+
 class Knob : public juce::Component
 {
 public:
@@ -20,6 +37,8 @@ public:
     
     void setColour(juce::Colour newColour);
     void setLabel(const juce::String& lbl);
+    void setDisplayMode(KnobDisplayMode newMode);
+    void setScaleMode(KnobScaleMode newMode);
     
     std::function<void()> onValueChange;
 
@@ -30,14 +49,18 @@ private:
     double defaultValue{0.5};
     juce::Colour accentColour{Colours::neonGreen};
     juce::String label;
+    KnobDisplayMode displayMode{KnobDisplayMode::NormalizedPercent};
+    KnobScaleMode scaleMode{KnobScaleMode::Linear};
     
     double getNormalizedValue() const;
+    double valueToNormalized(double rawValue) const;
+    double normalizedToValue(double normalizedValue) const;
+    juce::String formatValue() const;
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseDoubleClick(const juce::MouseEvent& event) override;
     
-    juce::Point<int> lastMousePos;
-    double valueOnMouseDown{0.0};
+    double normalizedOnMouseDown{0.0};
 };
 
 }

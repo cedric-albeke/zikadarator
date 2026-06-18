@@ -108,6 +108,7 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
         addChildComponent(knob.get());
         stepKnobs[i] = std::move(knob);
     }
+    applyKnobConfigForLane(0);
 
     modModeButton.setClickingTogglesState(true);
     modModeButton.setColour(juce::TextButton::buttonColourId,   Colours::bgSurface);
@@ -140,7 +141,28 @@ void FooterPanel::applyKnobConfigForLane(int lane)
         stepKnobs[i]->setRange(mins[static_cast<size_t>(i)], maxes[static_cast<size_t>(i)]);
         stepKnobs[i]->setDefaultValue(defaults[static_cast<size_t>(i)]);
         stepKnobs[i]->setLabel(labels[static_cast<size_t>(i)]);
+        stepKnobs[i]->setScaleMode(KnobScaleMode::Linear);
     }
+
+    if (loopLane)
+    {
+        stepKnobs[0]->setDisplayMode(KnobDisplayMode::Gain);
+        stepKnobs[1]->setDisplayMode(KnobDisplayMode::Gain);
+        stepKnobs[2]->setDisplayMode(KnobDisplayMode::Percent);
+        stepKnobs[3]->setDisplayMode(KnobDisplayMode::Percent);
+    }
+    else
+    {
+        stepKnobs[0]->setDisplayMode(KnobDisplayMode::Hertz);
+        stepKnobs[0]->setScaleMode(KnobScaleMode::Logarithmic);
+        stepKnobs[1]->setDisplayMode(KnobDisplayMode::Decimal);
+        stepKnobs[2]->setDisplayMode(KnobDisplayMode::Seconds);
+        stepKnobs[3]->setDisplayMode(KnobDisplayMode::Percent);
+    }
+
+    stepKnobs[4]->setDisplayMode(KnobDisplayMode::Percent);
+    stepKnobs[5]->setDisplayMode(KnobDisplayMode::Gain);
+    stepKnobs[6]->setDisplayMode(KnobDisplayMode::Pan);
 }
 
 void FooterPanel::refreshGlobalControlLabels()

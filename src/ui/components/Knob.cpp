@@ -1,4 +1,5 @@
 #include "ui/components/Knob.h"
+#include <cmath>
 
 namespace zikada {
 
@@ -76,8 +77,7 @@ void Knob::paint(juce::Graphics& g)
     g.setColour(accentColour.withAlpha(0.90f));
     g.fillEllipse(centre.x - 1.5f, centre.y - 1.5f, 3.0f, 3.0f);
 
-    const int pct = static_cast<int>(std::round(getNormalizedValue() * 100.0));
-    const auto valueStr  = juce::String(pct) + "%";
+    const auto valueStr  = formatValue();
     const auto valueRect = juce::Rectangle<float>(0.0f, bh - valueH, bw, valueH);
 
     g.setColour(Colours::white.withAlpha(0.05f));
@@ -130,23 +130,104 @@ void Knob::setLabel(const juce::String& lbl)
     repaint();
 }
 
+void Knob::setDisplayMode(KnobDisplayMode newMode)
+{
+    displayMode = newMode;
+    repaint();
+}
+
+void Knob::setScaleMode(KnobScaleMode newMode)
+{
+    scaleMode = newMode;
+    value = juce::jlimit(minValue, maxValue, value);
+    repaint();
+}
+
 double Knob::getNormalizedValue() const
 {
-    return (value - minValue) / (maxValue - minValue);
+    return valueToNormalized(value);
+}
+
+double Knob::valueToNormalized(double rawValue) const
+{
+    if (maxValue <= minValue)
+        return 0.0;
+
+    rawValue = juce::jlimit(minValue, maxValue, rawValue);
+
+    if (scaleMode == KnobScaleMode::Logarithmic && minValue > 0.0 && maxValue > minValue)
+    {
+        const double logMin = std::log(minValue);
+        const double logMax = std::log(maxValue);
+        return juce::jlimit(0.0, 1.0, (std::log(rawValue) - logMin) / (logMax - logMin));
+    }
+
+    return juce::jlimit(0.0, 1.0, (rawValue - minValue) / (maxValue - minValue));
+}
+
+double Knob::normalizedToValue(double normalizedValue) const
+{
+    normalizedValue = juce::jlimit(0.0, 1.0, normalizedValue);
+
+    if (scaleMode == KnobScaleMode::Logarithmic && minValue > 0.0 && maxValue > minValue)
+    {
+        const double logMin = std::log(minValue);
+        const double logMax = std::log(maxValue);
+        return std::exp(logMin + normalizedValue * (logMax - logMin));
+    }
+
+    return minValue + normalizedValue * (maxValue - minValue);
+}
+
+juce::String Knob::formatValue() const
+{
+    switch (displayMode)
+    {
+        case KnobDisplayMode::Percent:
+            return juce::String(static_cast<int>(std::round(value * 100.0))) + "%";
+
+        case KnobDisplayMode::Hertz:
+            if (value >= 1000.0)
+                return juce::String(value / 1000.0, value >= 10000.0 ? 0 : 1) + "kHz";
+            return juce::String(static_cast<int>(std::round(value))) + "Hz";
+
+        case KnobDisplayMode::Decimal:
+            return juce::String(value, value < 1.0 ? 2 : 1);
+
+        case KnobDisplayMode::Seconds:
+            if (value < 1.0)
+                return juce::String(static_cast<int>(std::round(value * 1000.0))) + "ms";
+            return juce::String(value, 1) + "s";
+
+        case KnobDisplayMode::Gain:
+            return juce::String(value, value < 1.0 ? 2 : 1) + "x";
+
+        case KnobDisplayMode::Pan:
+        {
+            if (std::abs(value) < 0.01)
+                return "C";
+
+            const auto side = value < 0.0 ? juce::String("L") : juce::String("R");
+            return side + juce::String(static_cast<int>(std::round(std::abs(value) * 100.0)));
+        }
+
+        case KnobDisplayMode::NormalizedPercent:
+        default:
+            return juce::String(static_cast<int>(std::round(getNormalizedValue() * 100.0))) + "%";
+    }
 }
 
 void Knob::mouseDown(const juce::MouseEvent& event)
 {
-    lastMousePos = event.getScreenPosition();
-    valueOnMouseDown = value;
+    juce::ignoreUnused(event);
+    normalizedOnMouseDown = getNormalizedValue();
 }
 
 void Knob::mouseDrag(const juce::MouseEvent& event)
 {
-    auto deltaY = -event.getDistanceFromDragStartY();
-    auto sensitivity = (maxValue - minValue) / 200.0;
-    auto newValue = valueOnMouseDown + deltaY * sensitivity;
-    setValue(newValue);
+    const auto deltaY = -event.getDistanceFromDragStartY();
+    const auto normalizedDelta = static_cast<double>(deltaY) / 200.0;
+    setValue(normalizedToValue(normalizedOnMouseDown + normalizedDelta));
 }
 
 void Knob::mouseDoubleClick(const juce::MouseEvent& event)
