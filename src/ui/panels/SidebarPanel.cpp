@@ -4,10 +4,19 @@
 namespace zikada {
 
 namespace {
-    constexpr int kGridCols = 5;
-    constexpr int kButtonGap = 5;
+    constexpr int kFactoryGridCols = 4;
+    constexpr int kFactoryPresetCount = 16;
+    constexpr int kUserSlotCols = 4;
+    constexpr int kButtonGap = 6;
     constexpr int kHeaderH = 80;
     constexpr int kInfoH = 60;
+    constexpr int kUserSlotSectionGap = 18;
+    constexpr int kUserSlotLabelH = 14;
+
+    bool isUserSlotButton(size_t index)
+    {
+        return index >= static_cast<size_t>(kFactoryPresetCount);
+    }
 
     void rebuildSidebarLayoutAsync(juce::Component::SafePointer<SidebarPanel> panel)
     {
@@ -244,6 +253,7 @@ void SidebarPanel::updateInfoForHover(int presetIndex)
             return;
         }
     }
+
 }
 
 void SidebarPanel::updateInfoForSelection()
@@ -336,15 +346,41 @@ void SidebarPanel::paintOverChildren(juce::Graphics& g)
 
     auto presets = getPresetsForLane(currentLane);
     auto laneColour = laneInfos[currentLane].colour;
+    auto labelFont = juce::Font(juce::FontOptions().withHeight(9.0f).withStyle("Bold"));
+
+    auto drawPresetLabel = [&](juce::Rectangle<float> bounds, const juce::String& label, juce::Colour colour)
+    {
+        g.setFont(labelFont);
+        g.setColour(colour);
+        g.drawText(label, bounds, juce::Justification::centred, true);
+    };
 
     for (size_t i = 0; i < presetButtons.size() && i < presets.size(); ++i)
     {
-        auto btnBounds = presetButtons[i]->getBounds().toFloat().reduced(4.0f);
+        auto fullBounds = presetButtons[i]->getBounds().toFloat().reduced(4.0f);
         bool active = presetButtons[i]->getToggleState();
         bool hovered = (presets[i].presetIndex == hoveredPresetIndex);
         auto iconColour = active ? Colours::bgPrimary : (hovered ? laneColour.brighter(0.3f) : laneColour);
+        auto iconBounds = fullBounds.withTrimmedBottom(12.0f).reduced(isUserSlotButton(i) ? 6.0f : 4.0f);
         PresetIcons::drawPresetIcon(g, currentLane, presets[i].presetIndex,
-                                    btnBounds, iconColour);
+                                    iconBounds, iconColour);
+        drawPresetLabel(fullBounds.removeFromBottom(11.0f), presets[i].label,
+                        active ? Colours::bgPrimary : Colours::white.withAlpha(hovered ? 0.92f : 0.68f));
+    }
+
+    if (presetButtons.size() > static_cast<size_t>(kFactoryPresetCount))
+    {
+        const auto firstUserBounds = presetButtons[static_cast<size_t>(kFactoryPresetCount)]->getBounds();
+        const auto labelBounds = juce::Rectangle<int>(firstUserBounds.getX(),
+                                                      firstUserBounds.getY() - kUserSlotLabelH - 3,
+                                                      getWidth() - firstUserBounds.getX() - 10,
+                                                      kUserSlotLabelH).toFloat();
+        g.setFont(juce::Font(juce::FontOptions().withHeight(9.0f).withStyle("Bold")));
+        g.setColour(Colours::white50);
+        g.drawText("USER SLOTS", labelBounds, juce::Justification::centredLeft, false);
+        g.setColour(laneColour.withAlpha(0.22f));
+        g.drawLine(labelBounds.getX() + 68.0f, labelBounds.getCentreY(),
+                   labelBounds.getRight(), labelBounds.getCentreY(), 1.0f);
     }
 }
 
@@ -360,20 +396,30 @@ void SidebarPanel::resized()
     infoLabel.setBounds(infoArea);
 
     auto gridArea = bounds;
-    const int cols = kGridCols;
-    const int rows = static_cast<int>((presetButtons.size() + cols - 1) / cols);
+    const int cols = kFactoryGridCols;
+    const int factoryCount = juce::jmin(static_cast<int>(presetButtons.size()), kFactoryPresetCount);
+    const int userCount = juce::jmax(0, static_cast<int>(presetButtons.size()) - kFactoryPresetCount);
+    const int factoryRows = factoryCount > 0 ? (factoryCount + cols - 1) / cols : 0;
+    const int userRows = userCount > 0 ? (userCount + kUserSlotCols - 1) / kUserSlotCols : 0;
+    const int totalRows = factoryRows + userRows;
     const int availW = gridArea.getWidth();
-    const int availH = gridArea.getHeight();
+    const int sectionExtraH = userCount > 0 ? kUserSlotSectionGap + kUserSlotLabelH : 0;
+    const int availH = gridArea.getHeight() - sectionExtraH;
     const int cellW = juce::jmax(40, (availW - (cols - 1) * kButtonGap) / cols);
-    const int cellH = juce::jmax(40, rows > 0 ? (availH - (rows - 1) * kButtonGap) / rows : availH);
+    const int cellH = juce::jmax(40, totalRows > 0 ? (availH - (totalRows - 1) * kButtonGap) / totalRows : availH);
     const int cellSize = juce::jmin(cellW, cellH);
 
     for (size_t i = 0; i < presetButtons.size(); ++i)
     {
-        int c = static_cast<int>(i) % cols;
-        int r = static_cast<int>(i) / cols;
+        const bool userSlot = isUserSlotButton(i);
+        const int localIndex = userSlot ? static_cast<int>(i) - kFactoryPresetCount : static_cast<int>(i);
+        const int layoutCols = userSlot ? kUserSlotCols : kFactoryGridCols;
+        int c = localIndex % layoutCols;
+        int r = localIndex / layoutCols;
         int x = gridArea.getX() + c * (cellSize + kButtonGap);
         int y = gridArea.getY() + r * (cellSize + kButtonGap);
+        if (userSlot)
+            y += factoryRows * (cellSize + kButtonGap) + kUserSlotSectionGap + kUserSlotLabelH;
         presetButtons[i]->setBounds(x, y, cellSize, cellSize);
     }
 }

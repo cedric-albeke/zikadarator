@@ -38,11 +38,12 @@ Date: 2026-06-18
 - The monitor shows selected step/preset state and pulses from the real playhead lane-activity mask.
 - The display uses lane colors, scanlines, and a phosphor trace for Zikada character without claiming unsupported DSP.
 - Added source smoke guards so the display API, painter, and editor wiring remain present.
+- Reworked the sidebar preset browser from a flat five-column icon wall into a four-column factory grid with visible short labels and a separated U1-U4 user-slot row.
 
 ## Recommended Next Slices
 
 1. Sequencer hierarchy pass: make the grid the hero, quiet passive panel borders, strengthen 4-beat grouping, and reduce per-cell glow.
-2. Sidebar rework: use a 4x5 factory preset grid plus a separated U1-U4 row and a larger selected-preset detail area.
+2. Sidebar follow-up: increase the selected-preset detail area and consider keyboard navigation for the preset grid.
 3. Footer rework: split selected-step controls into lane-aware groups with more knob spacing and fewer always-visible globals.
 4. Engine FX slice: implement one real groove effect before adding labels. The lowest-risk first slice is real Slice-lane reverse/repeat/stutter/retrigger playback, because the UI already exposes those concepts and the existing `SliceEngine` can be extended without promising vinyl/tape-stop yet.
 5. Performance slice: cache static grid/panel layers and repaint only old/new playhead columns plus active CRT bounds.

@@ -177,6 +177,11 @@ assertContains(editor, "headerPanel.setFxDisplayState", "editor must update the 
 assertContains(editor, "headerPanel.setFxDisplayPlayhead", "editor must pulse the CRT display from the playhead");
 assertContains(sidebar, "selectedPresetIndex", "sidebar must track selected preset details separately from hover");
 assertContains(sidebar, "updateInfoForSelection", "sidebar must restore selected preset details when hover leaves");
+assertContains(sidebar, "kFactoryGridCols = 4", "sidebar preset browser must use a scan-friendly four-column factory grid");
+assertContains(sidebar, "kFactoryPresetCount = 16", "sidebar preset browser must distinguish factory presets from user slots");
+assertContains(sidebar, "kUserSlotCols = 4", "sidebar preset browser must place U1-U4 in a separated four-slot row");
+assertContains(sidebar, "drawPresetLabel", "sidebar preset browser must draw visible short labels, not icon-only cells");
+assertContains(sidebar, "USER SLOTS", "sidebar preset browser must visually separate user slots from factory presets");
 if (sidebar.includes("Hover a preset to see details...")) {
   fail("sidebar detail panel must not depend on hover-only copy");
 }
