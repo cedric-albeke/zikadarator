@@ -382,10 +382,10 @@ void PluginEditor::layoutEditorCanvas(juce::Rectangle<int> logicalBounds)
     if (currentPage != Page::Sequencer)
         return;
 
-    footerPanel.setBounds(bounds.removeFromBottom(170));
+    footerPanel.setBounds(bounds.removeFromBottom(150));
     bounds.removeFromBottom(PM::kModuleGap);
 
-    sidebarPanel.setBounds(bounds.removeFromRight(300));
+    sidebarPanel.setBounds(bounds.removeFromRight(280));
     bounds.removeFromRight(PM::kModuleGap);
     sequencerPanel.setBounds(bounds);
 }

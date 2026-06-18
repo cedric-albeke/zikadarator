@@ -3,14 +3,14 @@
 namespace zikada {
 
 namespace {
-    constexpr int kDryWetW  = 200;
-    constexpr int kSignalW  = 340;
-    constexpr int kZoneGap  = 6;
-    constexpr int kHPad     = 8;
-    constexpr int kVPad     = 4;
-    constexpr int kLabelH   = 12;
-    constexpr int kInnerPad = 8;
-    constexpr int kKnobGap  = 4;
+    constexpr int kDryWetW  = 180;
+    constexpr int kSignalW  = 300;
+    constexpr int kZoneGap  = 4;
+    constexpr int kHPad     = 6;
+    constexpr int kVPad     = 2;
+    constexpr int kLabelH   = 10;
+    constexpr int kInnerPad = 6;
+    constexpr int kKnobGap  = 3;
 
     constexpr std::array<double, 7> kKnobMin  = { 20.0, 0.1,   0.0, 0.0, 0.0, 0.0, -1.0 };
     constexpr std::array<double, 7> kKnobMax  = { 20000.0, 10.0, 1.0, 1.0, 1.0, 2.0,  1.0 };
@@ -50,13 +50,13 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
 
     mixModeLabel.setText("LINEAR", juce::dontSendNotification);
     mixModeLabel.setJustificationType(juce::Justification::centred);
-    mixModeLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
-    mixModeLabel.setColour(juce::Label::textColourId, Colours::neonGreen);
+    mixModeLabel.setFont(juce::Font(juce::FontOptions().withHeight(11.0f).withStyle("Bold")));
+    mixModeLabel.setColour(juce::Label::textColourId, Colours::white);
     addAndMakeVisible(mixModeLabel);
 
-    outputGainLabel.setFont(juce::Font(juce::FontOptions().withHeight(14.0f)));
+    outputGainLabel.setFont(juce::Font(juce::FontOptions().withHeight(11.0f).withStyle("Bold")));
     outputGainLabel.setJustificationType(juce::Justification::centred);
-    outputGainLabel.setColour(juce::Label::textColourId, Colours::white85);
+    outputGainLabel.setColour(juce::Label::textColourId, Colours::white);
     outputGainLabel.setText("0.0 dB", juce::dontSendNotification);
     addAndMakeVisible(outputGainLabel);
 
@@ -204,15 +204,15 @@ void FooterPanel::setupModulationControls()
     {
         auto targetBtn = std::make_unique<juce::TextButton>("OFF");
         targetBtn->onClick = [this, i] { cycleModTarget(i); };
-        targetBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
-        targetBtn->setColour(juce::TextButton::textColourOffId, Colours::white85);
+        targetBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface.withAlpha(0.50f));
+        targetBtn->setColour(juce::TextButton::textColourOffId, Colours::white50);
         addChildComponent(targetBtn.get());
         modTargetButtons[i] = std::move(targetBtn);
 
         auto sourceBtn = std::make_unique<juce::TextButton>("STATIC");
         sourceBtn->onClick = [this, i] { cycleModSource(i); };
-        sourceBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
-        sourceBtn->setColour(juce::TextButton::textColourOffId, Colours::white85);
+        sourceBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface.withAlpha(0.50f));
+        sourceBtn->setColour(juce::TextButton::textColourOffId, Colours::white50);
         addChildComponent(sourceBtn.get());
         modSourceButtons[i] = std::move(sourceBtn);
 
@@ -223,7 +223,7 @@ void FooterPanel::setupModulationControls()
         amountSlider->setValue(0.0);
         amountSlider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
         amountSlider->setColour(juce::Slider::trackColourId, Colours::white50);
-        amountSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface);
+        amountSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface.withAlpha(0.50f));
         amountSlider->onValueChange = [this] { notifySlotDataChanged(); };
         addChildComponent(amountSlider.get());
         modAmountSliders[i] = std::move(amountSlider);
@@ -235,7 +235,7 @@ void FooterPanel::setupModulationControls()
         paramSlider->setValue(0.0);
         paramSlider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
         paramSlider->setColour(juce::Slider::trackColourId, Colours::white50);
-        paramSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface);
+        paramSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface.withAlpha(0.50f));
         paramSlider->onValueChange = [this] { notifySlotDataChanged(); };
         addChildComponent(paramSlider.get());
         modParamSliders[i] = std::move(paramSlider);
@@ -301,13 +301,13 @@ void FooterPanel::drawDryWetModule(juce::Graphics& g) const
 
     g.setFont(laf != nullptr ? laf->getVcrFont(11.0f)
                               : juce::Font(juce::FontOptions().withHeight(11.0f)));
-    g.setColour(Colours::neonGreen.withAlpha(0.70f));
+    g.setColour(Colours::white50);
     g.drawText("DRY / WET", topRow, juce::Justification::centredLeft, false);
 
     const auto valStr = juce::String(static_cast<int>(dryWetSlider.getValue())) + "%";
     g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
                               : juce::Font(juce::FontOptions().withHeight(12.0f)));
-    g.setColour(Colours::white85);
+    g.setColour(Colours::white);
     g.drawText(valStr, topRow, juce::Justification::centredRight, false);
 }
 
@@ -333,7 +333,7 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
 
     g.setFont(laf != nullptr ? laf->getVcrFont(11.0f)
                               : juce::Font(juce::FontOptions().withHeight(11.0f)));
-    g.setColour(Colours::neonGreen.withAlpha(0.55f));
+    g.setColour(Colours::white50);
 
     if (modModeActive)
         g.drawText("MODULATION", labelRow, juce::Justification::centredLeft, false);
@@ -348,14 +348,14 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
         const auto infoStr = selectedLaneName + "  /  U" + juce::String(selectedSlot + 1);
         g.setFont(laf != nullptr ? laf->getSpaceMonoFont(12.0f, true)
                                   : juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
-        g.setColour(Colours::neonGreen.withAlpha(0.90f));
+        g.setColour(Colours::white);
         g.drawText(infoStr, infoRow, juce::Justification::centredRight, false);
     }
     else if (!modModeActive)
     {
         g.setFont(laf != nullptr ? laf->getSpaceMonoFont(11.0f)
                                   : juce::Font(juce::FontOptions().withHeight(11.0f)));
-        g.setColour(Colours::white.withAlpha(0.20f));
+        g.setColour(Colours::white50);
         g.drawText("SELECT A STEP TO EDIT", infoRow, juce::Justification::centredRight, false);
 
         inner.removeFromBottom(3);

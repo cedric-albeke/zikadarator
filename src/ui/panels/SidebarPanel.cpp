@@ -6,8 +6,8 @@ namespace zikada {
 namespace {
     constexpr int kGridCols = 5;
     constexpr int kButtonGap = 5;
-    constexpr int kHeaderH = 98;
-    constexpr int kInfoH = 72;
+    constexpr int kHeaderH = 80;
+    constexpr int kInfoH = 60;
 
     void rebuildSidebarLayoutAsync(juce::Component::SafePointer<SidebarPanel> panel)
     {
@@ -25,7 +25,7 @@ namespace {
 SidebarPanel::SidebarPanel()
 {
     infoLabel.setJustificationType(juce::Justification::centredLeft);
-    infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(16.0f)));
+    infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
     infoLabel.setColour(juce::Label::textColourId, Colours::white85);
     infoLabel.setMinimumHorizontalScale(1.0f);
     infoLabel.setText("Select a step to inspect presets.", juce::dontSendNotification);
@@ -293,25 +293,32 @@ void SidebarPanel::paint(juce::Graphics& g)
 
     ZikadaLookAndFeel::drawDeviceDisplay(g, headerBounds.toNearestInt());
 
-    auto headerInner = headerBounds.reduced(14, 10).toFloat();
+    auto headerInner = headerBounds.reduced(12, 8).toFloat();
     g.setColour(laneColour.withAlpha(0.90f));
-    g.fillRoundedRectangle(headerInner.withWidth(4.0f).withTrimmedTop(8.0f).withTrimmedBottom(8.0f), 2.0f);
+    g.fillRoundedRectangle(headerInner.withWidth(4.0f).withTrimmedTop(6.0f).withTrimmedBottom(6.0f), 2.0f);
+
+    // Subtle gradient overlay on header
+    juce::ColourGradient headerGrad(
+        Colours::white.withAlpha(0.06f), headerBounds.getX(), headerBounds.getY(),
+        juce::Colours::transparentBlack, headerBounds.getX(), headerBounds.getBottom(), false);
+    g.setGradientFill(headerGrad);
+    g.fillRoundedRectangle(headerBounds.reduced(1.0f), 2.0f);
 
     float iconSize = headerInner.getHeight() * 0.55f;
     auto iconBounds = juce::Rectangle<float>(
-        headerInner.getX() + 14.0f,
+        headerInner.getX() + 12.0f,
         headerInner.getCentreY() - iconSize * 0.5f,
         iconSize, iconSize);
     PresetIcons::drawLaneIcon(g, currentLane, iconBounds, laneColour, 2.0f);
 
-    auto textBounds = headerInner.withTrimmedLeft(iconSize + 28.0f);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(23.0f).withStyle("Bold")));
+    auto textBounds = headerInner.withTrimmedLeft(iconSize + 24.0f);
+    g.setFont(juce::Font(juce::FontOptions().withHeight(18.0f).withStyle("Bold")));
     g.setColour(Colours::white);
     g.drawText(laneInfos[currentLane].name,
                textBounds.withHeight(textBounds.getHeight() * 0.55f),
                juce::Justification::centredLeft, false);
 
-    g.setFont(juce::Font(juce::FontOptions().withHeight(14.0f)));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f).withStyle("Bold")));
     g.setColour(Colours::white50);
     g.drawText("SELECT PRESET",
                textBounds.withY(textBounds.getY() + textBounds.getHeight() * 0.48f)
@@ -343,13 +350,13 @@ void SidebarPanel::paintOverChildren(juce::Graphics& g)
 
 void SidebarPanel::resized()
 {
-    auto bounds = getLocalBounds().reduced(8, 8);
+    auto bounds = getLocalBounds().reduced(10, 10);
 
     bounds.removeFromTop(kHeaderH);
-    bounds.removeFromTop(10);
+    bounds.removeFromTop(8);
 
     auto infoArea = bounds.removeFromBottom(kInfoH);
-    infoArea.removeFromTop(6);
+    infoArea.removeFromTop(4);
     infoLabel.setBounds(infoArea);
 
     auto gridArea = bounds;
