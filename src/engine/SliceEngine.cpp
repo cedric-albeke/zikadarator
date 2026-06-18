@@ -3,6 +3,11 @@
 
 namespace zikada {
 
+namespace {
+    constexpr double kMinPreparedTempoBpm = 20.0;
+    constexpr double kMaxPreparedTempoBpm = 300.0;
+}
+
 SliceEngine::SliceEngine() = default;
 
 void SliceEngine::prepare(double sr, int maxBlockSize)
@@ -15,8 +20,11 @@ void SliceEngine::prepare(double sr, int maxBlockSize)
     leftBuffer.prepare(maxSamples);
     rightBuffer.prepare(maxSamples);
     
-    playbackBufferLeft.resize(static_cast<size_t>(maxBlockSize), 0.0f);
-    playbackBufferRight.resize(static_cast<size_t>(maxBlockSize), 0.0f);
+    const auto maxSliceDuration = (60.0 / kMinPreparedTempoBpm) / 4.0;
+    const auto playbackCapacity = juce::jmax(maxBlockSize,
+                                             static_cast<int>(std::ceil(maxSliceDuration * sampleRate)));
+    playbackBufferLeft.assign(static_cast<size_t>(playbackCapacity), 0.0f);
+    playbackBufferRight.assign(static_cast<size_t>(playbackCapacity), 0.0f);
     
     setTempo(tempoBPM);
     reset();
@@ -33,11 +41,14 @@ void SliceEngine::reset()
 
 void SliceEngine::setTempo(double bpm)
 {
-    tempoBPM = bpm;
+    tempoBPM = juce::jlimit(kMinPreparedTempoBpm, kMaxPreparedTempoBpm, bpm);
     auto beatDuration = 60.0 / tempoBPM;
     auto sliceDuration = beatDuration / 4.0;
     samplesPerSlice = sliceDuration * sampleRate;
     maxSliceSamples = static_cast<int>(std::ceil(samplesPerSlice));
+
+    if (! playbackBufferLeft.empty())
+        maxSliceSamples = juce::jmin(maxSliceSamples, static_cast<int>(playbackBufferLeft.size()));
 }
 
 void SliceEngine::writeToBuffer(const float* inputLeft, const float* inputRight, int numSamples)
@@ -54,11 +65,8 @@ void SliceEngine::triggerSlice(int sliceIndex)
     auto sliceEndSamples = static_cast<int>((sliceIndex + 1) * samplesPerSlice);
     playbackLength = sliceEndSamples - sliceStartSamples;
     playbackLength = juce::jmin(playbackLength, maxSliceSamples);
-    
-    if (playbackBufferLeft.size() < static_cast<size_t>(playbackLength))
-        playbackBufferLeft.resize(static_cast<size_t>(playbackLength));
-    if (playbackBufferRight.size() < static_cast<size_t>(playbackLength))
-        playbackBufferRight.resize(static_cast<size_t>(playbackLength));
+    playbackLength = juce::jmin(playbackLength, static_cast<int>(playbackBufferLeft.size()));
+    playbackLength = juce::jmin(playbackLength, static_cast<int>(playbackBufferRight.size()));
     
     for (int i = 0; i < playbackLength; ++i)
     {

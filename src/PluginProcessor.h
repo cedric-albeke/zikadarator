@@ -85,6 +85,7 @@ private:
                         int numSamples,
                         bool hasRightChannel,
                         const StepScheduler::Segment& segment,
+                        const SequencerState::Snapshot& sequencerSnapshot,
                         double bpm,
                         double blockPpqPerStep,
                         const float* laneMix,

@@ -46,6 +46,7 @@ const knob = read("src/ui/components/Knob.cpp");
 const presetManager = read("src/state/PresetManager.cpp");
 const parameterIDs = read("src/state/ParameterIDs.h");
 const sequencerEngine = read("src/engine/SequencerEngine.cpp");
+const sliceEngine = read("src/engine/SliceEngine.cpp");
 const loopEngine = read("src/engine/LoopEngine.cpp");
 const loopEngineHeader = read("src/engine/LoopEngine.h");
 const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
@@ -61,6 +62,22 @@ const processSegment = extractFunction(
 const loopPresetMapping = extractFunction(
   processor,
   "void configureLoopEngineForPreset(LoopEngine& loopEngine, int presetIndex, const UserSlotData& slotData,",
+);
+const triggerSlice = extractFunction(
+  sliceEngine,
+  "void SliceEngine::triggerSlice(int sliceIndex)",
+);
+const setLoopParameters = extractFunction(
+  loopEngine,
+  "void LoopEngine::setLoopParameters(float loopLengthSeconds,",
+);
+const ensureLoopBufferSize = extractFunction(
+  loopEngine,
+  "void LoopEngine::ensureLoopBufferSize()",
+);
+const refreshLoopSnapshot = extractFunction(
+  loopEngine,
+  "void LoopEngine::refreshLoopSnapshot()",
 );
 const stepGridTimer = extractFunction(
   stepGrid,
@@ -101,8 +118,23 @@ assertContains(processorHeader, "monoRightBuffer", "processor must own reusable 
 assertContains(processorHeader, "ensureScratchBuffers", "processor must expose scratch-buffer sizing helper");
 assertContains(processBlock, "monoRightBuffer.data()", "mono processing must avoid aliasing left/right pointers");
 assertContains(processSegment, "0.5f * (outLeft + outRight)", "mono processing must fold rendered stereo output to mono");
+assertContains(processBlock, "sequencerState.getSnapshot()", "processBlock must capture a sequencer snapshot for audio rendering");
+assertContains(processSegment, "SequencerState::Snapshot", "processSegment must render from an immutable sequencer snapshot");
+assertContains(processSegment, "sequencerSnapshot.getStepData", "processSegment must read step data from the captured snapshot");
+assertContains(processSegment, "sequencerSnapshot.getUserSlot", "processSegment must read user slots from the captured snapshot");
+if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
+  fail("processSegment must not read mutable SequencerState directly on the audio thread");
+}
 if (processSegment.includes("left[i] *= mix") || processSegment.includes("right[i] *= mix")) {
   fail("lane mix must dry/wet blend the lane result, not multiply the whole shared wet chain");
+}
+assertContains(sliceEngine, "playbackBufferLeft.assign", "SliceEngine must preallocate playback buffers during prepare");
+if (triggerSlice.includes(".resize(") || triggerSlice.includes(".assign(")) {
+  fail("SliceEngine triggerSlice must not allocate on the audio thread");
+}
+assertContains(loopEngine, "loopBufferL.assign", "LoopEngine must preallocate snapshot buffers during prepare");
+if ([setLoopParameters, ensureLoopBufferSize, refreshLoopSnapshot].some((body) => body.includes(".resize(") || body.includes(".assign("))) {
+  fail("LoopEngine render-called loop setup/snapshot paths must not allocate on the audio thread");
 }
 assertContains(processSegment, "blendLaneOutput", "processSegment must blend each lane output against that lane input");
 assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resizing to a fixed aspect ratio");

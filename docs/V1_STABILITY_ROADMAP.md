@@ -22,6 +22,8 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Sidebar preset details now persist from the selected step/preset and temporarily preview hover targets, so the detail area stays useful after the pointer leaves the grid.
 - Step cells now support mouse-wheel preset cycling on the hovered or selected cell, with undo snapshotting, sidebar/footer refresh, APVTS active-state sync, and dirty-preset tracking.
 - Footer knobs now render real units and move through the right scale: cutoff uses Hz/kHz with logarithmic travel, resonance uses decimals, timing uses milliseconds/seconds, mix-style controls use percentages, volume/rate controls use multipliers, and pan uses L/C/R readouts.
+- Processor rendering now captures one immutable `SequencerState::Snapshot` per block and renders segments from that snapshot instead of reading mutable UI-owned sequencer state directly on the audio thread.
+- Slice and loop engines now preallocate their render buffers during `prepare()`, so slice triggering and loop snapshot refresh no longer grow vectors from render-called paths.
 
 ## V1 Blockers
 

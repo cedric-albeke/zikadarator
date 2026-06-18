@@ -58,12 +58,6 @@ bool isUserSlotPreset(int presetIndex)
     return presetIndex >= 1 && presetIndex <= 4;
 }
 
-UserSlotData getSlotDataForStep(const SequencerState& sequencerState, int lane, const StepData& stepData)
-{
-    const int slotIndex = isUserSlotPreset(stepData.presetIndex) ? stepData.presetIndex - 1 : 0;
-    return sequencerState.getUserSlot(lane, slotIndex);
-}
-
 double getBeatSeconds(double bpm)
 {
     return bpm > 0.0 ? 60.0 / bpm : 0.5;
@@ -853,6 +847,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         return;
     }
 
+    const auto sequencerSnapshot = sequencerState.getSnapshot();
     float laneMix[6] = {};
     bool laneMuted[6] = {};
     bool laneSoloed[6] = {};
@@ -885,6 +880,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
                        segment.numSamples,
                        hasRightChannel,
                        segment,
+                       sequencerSnapshot,
                        bpm,
                        blockPpqPerStep,
                        laneMix,
@@ -906,6 +902,7 @@ void PluginProcessor::processSegment(float* leftChannel,
                                      int numSamples,
                                      bool hasRightChannel,
                                      const StepScheduler::Segment& segment,
+                                     const SequencerState::Snapshot& sequencerSnapshot,
                                      double bpm,
                                      double blockPpqPerStep,
                                      const float* laneMix,
@@ -928,7 +925,7 @@ void PluginProcessor::processSegment(float* leftChannel,
     {
         for (int lookback = rawStep; lookback >= juce::jmax(0, rawStep - 15); --lookback)
         {
-            const auto& s = sequencerState.getStepData(lane, lookback);
+            const auto& s = sequencerSnapshot.getStepData(lane, lookback);
             if (s.active && s.presetIndex > 0)
             {
                 if (rawStep < lookback + s.chainLength)
@@ -945,19 +942,25 @@ void PluginProcessor::processSegment(float* leftChannel,
     const int effFilterStep   = getEffectiveStep(kFilterLane,   sequencerStep);
     const int effFx2Step      = getEffectiveStep(kFX2Lane,      sequencerStep);
 
-    const auto& sliceStep    = sequencerState.getStepData(kSliceLane,    effSliceStep);
-    const auto& loopStep     = sequencerState.getStepData(kLoopLane,     effLoopStep);
-    const auto& envelopeStep = sequencerState.getStepData(kEnvelopeLane, effEnvelopeStep);
-    const auto& fx1Step      = sequencerState.getStepData(kFX1Lane,      effFx1Step);
-    const auto& filterStep   = sequencerState.getStepData(kFilterLane,   effFilterStep);
-    const auto& fx2Step      = sequencerState.getStepData(kFX2Lane,      effFx2Step);
+    const auto& sliceStep    = sequencerSnapshot.getStepData(kSliceLane,    effSliceStep);
+    const auto& loopStep     = sequencerSnapshot.getStepData(kLoopLane,     effLoopStep);
+    const auto& envelopeStep = sequencerSnapshot.getStepData(kEnvelopeLane, effEnvelopeStep);
+    const auto& fx1Step      = sequencerSnapshot.getStepData(kFX1Lane,      effFx1Step);
+    const auto& filterStep   = sequencerSnapshot.getStepData(kFilterLane,   effFilterStep);
+    const auto& fx2Step      = sequencerSnapshot.getStepData(kFX2Lane,      effFx2Step);
 
-    const auto sliceSlot    = getSlotDataForStep(sequencerState, kSliceLane,    sliceStep);
-    const auto loopSlot     = getSlotDataForStep(sequencerState, kLoopLane,     loopStep);
-    const auto envelopeSlot = getSlotDataForStep(sequencerState, kEnvelopeLane, envelopeStep);
-    const auto fx1Slot      = getSlotDataForStep(sequencerState, kFX1Lane,      fx1Step);
-    const auto filterSlot   = getSlotDataForStep(sequencerState, kFilterLane,   filterStep);
-    const auto fx2Slot      = getSlotDataForStep(sequencerState, kFX2Lane,      fx2Step);
+    auto getSlotDataForStep = [&](int lane, const StepData& stepData) -> UserSlotData
+    {
+        const int slotIndex = isUserSlotPreset(stepData.presetIndex) ? stepData.presetIndex - 1 : 0;
+        return sequencerSnapshot.getUserSlot(lane, slotIndex);
+    };
+
+    const auto sliceSlot    = getSlotDataForStep(kSliceLane,    sliceStep);
+    const auto loopSlot     = getSlotDataForStep(kLoopLane,     loopStep);
+    const auto envelopeSlot = getSlotDataForStep(kEnvelopeLane, envelopeStep);
+    const auto fx1Slot      = getSlotDataForStep(kFX1Lane,      fx1Step);
+    const auto filterSlot   = getSlotDataForStep(kFilterLane,   filterStep);
+    const auto fx2Slot      = getSlotDataForStep(kFX2Lane,      fx2Step);
 
     const double beatSeconds = getBeatSeconds(bpm);
     const double stepDurationSeconds = beatSeconds * blockPpqPerStep;

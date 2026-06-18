@@ -13,6 +13,8 @@ void LoopEngine::prepare(double newSampleRate, int maxBlockSize)
     historySizeSamples = juce::jmax(maxBlockSize * 32, static_cast<int>(sampleRate * 4.0));
     bufferL.prepare(historySizeSamples);
     bufferR.prepare(historySizeSamples);
+    loopBufferL.assign(static_cast<size_t>(historySizeSamples), 0.0f);
+    loopBufferR.assign(static_cast<size_t>(historySizeSamples), 0.0f);
     reset();
 }
 
@@ -68,16 +70,26 @@ void LoopEngine::captureInput(const float* left, const float* right, int numSamp
 
 void LoopEngine::ensureLoopBufferSize()
 {
-    const auto targetSize = static_cast<size_t>(juce::jmax(1, loopLengthSamples));
-    if (loopBufferL.size() != targetSize)
-        loopBufferL.assign(targetSize, 0.0f);
-    if (loopBufferR.size() != targetSize)
-        loopBufferR.assign(targetSize, 0.0f);
+    const int preparedCapacity = static_cast<int>(juce::jmin(loopBufferL.size(), loopBufferR.size()));
+    if (preparedCapacity <= 0)
+    {
+        loopLengthSamples = 1;
+        return;
+    }
+
+    loopLengthSamples = juce::jlimit(1, preparedCapacity, loopLengthSamples);
 }
 
 void LoopEngine::refreshLoopSnapshot()
 {
     ensureLoopBufferSize();
+
+    if (loopBufferL.empty() || loopBufferR.empty())
+    {
+        snapshotPending = false;
+        hasSnapshot = false;
+        return;
+    }
 
     for (int i = 0; i < loopLengthSamples; ++i)
     {
