@@ -48,6 +48,7 @@ const knobHeader = read("src/ui/components/Knob.h");
 const knob = read("src/ui/components/Knob.cpp");
 const presetManager = read("src/state/PresetManager.cpp");
 const parameterIDs = read("src/state/ParameterIDs.h");
+const processorTests = read("tests/processor/ProcessorTestMain.cpp");
 const sequencerEngine = read("src/engine/SequencerEngine.cpp");
 const sliceEngine = read("src/engine/SliceEngine.cpp");
 const envelopeShape = read("src/engine/EnvelopeShape.cpp");
@@ -190,6 +191,8 @@ assertContains(processSegment, "ModulationTarget::FilterResonance", "filter lane
 assertContains(processSegment, "ModulationTarget::Volume", "filter lane modulation must apply volume target");
 assertContains(processSegment, "ModulationTarget::Pan", "filter lane modulation must apply pan target");
 assertContains(processor, "applyGainPanSample", "processor must support per-sample gain/pan modulation for filter lane targets");
+assertContains(processorTests, "invalid host state is ignored without corrupting current state", "processor tests must guard invalid host state restore safety");
+assertContains(processorTests, "malformed binary host state is ignored without corrupting current state", "processor tests must guard malformed binary host state restore safety");
 assertContains(footer, "getSupportedModTargetsForLane", "footer MOD target picker must use lane-supported targets");
 assertContains(footer, "hasSupportedModTargetsForLane", "footer MOD mode must be disabled for lanes without backed modulation");
 assertContains(footer, "sanitizeModTargetForLane", "footer must sanitize saved unsupported MOD targets before showing or writing them");

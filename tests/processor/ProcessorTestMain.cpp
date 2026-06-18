@@ -146,6 +146,55 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         midi.clear();
         processor.processBlock(stereoBuffer2, midi);
     }});
+
+    tests.push_back({"invalid host state is ignored without corrupting current state", []
+    {
+        PluginProcessor processor;
+        processor.prepareToPlay(48000.0, 128);
+
+        setParameter(processor, ParameterIDs::dryWet, 64.0f);
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 8;
+        step.chainLength = 3;
+        processor.getSequencerState().setStepData(3, 4, step);
+
+        processor.applyFullState(juce::ValueTree("NotZikadaratorState"));
+
+        auto* dryWetParam = processor.getPluginState().getValueTreeState().getParameter(ParameterIDs::dryWet);
+        requireNear(dryWetParam->getValue(), dryWetParam->convertTo0to1(64.0f), 0.001f,
+                    "dryWet changed after invalid host state");
+
+        const auto restoredStep = processor.getSequencerState().getStepData(3, 4);
+        if (!restoredStep.active) throw std::runtime_error("step active changed after invalid host state");
+        if (restoredStep.presetIndex != 8) throw std::runtime_error("step preset changed after invalid host state");
+        if (restoredStep.chainLength != 3) throw std::runtime_error("step chain changed after invalid host state");
+    }});
+
+    tests.push_back({"malformed binary host state is ignored without corrupting current state", []
+    {
+        PluginProcessor processor;
+        processor.prepareToPlay(48000.0, 128);
+
+        setParameter(processor, ParameterIDs::outputGain, -9.0f);
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 5;
+        processor.getSequencerState().setStepData(1, 7, step);
+
+        const char malformedState[] = "not valid plugin XML";
+        processor.setStateInformation(malformedState, static_cast<int>(sizeof(malformedState)));
+
+        auto* outputGainParam = processor.getPluginState().getValueTreeState().getParameter(ParameterIDs::outputGain);
+        requireNear(outputGainParam->getValue(), outputGainParam->convertTo0to1(-9.0f), 0.001f,
+                    "outputGain changed after malformed host state");
+
+        const auto restoredStep = processor.getSequencerState().getStepData(1, 7);
+        if (!restoredStep.active) throw std::runtime_error("step active changed after malformed host state");
+        if (restoredStep.presetIndex != 5) throw std::runtime_error("step preset changed after malformed host state");
+    }});
 }
 
 } // namespace zikada::tests

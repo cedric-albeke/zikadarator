@@ -39,6 +39,7 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Validation scripts now auto-discover Steinberg VST3 validator on common Windows/macOS paths.
 - Windows CI now syntax-checks the macOS validation script via Bash (`bash -n`).
 - Processor regression tests now cover host-state roundtrip (`exportFullState` / `applyFullState`) and host-layout changes (mono → stereo → mono).
+- Processor regression tests now also cover invalid ValueTree state and malformed binary state restore attempts, ensuring DAW restore failures do not wipe current parameters or sequencer data.
 - Windows and macOS CI workflows now include optional code signing and notarization steps that run only when signing secrets are present, producing unsigned tester builds otherwise.
 
 ## V1 Blockers
