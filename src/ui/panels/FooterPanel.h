@@ -81,7 +81,11 @@ private:
     void cycleModTarget(int slot);
     void cycleModSource(int slot);
     void updateModParamLabel(int slot);
+    ModulationTarget sanitizeModTargetForLane(ModulationTarget target) const;
+    bool isModTargetSupportedForLane(ModulationTarget target) const;
 
+    static std::array<ModulationTarget, 5> getSupportedModTargetsForLane(int lane);
+    static bool hasSupportedModTargetsForLane(int lane);
     static juce::String targetToString(ModulationTarget t);
     static ModulationTarget targetFromString(const juce::String& s);
     static juce::String sourceToString(ModulationSource s);

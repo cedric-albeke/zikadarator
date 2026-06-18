@@ -168,6 +168,15 @@ assertContains(processSegment, "ModulationTarget::FilterResonance", "filter lane
 assertContains(processSegment, "ModulationTarget::Volume", "filter lane modulation must apply volume target");
 assertContains(processSegment, "ModulationTarget::Pan", "filter lane modulation must apply pan target");
 assertContains(processor, "applyGainPanSample", "processor must support per-sample gain/pan modulation for filter lane targets");
+assertContains(footer, "getSupportedModTargetsForLane", "footer MOD target picker must use lane-supported targets");
+assertContains(footer, "hasSupportedModTargetsForLane", "footer MOD mode must be disabled for lanes without backed modulation");
+assertContains(footer, "sanitizeModTargetForLane", "footer must sanitize saved unsupported MOD targets before showing or writing them");
+assertContains(footer, "std::array<ModulationTarget, 5>", "footer supported MOD target list must be explicit and bounded");
+assertContains(footer, "kFilterLaneIndex = 4", "footer must identify the filter lane as the backed modulation lane");
+assertContains(footer, "modModeButton.setEnabled(hasSelection && hasSupportedModTargetsForLane(selectedLane))", "footer MOD button must only enable when the selected lane has backed targets");
+if (footer.includes("% (static_cast<int>(ModulationTarget::NumTargets) + 1)")) {
+  fail("footer MOD target cycling must use lane-supported targets instead of every enum value");
+}
 assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resizing to a fixed aspect ratio");
 assertContains(editor, "layoutEditorCanvas", "plugin editor must lay out panels on a logical canvas");
 assertContains(editor, "editorCanvas.setTransform(juce::AffineTransform::scale", "plugin editor must scale the logical canvas for compact sizes");
@@ -285,8 +294,8 @@ assertContains(footer, "selectedLane == 1 ? \"TEXTURE\" : \"SPACE\"", "footer gr
 assertContains(footer, "drawGroupHeader", "footer group headers must use a shared painter for consistent hierarchy");
 assertContains(footer, "const bool showStepControls = hasSelection && !modModeActive", "footer must hide step knobs until a step is selected");
 assertContains(footer, "const bool showModControls = hasSelection && modModeActive", "footer must hide modulation controls until a step is selected");
-assertContains(footer, "modModeButton.setEnabled(hasSelection)", "footer mod mode must be disabled until a step is selected");
-assertContains(footer, "if (!hasSelection) modModeActive = false", "footer must leave modulation mode when selection is unavailable");
+assertContains(footer, "modModeButton.setEnabled(hasSelection && hasSupportedModTargetsForLane(selectedLane))", "footer mod mode must be disabled until a backed modulation lane is selected");
+assertContains(footer, "if (!hasSelection || !hasSupportedModTargetsForLane(selectedLane))", "footer must leave modulation mode when selection or lane support is unavailable");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Hertz)", "filter cutoff knobs must display Hz/kHz");
 assertContains(footer, "setScaleMode(KnobScaleMode::Logarithmic)", "filter cutoff knobs must use logarithmic movement");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Pan)", "pan knobs must display L/C/R position");

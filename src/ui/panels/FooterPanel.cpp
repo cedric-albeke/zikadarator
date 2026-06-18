@@ -13,6 +13,7 @@ namespace {
     constexpr int kKnobGap  = 3;
     constexpr int kDetailGroupHeaderH = 12;
     constexpr int kDetailGroupGap = 3;
+    constexpr int kFilterLaneIndex = 4;
 
     constexpr std::array<double, 7> kKnobMin  = { 20.0, 0.1,   0.0, 0.0, 0.0, 0.0, -1.0 };
     constexpr std::array<double, 7> kKnobMax  = { 20000.0, 10.0, 1.0, 1.0, 1.0, 2.0,  1.0 };
@@ -267,9 +268,11 @@ void FooterPanel::setupModulationControls()
 
 void FooterPanel::applyModModeVisibility()
 {
-    if (!hasSelection) modModeActive = false;
+    if (!hasSelection || !hasSupportedModTargetsForLane(selectedLane))
+        modModeActive = false;
+
     modModeButton.setToggleState(modModeActive, juce::dontSendNotification);
-    modModeButton.setEnabled(hasSelection);
+    modModeButton.setEnabled(hasSelection && hasSupportedModTargetsForLane(selectedLane));
 
     const bool showStepControls = hasSelection && !modModeActive;
     const bool showModControls = hasSelection && modModeActive;
@@ -597,7 +600,7 @@ void FooterPanel::updateModulationControlsFromData(const ModulationData& modData
     for (int i = 0; i < kNumModSlots; ++i)
     {
         const auto& slot = modData.slots[static_cast<size_t>(i)];
-        modTargetButtons[i]->setButtonText(targetToString(slot.target));
+        modTargetButtons[i]->setButtonText(targetToString(sanitizeModTargetForLane(slot.target)));
         modSourceButtons[i]->setButtonText(sourceToString(slot.source));
         modAmountSliders[i]->setValue(static_cast<double>(slot.amount) * 100.0);
         updateModParamLabel(i);
@@ -629,13 +632,22 @@ void FooterPanel::cycleModTarget(int slot)
     if (!hasSelection || updatingFromState)
         return;
 
-    int current = static_cast<int>(targetFromString(modTargetButtons[slot]->getButtonText()));
-    int mapped = current + 1;
-    mapped = (mapped + 1) % (static_cast<int>(ModulationTarget::NumTargets) + 1);
-    current = mapped - 1;
+    const auto supportedTargets = getSupportedModTargetsForLane(selectedLane);
+    const auto currentTarget = sanitizeModTargetForLane(
+        targetFromString(modTargetButtons[slot]->getButtonText()));
 
-    auto t = static_cast<ModulationTarget>(current);
-    modTargetButtons[slot]->setButtonText(targetToString(t));
+    int currentIndex = 0;
+    for (size_t i = 0; i < supportedTargets.size(); ++i)
+    {
+        if (supportedTargets[i] == currentTarget)
+        {
+            currentIndex = static_cast<int>(i);
+            break;
+        }
+    }
+
+    const auto nextIndex = static_cast<size_t>((currentIndex + 1) % static_cast<int>(supportedTargets.size()));
+    modTargetButtons[slot]->setButtonText(targetToString(supportedTargets[nextIndex]));
     notifySlotDataChanged();
 }
 
@@ -692,6 +704,53 @@ void FooterPanel::updateModParamLabel(int slot)
             modParamLabels[slot]->setText("", juce::dontSendNotification);
             break;
     }
+}
+
+std::array<ModulationTarget, 5> FooterPanel::getSupportedModTargetsForLane(int lane)
+{
+    if (lane == kFilterLaneIndex)
+    {
+        return {
+            ModulationTarget::None,
+            ModulationTarget::FilterCutoff,
+            ModulationTarget::FilterResonance,
+            ModulationTarget::Volume,
+            ModulationTarget::Pan
+        };
+    }
+
+    return {
+        ModulationTarget::None,
+        ModulationTarget::None,
+        ModulationTarget::None,
+        ModulationTarget::None,
+        ModulationTarget::None
+    };
+}
+
+bool FooterPanel::hasSupportedModTargetsForLane(int lane)
+{
+    return lane == kFilterLaneIndex;
+}
+
+bool FooterPanel::isModTargetSupportedForLane(ModulationTarget target) const
+{
+    if (target == ModulationTarget::None)
+        return true;
+
+    const auto supportedTargets = getSupportedModTargetsForLane(selectedLane);
+    for (const auto supportedTarget : supportedTargets)
+    {
+        if (supportedTarget == target)
+            return true;
+    }
+
+    return false;
+}
+
+ModulationTarget FooterPanel::sanitizeModTargetForLane(ModulationTarget target) const
+{
+    return isModTargetSupportedForLane(target) ? target : ModulationTarget::None;
 }
 
 juce::String FooterPanel::targetToString(ModulationTarget t)
@@ -764,7 +823,7 @@ ModulationData FooterPanel::readModulationDataFromControls() const
     for (int i = 0; i < kNumModSlots; ++i)
     {
         auto& slot = modData.slots[static_cast<size_t>(i)];
-        slot.target = targetFromString(modTargetButtons[i]->getButtonText());
+        slot.target = sanitizeModTargetForLane(targetFromString(modTargetButtons[i]->getButtonText()));
         slot.source = sourceFromString(modSourceButtons[i]->getButtonText());
         slot.amount = static_cast<float>(modAmountSliders[i]->getValue()) / 100.0f;
 
