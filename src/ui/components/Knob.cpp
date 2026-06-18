@@ -15,15 +15,16 @@ void Knob::paint(juce::Graphics& g)
     const float bw     = static_cast<float>(bounds.getWidth());
     const float bh     = static_cast<float>(bounds.getHeight());
 
-    const float labelH = label.isNotEmpty() ? 12.0f : 0.0f;
-    const float valueH = 14.0f;
+    const float labelH = label.isNotEmpty() ? 11.0f : 0.0f;
+    const float valueH = 10.0f;
     const float arcH   = bh - labelH - valueH;
 
+    // Label (above knob, clean)
     if (label.isNotEmpty())
     {
-        g.setColour(accentColour.withAlpha(0.72f));
-        g.setFont(laf != nullptr ? laf->getVcrFont(12.0f)
-                                 : juce::Font(juce::FontOptions().withHeight(12.0f)));
+        g.setColour(Colours::white.withAlpha(0.50f));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(11.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(11.0f)));
         g.drawText(label,
                    juce::Rectangle<float>(0.0f, 0.0f, bw, labelH).toNearestInt(),
                    juce::Justification::centred, false);
@@ -31,61 +32,97 @@ void Knob::paint(juce::Graphics& g)
 
     const auto arcBounds = juce::Rectangle<float>(0.0f, labelH, bw, arcH).reduced(4.0f);
     const auto centre    = arcBounds.getCentre();
-    const float radius   = juce::jmin(arcBounds.getWidth(), arcBounds.getHeight()) / 2.0f - 1.0f;
+    const float radius   = juce::jmin(arcBounds.getWidth(), arcBounds.getHeight()) / 2.0f - 2.0f;
 
     const float startAngle = juce::MathConstants<float>::pi * 1.25f;
     const float endAngle   = juce::MathConstants<float>::pi * 2.75f;
     const float arcRange   = endAngle - startAngle;
     const float valueAngle = startAngle + static_cast<float>(getNormalizedValue()) * arcRange;
 
-    juce::Path backgroundArc;
-    backgroundArc.addCentredArc(centre.x, centre.y, radius, radius,
-                                 0.0f, startAngle, endAngle, true);
-    g.setColour(Colours::white.withAlpha(0.10f));
-    g.strokePath(backgroundArc,
-                 juce::PathStrokeType(3.5f, juce::PathStrokeType::curved,
+    const bool isHovering = isMouseOverOrDragging();
+    const float arcAlpha = isHovering ? 1.0f : 0.85f;
+
+    // Outer ring (bgSurface with inner highlight)
+    juce::Path outerRing;
+    outerRing.addCentredArc(centre.x, centre.y, radius, radius,
+                            0.0f, startAngle, endAngle, true);
+    g.setColour(Colours::bgSurface);
+    g.strokePath(outerRing,
+                 juce::PathStrokeType(2.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+    g.setColour(Colours::white.withAlpha(0.08f));
+    g.strokePath(outerRing,
+                 juce::PathStrokeType(1.0f, juce::PathStrokeType::curved,
                                       juce::PathStrokeType::rounded));
 
+    // Background arc (subtle track)
+    juce::Path backgroundArc;
+    backgroundArc.addCentredArc(centre.x, centre.y, radius - 2.0f, radius - 2.0f,
+                                 0.0f, startAngle, endAngle, true);
+    g.setColour(Colours::white.withAlpha(0.06f));
+    g.strokePath(backgroundArc,
+                 juce::PathStrokeType(2.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+
+    // Value arc (colored indicator with glow)
     if (getNormalizedValue() > 0.001)
     {
         juce::Path valueArc;
-        valueArc.addCentredArc(centre.x, centre.y, radius, radius,
+        valueArc.addCentredArc(centre.x, centre.y, radius - 2.0f, radius - 2.0f,
                                0.0f, startAngle, valueAngle, true);
 
-        g.setColour(accentColour.withAlpha(0.20f));
+        // Glow (thick, low alpha)
+        g.setColour(accentColour.withAlpha(0.18f * arcAlpha));
         g.strokePath(valueArc,
-                     juce::PathStrokeType(7.0f, juce::PathStrokeType::curved,
+                     juce::PathStrokeType(5.0f, juce::PathStrokeType::curved,
                                           juce::PathStrokeType::rounded));
 
-        g.setColour(accentColour);
+        // Core arc (precise, high alpha)
+        g.setColour(accentColour.withAlpha(0.90f * arcAlpha));
         g.strokePath(valueArc,
-                     juce::PathStrokeType(3.5f, juce::PathStrokeType::curved,
+                     juce::PathStrokeType(2.5f, juce::PathStrokeType::curved,
                                           juce::PathStrokeType::rounded));
     }
 
-    // JUCE addCentredArc measures angles clockwise from 12 o'clock,
-    // but cos/sin use counter-clockwise from 3 o'clock.
-    // Offset by -pi/2 to convert JUCE angle convention to trig convention.
-    const float trigAngle = valueAngle - juce::MathConstants<float>::halfPi;
-    const float thumbX = centre.x + radius * std::cos(trigAngle);
-    const float thumbY = centre.y + radius * std::sin(trigAngle);
-    g.setColour(Colours::white.withAlpha(0.88f));
-    g.fillEllipse(thumbX - 2.5f, thumbY - 2.5f, 5.0f, 5.0f);
+    // 3D Center cap
+    const float capRadius = radius * 0.60f;
+    const auto capBounds = juce::Rectangle<float>(
+        centre.x - capRadius, centre.y - capRadius,
+        capRadius * 2.0f, capRadius * 2.0f);
 
-    g.setColour(Colours::displayBezel);
-    g.fillEllipse(centre.x - 3.5f, centre.y - 3.5f, 7.0f, 7.0f);
-    g.setColour(accentColour.withAlpha(0.90f));
-    g.fillEllipse(centre.x - 1.5f, centre.y - 1.5f, 3.0f, 3.0f);
+    // Cap shadow (gives depth)
+    g.setColour(juce::Colours::black.withAlpha(0.40f));
+    g.fillEllipse(capBounds.translated(0.0f, 1.0f));
 
+    // Cap body (radial gradient for 3D effect)
+    juce::ColourGradient capGrad(
+        Colours::panelRaised, capBounds.getX(), capBounds.getY(),
+        Colours::bgSurface, capBounds.getRight(), capBounds.getBottom(), true);
+    g.setGradientFill(capGrad);
+    g.fillEllipse(capBounds);
+
+    // Cap highlight (top edge)
+    g.setColour(Colours::white.withAlpha(0.08f));
+    g.drawEllipse(capBounds.reduced(1.0f), 1.0f);
+
+    // Cap inner shadow (bottom edge)
+    g.setColour(juce::Colours::black.withAlpha(0.30f));
+    g.drawEllipse(capBounds.translated(0.0f, 0.5f).reduced(1.0f), 1.0f);
+
+    // Center dot (value indicator, grows on hover)
+    const float dotRadius = isHovering ? 3.0f : 2.5f;
+    const float dotAlpha = isHovering ? 1.0f : 0.70f;
+    g.setColour(accentColour.withAlpha(dotAlpha));
+    g.fillEllipse(centre.x - dotRadius, centre.y - dotRadius,
+                  dotRadius * 2.0f, dotRadius * 2.0f);
+
+    // Value text (below knob, clean, no background box)
     const auto valueStr  = formatValue();
     const auto valueRect = juce::Rectangle<float>(0.0f, bh - valueH, bw, valueH);
 
-    g.setColour(Colours::white.withAlpha(0.05f));
-    g.fillRoundedRectangle(valueRect.reduced(5.0f, 2.0f), 2.0f);
-
-    g.setColour(accentColour.withAlpha(0.88f));
-    g.setFont(laf != nullptr ? laf->getSpaceMonoFont(14.0f, true)
-                             : juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold")));
+    g.setColour(accentColour.withAlpha(0.72f));
+    g.setFont(laf != nullptr ? laf->getSpaceMonoFont(10.0f)
+                             : juce::Font(juce::FontOptions().withHeight(10.0f)));
     g.drawText(valueStr, valueRect.toNearestInt(), juce::Justification::centred, false);
 }
 
