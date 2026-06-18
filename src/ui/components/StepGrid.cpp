@@ -421,6 +421,47 @@ void StepGrid::applyPaintToCell(int lane, int step)
         cell->setToggleState(paintMode, juce::sendNotification);
 }
 
+void StepGrid::cyclePresetAt(int lane, int step, int direction)
+{
+    if (lane < 0 || lane >= numLanes || step < 0 || step >= numSteps || direction == 0)
+        return;
+
+    if (isStepConsumedByChain(lane, step))
+        step = findChainRoot(lane, step);
+
+    auto data = sequencerState.getStepData(lane, step);
+    const int currentPreset = data.active && data.presetIndex > 0 ? data.presetIndex : 0;
+    int nextPreset = currentPreset + direction;
+
+    if (nextPreset < 1)
+        nextPreset = 20;
+    else if (nextPreset > 20)
+        nextPreset = 1;
+
+    data.active = true;
+    data.presetIndex = nextPreset;
+    data.chainLength = juce::jlimit(1, numSteps - step, data.chainLength);
+
+    if (onStepPresetEditStarting)
+        onStepPresetEditStarting();
+
+    sequencerState.setStepData(lane, step, data);
+    setStepActive(lane, step, true);
+
+    if (auto* cell = getCell(lane, step))
+    {
+        cell->setActive(true);
+        cell->setPresetIndex(nextPreset);
+    }
+
+    setSelectedStep(lane, step);
+    refreshChainVisuals(lane);
+    refreshLane(lane);
+
+    if (onStepPresetChanged)
+        onStepPresetChanged(lane, step, nextPreset);
+}
+
 void StepGrid::mouseDown(const juce::MouseEvent& e)
 {
     for (int l = 0; l < numLanes; ++l)
@@ -598,6 +639,22 @@ void StepGrid::mouseMove(const juce::MouseEvent& e)
         if (hoverLane >= 0 && hoverStep >= 0)
             cells[hoverLane][hoverStep]->setHovered(true);
     }
+}
+
+void StepGrid::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    if (wheel.deltaY == 0.0f)
+        return;
+
+    auto [lane, step] = hitTestCell(e.getPosition());
+    if (lane < 0 || step < 0)
+    {
+        lane = hoverLane >= 0 ? hoverLane : selectedLane;
+        step = hoverStep >= 0 ? hoverStep : selectedStep;
+    }
+
+    const int direction = wheel.deltaY >= 0.0f ? 1 : -1;
+    cyclePresetAt(lane, step, direction);
 }
 
 void StepGrid::mouseExit(const juce::MouseEvent& /*e*/)

@@ -120,6 +120,12 @@ assertContains(sidebar, "updateInfoForSelection", "sidebar must restore selected
 if (sidebar.includes("Hover a preset to see details...")) {
   fail("sidebar detail panel must not depend on hover-only copy");
 }
+assertContains(stepGrid, "mouseWheelMove", "step grid must support mouse-wheel preset cycling");
+assertContains(stepGrid, "cyclePresetAt", "step grid must cycle presets through a dedicated helper");
+assertContains(stepGrid, "onStepPresetEditStarting", "step grid preset cycling must expose a pre-edit undo hook");
+assertContains(stepGrid, "onStepPresetChanged", "step grid preset cycling must notify the editor");
+assertContains(editor, "onStepPresetEditStarting", "editor must snapshot before wheel-driven preset changes");
+assertContains(editor, "onStepPresetChanged", "editor must listen for wheel-driven preset changes");
 assertContains(parameterIDs, 'juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1', "step resolution choices must include 1/16 while defaulting to 1/8");
 assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must map step resolution index 0 to 1/16");
 assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");

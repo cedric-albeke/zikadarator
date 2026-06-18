@@ -177,6 +177,23 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         markCurrentPresetDirty();
     };
 
+    sequencerPanel.getStepGrid().onStepPresetEditStarting = [this]
+    {
+        pushUndoSnapshot();
+    };
+
+    sequencerPanel.getStepGrid().onStepPresetChanged = [this](int lane, int step, int presetIndex)
+    {
+        const auto& stepData = processorRef.getSequencerState().getStepData(lane, step);
+        sidebarPanel.setSelectedStep(lane, step, stepData);
+
+        const int slotIndex = presetIndex >= 1 && presetIndex <= 4 ? presetIndex - 1 : 0;
+        const auto& userSlot = processorRef.getSequencerState().getUserSlot(lane, slotIndex);
+        footerPanel.setSelectedSlot(lane, slotIndex, userSlot, laneInfos[lane].name);
+
+        markCurrentPresetDirty();
+    };
+
     sidebarPanel.onPresetAssigned = [this](int lane, int step, int presetIndex)
     {
         pushUndoSnapshot();

@@ -22,6 +22,7 @@ public:
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseMove(const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
     void mouseExit(const juce::MouseEvent& e) override;
 
     void setPlayingStep(int step);
@@ -40,6 +41,8 @@ public:
 
     std::function<void(int lane, int step)> onStepSelected;
     std::function<void(int lane, int step, int chainLength)> onChainChanged;
+    std::function<void()> onStepPresetEditStarting;
+    std::function<void(int lane, int step, int presetIndex)> onStepPresetChanged;
 
     static constexpr int numLanes = 6;
     static constexpr int numSteps = 16;
@@ -84,6 +87,7 @@ private:
     void timerCallback() override;
     std::pair<int, int> hitTestCell(juce::Point<int> pos) const;
     void applyPaintToCell(int lane, int step);
+    void cyclePresetAt(int lane, int step, int direction);
     int findChainRoot(int lane, int step) const;
 };
 
