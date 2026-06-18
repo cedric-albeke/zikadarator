@@ -43,13 +43,15 @@ private:
     int selectedPresetIndex{-1};
     int focusedPresetButtonIndex{-1};
 
-    juce::Label infoLabel;
+    juce::Label infoTitleLabel;
+    juce::Label infoDetailLabel;
     std::vector<std::unique_ptr<juce::TextButton>> presetButtons;
 
     std::vector<LanePresetDef> getPresetsForLane(int lane) const;
     void buildPresetGrid();
     void highlightPresetButton(int presetIndex);
     void notifyPresetAssigned(int presetIndex);
+    void setInfoText(const juce::String& title, const juce::String& detail, bool active);
     void updateInfoForSelection();
     void updateInfoForHover(int presetIndex);
     void moveFocusedPresetBy(int columnDelta, int rowDelta);

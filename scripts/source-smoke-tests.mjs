@@ -193,8 +193,15 @@ assertContains(sidebar, "focusedPresetButtonIndex", "sidebar preset browser must
 assertContains(sidebar, "moveFocusedPresetBy", "sidebar preset browser must support arrow-key focus movement");
 assertContains(sidebar, "activateFocusedPreset", "sidebar preset browser must activate focused presets from keyboard");
 assertContains(sidebar, "juce::KeyPress::spaceKey", "sidebar preset browser must handle space/return activation");
+assertContains(sidebar, "kInfoH = 84", "sidebar detail panel must reserve enough room for title and body copy");
+assertContains(read("src/ui/panels/SidebarPanel.h"), "infoTitleLabel", "sidebar detail panel must split title from body copy");
+assertContains(read("src/ui/panels/SidebarPanel.h"), "infoDetailLabel", "sidebar detail panel must split detail body from title");
+assertContains(sidebar, "setInfoText", "sidebar detail panel must update structured title/detail copy through one helper");
 if (sidebar.includes("Hover a preset to see details...")) {
   fail("sidebar detail panel must not depend on hover-only copy");
+}
+if (sidebar.includes("\"Selected: \" +")) {
+  fail("sidebar detail panel must not concatenate selected preset title and body into one cramped line");
 }
 assertContains(stepGrid, "mouseWheelMove", "step grid must support mouse-wheel preset cycling");
 assertContains(stepGrid, "cyclePresetAt", "step grid must cycle presets through a dedicated helper");

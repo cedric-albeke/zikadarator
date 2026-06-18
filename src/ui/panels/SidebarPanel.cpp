@@ -9,7 +9,7 @@ namespace {
     constexpr int kUserSlotCols = 4;
     constexpr int kButtonGap = 6;
     constexpr int kHeaderH = 80;
-    constexpr int kInfoH = 60;
+    constexpr int kInfoH = 84;
     constexpr int kUserSlotSectionGap = 18;
     constexpr int kUserSlotLabelH = 14;
 
@@ -34,12 +34,20 @@ namespace {
 SidebarPanel::SidebarPanel()
 {
     setWantsKeyboardFocus(true);
-    infoLabel.setJustificationType(juce::Justification::centredLeft);
-    infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
-    infoLabel.setColour(juce::Label::textColourId, Colours::white50);
-    infoLabel.setMinimumHorizontalScale(1.0f);
-    infoLabel.setText("Select a step to inspect presets.", juce::dontSendNotification);
-    addAndMakeVisible(infoLabel);
+
+    infoTitleLabel.setJustificationType(juce::Justification::centredLeft);
+    infoTitleLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
+    infoTitleLabel.setMinimumHorizontalScale(0.82f);
+    infoTitleLabel.setInterceptsMouseClicks(false, false);
+    addAndMakeVisible(infoTitleLabel);
+
+    infoDetailLabel.setJustificationType(juce::Justification::centredLeft);
+    infoDetailLabel.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+    infoDetailLabel.setMinimumHorizontalScale(0.78f);
+    infoDetailLabel.setInterceptsMouseClicks(false, false);
+    addAndMakeVisible(infoDetailLabel);
+
+    setInfoText("NO STEP SELECTED", "Choose a sequencer step to inspect lane presets.", false);
 }
 
 std::vector<LanePresetDef> SidebarPanel::getPresetsForLane(int lane) const
@@ -249,6 +257,15 @@ int SidebarPanel::findPresetButtonIndex(int presetIndex) const
     return -1;
 }
 
+void SidebarPanel::setInfoText(const juce::String& title, const juce::String& detail, bool active)
+{
+    infoTitleLabel.setText(title, juce::dontSendNotification);
+    infoDetailLabel.setText(detail, juce::dontSendNotification);
+
+    infoTitleLabel.setColour(juce::Label::textColourId, active ? Colours::white : Colours::white50);
+    infoDetailLabel.setColour(juce::Label::textColourId, active ? Colours::white.withAlpha(0.68f) : Colours::white50);
+}
+
 void SidebarPanel::updateInfoForHover(int presetIndex)
 {
     if (presetIndex < 0)
@@ -262,8 +279,7 @@ void SidebarPanel::updateInfoForHover(int presetIndex)
     {
         if (p.presetIndex == presetIndex)
         {
-            infoLabel.setText(p.infoText, juce::dontSendNotification);
-            infoLabel.setColour(juce::Label::textColourId, Colours::white);
+            setInfoText(p.tooltip.toUpperCase(), p.infoText, true);
             return;
         }
     }
@@ -274,15 +290,13 @@ void SidebarPanel::updateInfoForSelection()
 {
     if (currentLane < 0 || !hasSelection)
     {
-        infoLabel.setText("Select a step to inspect presets.", juce::dontSendNotification);
-        infoLabel.setColour(juce::Label::textColourId, Colours::white50);
+        setInfoText("NO STEP SELECTED", "Choose a sequencer step to inspect lane presets.", false);
         return;
     }
 
     if (selectedPresetIndex <= 0)
     {
-        infoLabel.setText("Selected step has no preset. Choose an icon to arm this lane.", juce::dontSendNotification);
-        infoLabel.setColour(juce::Label::textColourId, Colours::white50);
+        setInfoText("NO PRESET", "Choose a preset icon to arm this lane.", false);
         return;
     }
 
@@ -291,14 +305,12 @@ void SidebarPanel::updateInfoForSelection()
     {
         if (p.presetIndex == selectedPresetIndex)
         {
-            infoLabel.setText("Selected: " + p.tooltip + " - " + p.infoText, juce::dontSendNotification);
-            infoLabel.setColour(juce::Label::textColourId, Colours::white);
+            setInfoText(p.tooltip.toUpperCase(), p.infoText, true);
             return;
         }
     }
 
-    infoLabel.setText("Selected preset is unavailable for this lane.", juce::dontSendNotification);
-    infoLabel.setColour(juce::Label::textColourId, Colours::white50);
+    setInfoText("PRESET UNAVAILABLE", "This lane cannot use the selected preset.", false);
 }
 
 void SidebarPanel::paint(juce::Graphics& g)
@@ -351,6 +363,13 @@ void SidebarPanel::paint(juce::Graphics& g)
 
     auto infoBounds = getLocalBounds().removeFromBottom(kInfoH).toFloat().reduced(8, 4);
     ZikadaLookAndFeel::drawDeviceDisplay(g, infoBounds.toNearestInt());
+
+    if (currentLane >= 0)
+    {
+        auto accent = infoBounds.reduced(8.0f, 10.0f).withWidth(3.0f);
+        g.setColour(laneColour.withAlpha(0.78f));
+        g.fillRoundedRectangle(accent, 1.5f);
+    }
 }
 
 void SidebarPanel::paintOverChildren(juce::Graphics& g)
@@ -416,8 +435,11 @@ void SidebarPanel::resized()
     bounds.removeFromTop(8);
 
     auto infoArea = bounds.removeFromBottom(kInfoH);
-    infoArea.removeFromTop(4);
-    infoLabel.setBounds(infoArea);
+    auto infoTextArea = infoArea.reduced(18, 11);
+    infoTextArea.removeFromLeft(5);
+    infoTitleLabel.setBounds(infoTextArea.removeFromTop(24));
+    infoTextArea.removeFromTop(3);
+    infoDetailLabel.setBounds(infoTextArea);
 
     auto gridArea = bounds;
     const int cols = kFactoryGridCols;

@@ -40,11 +40,12 @@ Date: 2026-06-18
 - Added source smoke guards so the display API, painter, and editor wiring remain present.
 - Reworked the sidebar preset browser from a flat five-column icon wall into a four-column factory grid with visible short labels and a separated U1-U4 user-slot row.
 - Added keyboard focus, arrow navigation, visible focus ring, and Space/Return activation for the sidebar preset browser.
+- Expanded the sidebar selected-preset readout into a roomier device-display panel with separate title/body labels and a lane-color accent.
 
 ## Recommended Next Slices
 
 1. Sequencer hierarchy pass: make the grid the hero, quiet passive panel borders, strengthen 4-beat grouping, and reduce per-cell glow.
-2. Sidebar follow-up: increase the selected-preset detail area and add direct lane-category grouping if the preset set grows beyond 16 factory options.
+2. Sidebar follow-up: add direct lane-category grouping if the preset set grows beyond 16 factory options.
 3. Footer rework: split selected-step controls into lane-aware groups with more knob spacing and fewer always-visible globals.
 4. Engine FX slice: implement one real groove effect before adding labels. The lowest-risk first slice is real Slice-lane reverse/repeat/stutter/retrigger playback, because the UI already exposes those concepts and the existing `SliceEngine` can be extended without promising vinyl/tape-stop yet.
 5. Performance slice: cache static grid/panel layers and repaint only old/new playhead columns plus active CRT bounds.
