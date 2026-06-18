@@ -9,6 +9,7 @@ Use this checklist before sharing a build with external testers.
 - `ZIKADARATOR-windows-vst3`
 - `ZIKADARATOR-windows-zip`
 - `ZIKADARATOR-windows-installer`
+- `SHA256SUMS.txt` inside the Windows ZIP/package matches the shipped standalone and VST3 binary.
 
 ### macOS
 

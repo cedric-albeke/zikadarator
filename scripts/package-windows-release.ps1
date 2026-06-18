@@ -47,6 +47,35 @@ function Assert-FileExists {
     }
 }
 
+function Write-PackageChecksums {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $PackagePath
+    )
+
+    $entries = @(
+        @{ Label = "ZIKADARATOR.exe"; Path = Join-Path $PackagePath "ZIKADARATOR.exe" },
+        @{ Label = "ZIKADARATOR.vst3/Contents/x86_64-win/ZIKADARATOR.vst3"; Path = Join-Path $PackagePath "ZIKADARATOR.vst3/Contents/x86_64-win/ZIKADARATOR.vst3" },
+        @{ Label = "ZIKADARATOR.vst3/Contents/Resources/moduleinfo.json"; Path = Join-Path $PackagePath "ZIKADARATOR.vst3/Contents/Resources/moduleinfo.json" },
+        @{ Label = "install.bat"; Path = Join-Path $PackagePath "install.bat" },
+        @{ Label = "README.txt"; Path = Join-Path $PackagePath "README.txt" }
+    )
+
+    $lines = @(
+        "ZIKADARATOR V1 Windows Test Package SHA-256",
+        "Generated: $(Get-Date -Format o)",
+        ""
+    )
+
+    foreach ($entry in $entries) {
+        Assert-FileExists -Path $entry.Path -Label $entry.Label
+        $hash = Get-FileHash -LiteralPath $entry.Path -Algorithm SHA256
+        $lines += "$($hash.Hash.ToLowerInvariant())  $($entry.Label)"
+    }
+
+    $lines | Set-Content -LiteralPath (Join-Path $PackagePath "SHA256SUMS.txt") -Encoding ASCII
+}
+
 $script:RepoRoot = [System.IO.Path]::GetFullPath((Resolve-Path (Join-Path $PSScriptRoot "..")).Path)
 Set-Location $script:RepoRoot
 
@@ -117,7 +146,12 @@ Contents:
 If Windows Application Control blocks JUCE's VST3 helper, this package script restores
 a tracked moduleinfo.json fallback before packaging so the bundle is not left with a
 zero-byte manifest.
+
+SHA256SUMS.txt lists checksums for the standalone, VST3 binary, moduleinfo, installer
+helper, and this README so tester downloads can be verified after transfer.
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "README.txt") -Encoding ASCII
+
+Write-PackageChecksums -PackagePath $packagePath
 
 if (Test-Path -LiteralPath $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force

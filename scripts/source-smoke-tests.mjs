@@ -154,6 +154,8 @@ assertContains(windowsPackageScript, "moduleinfo.json", "Windows package script 
 assertContains(windowsPackageScript, "packaging/windows/moduleinfo.json", "Windows package script must use tracked moduleinfo fallback when JUCE helper is blocked");
 assertContains(windowsPackageScript, "Length -eq 0", "Windows package script must repair zero-byte moduleinfo outputs");
 assertContains(windowsPackageScript, "Compress-Archive", "Windows package script must create a tester-facing ZIP package");
+assertContains(windowsPackageScript, "SHA256SUMS.txt", "Windows package script must include tester-facing SHA-256 checksums");
+assertContains(windowsPackageScript, "Get-FileHash", "Windows package script must compute package checksums with SHA-256");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }

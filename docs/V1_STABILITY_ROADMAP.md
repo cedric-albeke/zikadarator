@@ -36,6 +36,7 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Waveform display double framing is removed: the SequencerPanel already draws the device bezel, so WaveformDisplay no longer draws its own redundant bezel.
 - Release file logging is opt-in outside debug builds through `ZIKADARATOR_DEBUG_LOG=1`, and footer/workspace interaction helpers no longer write routine UI logs.
 - Ableton log scanning now treats a missing ZIKADARATOR UI log as expected for quiet release builds, with `-RequireZikadaLog` available for strict diagnostic-log passes.
+- Windows tester packages now include `SHA256SUMS.txt` so the standalone, VST3 binary, and module metadata can be verified after transfer.
 - Validation scripts now auto-discover Steinberg VST3 validator on common Windows/macOS paths.
 - Windows CI now syntax-checks the macOS validation script via Bash (`bash -n`).
 - Processor regression tests now cover host-state roundtrip (`exportFullState` / `applyFullState`) and host-layout changes (mono → stereo → mono).
