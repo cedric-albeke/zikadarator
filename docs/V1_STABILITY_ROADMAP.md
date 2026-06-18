@@ -26,6 +26,7 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Keyboard focus, arrow navigation, visible focus rings, and space/return activation are now implemented on the StepGrid. Off-cell wheel preset cycling requires an explicit Shift gesture.
 - A column-wide playhead rail is now drawn in the step grid at the current playing step, spanning all lanes with a subtle neon glow.
 - StepGrid layout metrics are centralized across painting, resizing, hit testing, and playhead drawing, and each lane now has subtle four-step beat-group backplates to make the sequencer read more musically.
+- Passive sequencer framing and inactive/active step glow have been reduced so the grid hierarchy favors selected, playing, hovered, and active musical events over decoration.
 - Waveform display double framing is removed: the SequencerPanel already draws the device bezel, so WaveformDisplay no longer draws its own redundant bezel.
 - Validation scripts now auto-discover Steinberg VST3 validator on common Windows/macOS paths.
 - Windows CI now syntax-checks the macOS validation script via Bash (`bash -n`).

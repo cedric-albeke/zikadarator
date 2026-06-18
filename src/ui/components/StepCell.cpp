@@ -3,6 +3,13 @@
 
 namespace zikada {
 
+namespace {
+    constexpr float kPlayingGlowAlpha = 0.26f;
+    constexpr float kActiveGlowAlpha = 0.12f;
+    constexpr float kActiveHoverGlowAlpha = 0.24f;
+    constexpr float kInactiveHoverBorderAlpha = 0.38f;
+}
+
 StepCell::StepCell(int lane, int step)
     : Button(""), laneIndex(lane), stepIndex(step)
 {
@@ -28,7 +35,7 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
     {
         const auto glowBounds = bounds.expanded(4.0f);
         juce::ColourGradient playGlow(
-            Colours::neonGreen.withAlpha(0.35f), glowBounds.getCentreX(), glowBounds.getCentreY(),
+            Colours::neonGreen.withAlpha(kPlayingGlowAlpha), glowBounds.getCentreX(), glowBounds.getCentreY(),
             Colours::neonGreen.withAlpha(0.0f),  glowBounds.getRight(),   glowBounds.getBottom(), true);
         g.setGradientFill(playGlow);
         g.fillRoundedRectangle(glowBounds, corner + 3.0f);
@@ -45,9 +52,9 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         if (down)    cellColour = cellColour.darker(0.20f);
 
         // Outer glow (subtle)
-        const auto glowBounds = bounds.expanded(hovered ? 4.0f : 2.0f);
+        const auto glowBounds = bounds.expanded(hovered ? 3.0f : 1.5f);
         juce::ColourGradient glowGrad(
-            cellColour.withAlpha(hovered ? 0.35f : 0.20f), glowBounds.getCentreX(), glowBounds.getCentreY(),
+            cellColour.withAlpha(hovered ? kActiveHoverGlowAlpha : kActiveGlowAlpha), glowBounds.getCentreX(), glowBounds.getCentreY(),
             cellColour.withAlpha(0.0f),  glowBounds.getRight(),   glowBounds.getBottom(), true);
         g.setGradientFill(glowGrad);
         g.fillRoundedRectangle(glowBounds, corner + 2.0f);
@@ -74,13 +81,13 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
                    1.0f);
 
         // Border (lane color, strong)
-        g.setColour(cellColour.withAlpha(0.75f));
+        g.setColour(cellColour.withAlpha(0.68f));
         g.drawRoundedRectangle(bounds, corner, 1.5f);
 
         if (hovered)
         {
-            g.setColour(Colours::white.withAlpha(0.40f));
-            g.drawRoundedRectangle(bounds, corner, 2.5f);
+            g.setColour(Colours::white.withAlpha(0.28f));
+            g.drawRoundedRectangle(bounds, corner, 1.8f);
         }
 
         // Step number (bottom-right, 9px, white50)
@@ -122,7 +129,7 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
                    1.0f);
 
         // Border (subtle, group start slightly stronger)
-        const float borderAlpha = hovered ? 0.60f
+        const float borderAlpha = hovered ? kInactiveHoverBorderAlpha
                                 : (isGroupStart ? 0.18f : 0.10f);
         g.setColour(Colours::white.withAlpha(borderAlpha));
         g.drawRoundedRectangle(bounds, corner, hovered ? 2.0f : 1.0f);

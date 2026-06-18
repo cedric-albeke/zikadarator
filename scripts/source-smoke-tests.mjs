@@ -257,13 +257,18 @@ assertContains(knob, "getSpaceMonoFont(11.0f)", "knobs must use compact 11px lab
 
 const stepCell = read("src/ui/components/StepCell.cpp");
 assertContains(stepCell, "playing", "step cell must support playing state indicator");
-assertContains(stepCell, "Colours::neonGreen.withAlpha(0.35f)", "playing step must have a neon green outer glow");
+assertContains(stepCell, "kPlayingGlowAlpha = 0.26f", "playing step glow must stay visible but restrained");
 assertContains(stepCell, "Colours::neonGreen.withAlpha(0.65f)", "playing step must have a neon green border");
 assertContains(stepCell, "getSpaceMonoFont(9.0f)", "active step numbers must be compact 9px");
 assertContains(stepCell, "getSpaceMonoFont(11.0f)", "inactive step numbers must be 11px");
 assertContains(stepCell, "juce::Colours::black.withAlpha(0.25f)", "active step cells must have a bottom shadow");
-assertContains(stepCell, "cellColour.withAlpha(0.75f)", "active step cells must have a strong lane color border");
-assertContains(stepCell, "Colours::white.withAlpha(0.40f)", "hovered active cells must have a stronger white highlight border for AAA visibility");
+assertContains(stepCell, "kActiveGlowAlpha = 0.12f", "active step cells must use restrained glow now that beat groups provide structure");
+assertContains(stepCell, "kActiveHoverGlowAlpha = 0.24f", "hovered active step glow must be clearer than idle without flooding the grid");
+assertContains(stepCell, "kInactiveHoverBorderAlpha = 0.38f", "inactive hover borders must stay below selected/playing emphasis");
+assertContains(stepCell, "cellColour.withAlpha(0.68f)", "active step cells must keep a strong lane color border without overemphasis");
+assertContains(stepCell, "Colours::white.withAlpha(0.28f)", "hovered active cells must use a restrained white highlight border");
+assertContains(read("src/ui/panels/SequencerPanel.cpp"), "kGridSurfaceAlpha = 0.30f", "sequencer passive grid surface must be quieter than active step/panel states");
+assertContains(read("src/ui/panels/SequencerPanel.cpp"), "kGridBorderAlpha = 0.045f", "sequencer passive grid border must be quieter than active step/panel states");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Hertz)", "filter cutoff knobs must display Hz/kHz");
 assertContains(footer, "setScaleMode(KnobScaleMode::Logarithmic)", "filter cutoff knobs must use logarithmic movement");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Pan)", "pan knobs must display L/C/R position");

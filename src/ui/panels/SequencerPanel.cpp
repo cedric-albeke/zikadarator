@@ -2,6 +2,11 @@
 
 namespace zikada {
 
+namespace {
+    constexpr float kGridSurfaceAlpha = 0.30f;
+    constexpr float kGridBorderAlpha = 0.045f;
+}
+
 SequencerPanel::SequencerPanel(juce::AudioProcessorValueTreeState& apvts, SequencerState& seqState)
     : stepGrid(apvts, seqState)
 {
@@ -46,9 +51,9 @@ void SequencerPanel::paint(juce::Graphics& g)
 
     inner.removeFromTop(8);
     auto gridSurface = inner;
-    g.setColour(Colours::bgSurface.withAlpha(0.42f));
+    g.setColour(Colours::bgSurface.withAlpha(kGridSurfaceAlpha));
     g.fillRoundedRectangle(gridSurface.toFloat(), PM::kInnerCorner);
-    g.setColour(Colours::white.withAlpha(0.07f));
+    g.setColour(Colours::white.withAlpha(kGridBorderAlpha));
     g.drawRoundedRectangle(gridSurface.toFloat().reduced(0.5f), PM::kInnerCorner, 1.0f);
 }
 
