@@ -23,17 +23,16 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Step cells now support mouse-wheel preset cycling on the hovered or selected cell, with undo snapshotting, sidebar/footer refresh, APVTS active-state sync, and dirty-preset tracking.
 - Footer knobs now render real units and move through the right scale: cutoff uses Hz/kHz with logarithmic travel, resonance uses decimals, timing uses milliseconds/seconds, mix-style controls use percentages, volume/rate controls use multipliers, and pan uses L/C/R readouts.
 - Processor rendering now captures one immutable `SequencerState::Snapshot` per block and renders segments from that snapshot instead of reading mutable UI-owned sequencer state directly on the audio thread.
-- Slice and loop engines now preallocate their render buffers during `prepare()`, so slice triggering and loop snapshot refresh no longer grow vectors from render-called paths.
+- Keyboard focus, arrow navigation, visible focus rings, and space/return activation are now implemented on the StepGrid. Off-cell wheel preset cycling requires an explicit Shift gesture.
 
 ## V1 Blockers
 
 1. Finish the AAA interaction polish pass.
-   The compact canvas, header quick menu, persistent sidebar details, wheel preset cycling, and unit-aware knobs are in place, but keyboard focus/navigation, playhead rail, and waveform framing still need dedicated passes.
+1. The compact canvas, header quick menu, persistent sidebar details, wheel preset cycling, unit-aware knobs, and keyboard focus/navigation are in place, but the playhead rail and waveform framing still need dedicated passes.
 
 ## Next AAA UI/UX Polish
 
-1. Add keyboard focus, arrow navigation, and visible focus rings for custom-painted controls.
-2. Add a column-wide playhead rail in the step grid and remove double framing around the waveform.
+1. Add a column-wide playhead rail in the step grid and remove double framing around the waveform.
 
 ## Release Hardening
 

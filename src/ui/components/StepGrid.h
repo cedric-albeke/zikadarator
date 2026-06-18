@@ -24,6 +24,9 @@ public:
     void mouseMove(const juce::MouseEvent& e) override;
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
     void mouseExit(const juce::MouseEvent& e) override;
+    bool keyPressed(const juce::KeyPress& key) override;
+    void focusGained(juce::Component::FocusChangeType cause) override;
+    void focusLost(juce::Component::FocusChangeType cause) override;
 
     void setPlayingStep(int step);
     void setSelectedStep(int lane, int step);
@@ -88,6 +91,10 @@ private:
     std::pair<int, int> hitTestCell(juce::Point<int> pos) const;
     void applyPaintToCell(int lane, int step);
     void cyclePresetAt(int lane, int step, int direction);
+    void selectStepAndNotify(int lane, int step);
+    bool moveSelectionBy(int laneDelta, int stepDelta);
+    bool toggleSelectedStep();
+    void drawKeyboardFocusRing(juce::Graphics& g);
     int findChainRoot(int lane, int step) const;
 };
 

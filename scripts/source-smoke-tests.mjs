@@ -40,6 +40,7 @@ const processorHeader = read("src/PluginProcessor.h");
 const editor = read("src/PluginEditor.cpp");
 const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const footer = read("src/ui/panels/FooterPanel.cpp");
+const stepGridHeader = read("src/ui/components/StepGrid.h");
 const stepGrid = read("src/ui/components/StepGrid.cpp");
 const knobHeader = read("src/ui/components/Knob.h");
 const knob = read("src/ui/components/Knob.cpp");
@@ -158,6 +159,18 @@ assertContains(stepGrid, "mouseWheelMove", "step grid must support mouse-wheel p
 assertContains(stepGrid, "cyclePresetAt", "step grid must cycle presets through a dedicated helper");
 assertContains(stepGrid, "onStepPresetEditStarting", "step grid preset cycling must expose a pre-edit undo hook");
 assertContains(stepGrid, "onStepPresetChanged", "step grid preset cycling must notify the editor");
+assertContains(stepGrid, "setWantsKeyboardFocus(true)", "step grid must be keyboard focusable");
+assertContains(stepGrid, "grabKeyboardFocus()", "step grid must take focus when clicked");
+assertContains(stepGridHeader, "keyPressed", "step grid must handle keyboard navigation");
+assertContains(stepGrid, "moveSelectionBy", "step grid must expose arrow-key selection movement");
+assertContains(stepGrid, "toggleSelectedStep", "step grid must expose keyboard activation for the selected step");
+assertContains(stepGrid, "drawKeyboardFocusRing", "step grid must draw a visible keyboard focus ring");
+assertContains(stepGrid, "juce::KeyPress::leftKey", "step grid must handle left/right arrow keys");
+assertContains(stepGrid, "juce::KeyPress::spaceKey", "step grid must handle space/return activation");
+assertContains(stepGrid, "e.mods.isShiftDown()", "off-cell wheel preset cycling must require an explicit Shift gesture");
+if (stepGrid.includes("lane = hoverLane >= 0 ? hoverLane : selectedLane")) {
+  fail("step grid wheel cycling must not silently fall back from off-cell wheel movement to hover/selection");
+}
 assertContains(editor, "onStepPresetEditStarting", "editor must snapshot before wheel-driven preset changes");
 assertContains(editor, "onStepPresetChanged", "editor must listen for wheel-driven preset changes");
 assertContains(knobHeader, "KnobDisplayMode", "knobs must expose unit-aware display modes");

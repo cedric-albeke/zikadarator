@@ -6,6 +6,8 @@ namespace zikada {
 StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& seqState)
     : apvts(state), sequencerState(seqState)
 {
+    setWantsKeyboardFocus(true);
+    setMouseClickGrabsKeyboardFocus(true);
     setupGrid();
     startTimerHz(12);
 }
@@ -314,6 +316,8 @@ void StepGrid::paintOverChildren(juce::Graphics& g)
             g.drawLine(x1, y, x2, y, 3.0f);
         }
     }
+
+    drawKeyboardFocusRing(g);
 }
 
 void StepGrid::resized()
@@ -379,6 +383,8 @@ void StepGrid::setSelectedStep(int lane, int step)
     if (selectedLane >= 0 && selectedStep >= 0
         && selectedLane < numLanes && selectedStep < numSteps)
         cells[selectedLane][selectedStep]->setSelected(true);
+
+    repaint();
 }
 
 std::pair<int, int> StepGrid::hitTestCell(juce::Point<int> pos) const
@@ -462,8 +468,108 @@ void StepGrid::cyclePresetAt(int lane, int step, int direction)
         onStepPresetChanged(lane, step, nextPreset);
 }
 
+void StepGrid::selectStepAndNotify(int lane, int step)
+{
+    if (lane < 0 || lane >= numLanes || step < 0 || step >= numSteps)
+        return;
+
+    setSelectedStep(lane, step);
+
+    if (onStepSelected)
+        onStepSelected(lane, step);
+}
+
+bool StepGrid::moveSelectionBy(int laneDelta, int stepDelta)
+{
+    const int baseLane = selectedLane >= 0 ? selectedLane : 0;
+    const int baseStep = selectedStep >= 0 ? selectedStep : 0;
+    const int nextLane = juce::jlimit(0, numLanes - 1, baseLane + laneDelta);
+    const int nextStep = juce::jlimit(0, numSteps - 1, baseStep + stepDelta);
+
+    selectStepAndNotify(nextLane, nextStep);
+    return true;
+}
+
+bool StepGrid::toggleSelectedStep()
+{
+    if (selectedLane < 0 || selectedLane >= numLanes || selectedStep < 0 || selectedStep >= numSteps)
+    {
+        selectStepAndNotify(0, 0);
+        return true;
+    }
+
+    int lane = selectedLane;
+    int step = selectedStep;
+
+    if (isStepConsumedByChain(lane, step))
+        step = findChainRoot(lane, step);
+
+    auto data = sequencerState.getStepData(lane, step);
+
+    if (onStepPresetEditStarting)
+        onStepPresetEditStarting();
+
+    if (data.active)
+    {
+        data.active = false;
+        data.presetIndex = 0;
+        data.chainLength = 1;
+    }
+    else
+    {
+        data.active = true;
+        if (data.presetIndex <= 0)
+            data.presetIndex = 1;
+        data.chainLength = juce::jlimit(1, numSteps - step, data.chainLength);
+    }
+
+    sequencerState.setStepData(lane, step, data);
+    setStepActive(lane, step, data.active);
+
+    if (auto* cell = getCell(lane, step))
+    {
+        cell->setToggleState(data.active, juce::dontSendNotification);
+        cell->setActive(data.active);
+        cell->setPresetIndex(data.active ? data.presetIndex : 0);
+    }
+
+    setSelectedStep(lane, step);
+    refreshChainVisuals(lane);
+    refreshLane(lane);
+
+    if (onStepPresetChanged)
+        onStepPresetChanged(lane, step, data.presetIndex);
+
+    return true;
+}
+
+void StepGrid::drawKeyboardFocusRing(juce::Graphics& g)
+{
+    if (! hasKeyboardFocus(true)
+        || selectedLane < 0 || selectedLane >= numLanes
+        || selectedStep < 0 || selectedStep >= numSteps)
+        return;
+
+    if (auto* cell = getCell(selectedLane, selectedStep))
+    {
+        const auto bounds = cell->getBounds().toFloat().expanded(3.0f);
+        const auto laneColour = laneInfos[selectedLane].colour;
+
+        g.setColour(laneColour.withAlpha(0.18f));
+        g.fillRoundedRectangle(bounds.expanded(2.0f), 6.0f);
+
+        g.setColour(Colours::white.withAlpha(0.70f));
+        g.drawRoundedRectangle(bounds, 5.0f, 1.5f);
+
+        g.setColour(Colours::neonGreen.withAlpha(0.95f));
+        g.drawRoundedRectangle(bounds.expanded(2.0f), 7.0f, 1.2f);
+    }
+}
+
 void StepGrid::mouseDown(const juce::MouseEvent& e)
 {
+    grabKeyboardFocus();
+
     for (int l = 0; l < numLanes; ++l)
     {
         for (int s = 0; s < numSteps; ++s)
@@ -541,9 +647,7 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
         }
     }
 
-    setSelectedStep(lane, step);
-    if (onStepSelected)
-        onStepSelected(lane, step);
+    selectStepAndNotify(lane, step);
 }
 
 void StepGrid::mouseDrag(const juce::MouseEvent& e)
@@ -649,12 +753,47 @@ void StepGrid::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelD
     auto [lane, step] = hitTestCell(e.getPosition());
     if (lane < 0 || step < 0)
     {
-        lane = hoverLane >= 0 ? hoverLane : selectedLane;
-        step = hoverStep >= 0 ? hoverStep : selectedStep;
+        if (! e.mods.isShiftDown())
+            return;
+
+        lane = selectedLane;
+        step = selectedStep;
     }
 
     const int direction = wheel.deltaY >= 0.0f ? 1 : -1;
     cyclePresetAt(lane, step, direction);
+}
+
+bool StepGrid::keyPressed(const juce::KeyPress& key)
+{
+    switch (key.getKeyCode())
+    {
+        case juce::KeyPress::leftKey:   return moveSelectionBy(0, -1);
+        case juce::KeyPress::rightKey:  return moveSelectionBy(0, 1);
+        case juce::KeyPress::upKey:     return moveSelectionBy(-1, 0);
+        case juce::KeyPress::downKey:   return moveSelectionBy(1, 0);
+        case juce::KeyPress::homeKey:   return moveSelectionBy(0, -(selectedStep >= 0 ? selectedStep : 0));
+        case juce::KeyPress::endKey:    return moveSelectionBy(0, numSteps - 1 - (selectedStep >= 0 ? selectedStep : 0));
+        case juce::KeyPress::spaceKey:
+        case juce::KeyPress::returnKey:
+            return toggleSelectedStep();
+        default:
+            break;
+    }
+
+    return false;
+}
+
+void StepGrid::focusGained(juce::Component::FocusChangeType cause)
+{
+    juce::ignoreUnused(cause);
+    repaint();
+}
+
+void StepGrid::focusLost(juce::Component::FocusChangeType cause)
+{
+    juce::ignoreUnused(cause);
+    repaint();
 }
 
 void StepGrid::mouseExit(const juce::MouseEvent& /*e*/)
