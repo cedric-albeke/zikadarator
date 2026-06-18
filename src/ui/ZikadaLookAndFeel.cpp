@@ -133,24 +133,41 @@ void ZikadaLookAndFeel::drawPremiumPanel(juce::Graphics& g, juce::Rectangle<int>
     const float corner = PanelMetrics::kCorner;
     auto bf = bounds.toFloat();
 
+    // Layer 1: Outer rim (subtle shadow underneath)
+    g.setColour(juce::Colours::black.withAlpha(0.30f));
+    g.fillRoundedRectangle(bf.translated(0.0f, 2.0f), corner);
+
+    // Layer 2: Body surface (base fill)
     g.setColour(Colours::bgAccent);
     g.fillRoundedRectangle(bf, corner);
 
+    // Layer 3: Depth gradient (top lighter, bottom darker)
     juce::ColourGradient depthGrad(
-        Colours::panelRaised.withAlpha(0.32f), bf.getX(), bf.getY(),
-        Colours::bgPrimary.withAlpha(0.12f), bf.getX(), bf.getBottom(), false);
+        Colours::panelRaised.withAlpha(0.40f), bf.getX(), bf.getY(),
+        Colours::bgPrimary.withAlpha(0.20f), bf.getX(), bf.getBottom(), false);
     g.setGradientFill(depthGrad);
     g.fillRoundedRectangle(bf.reduced(1.0f), corner - 0.5f);
 
-    g.setColour(Colours::white.withAlpha(0.10f));
+    // Layer 4: Outer rim stroke (subtle highlight)
+    g.setColour(Colours::white.withAlpha(0.08f));
     g.drawRoundedRectangle(bf.reduced(0.5f), corner, 1.0f);
+
+    // Layer 5: Inner bezel (inset shadow line)
+    auto innerBounds = bf.reduced(2.5f);
+    g.setColour(juce::Colours::black.withAlpha(0.40f));
+    g.drawRoundedRectangle(innerBounds, corner - 1.0f, 1.0f);
+    g.setColour(Colours::white.withAlpha(0.04f));
+    g.drawRoundedRectangle(innerBounds.translated(0.0f, -0.5f), corner - 1.0f, 1.0f);
 
     if (accentTopEdge)
     {
         const float inset = corner * 0.7f;
-        g.setColour(Colours::neonGreen.withAlpha(0.55f));
+        g.setColour(Colours::neonGreen.withAlpha(0.65f));
         g.drawLine(bf.getX() + inset, bf.getY() + 0.75f,
-                   bf.getRight() - inset, bf.getY() + 0.75f, 1.5f);
+                   bf.getRight() - inset, bf.getY() + 0.75f, 1.8f);
+        g.setColour(Colours::neonGreen.withAlpha(0.25f));
+        g.drawLine(bf.getX() + inset, bf.getY() + 1.5f,
+                   bf.getRight() - inset, bf.getY() + 1.5f, 2.5f);
     }
 }
 
@@ -159,18 +176,31 @@ void ZikadaLookAndFeel::drawDeviceDisplay(juce::Graphics& g, juce::Rectangle<int
     const float corner = PanelMetrics::kInnerCorner;
     auto bf = bounds.toFloat();
 
+    // Outer bezel (dark, with subtle shadow)
     g.setColour(Colours::displayBezel);
     g.fillRoundedRectangle(bf, corner);
 
+    // Inset shadow (creates depth illusion)
+    g.setColour(juce::Colours::black.withAlpha(0.50f));
+    g.drawRoundedRectangle(bf.reduced(1.0f), corner - 0.5f, 1.5f);
+
+    // Inner surface (slightly lighter than bezel)
     auto innerBf = bf.reduced(3.0f, 3.0f);
     g.setColour(Colours::bgSurface.withAlpha(0.88f));
     g.fillRoundedRectangle(innerBf, corner - 1.0f);
 
+    // Top highlight (simulates light from above)
     g.setColour(Colours::white.withAlpha(0.06f));
     g.drawLine(innerBf.getX() + (corner - 1.0f), innerBf.getY() + 0.5f,
                innerBf.getRight() - (corner - 1.0f), innerBf.getY() + 0.5f, 1.0f);
 
-    g.setColour(Colours::neonGreen.withAlpha(0.20f));
+    // Bottom shadow (completes the inset effect)
+    g.setColour(juce::Colours::black.withAlpha(0.30f));
+    g.drawLine(innerBf.getX() + (corner - 1.0f), innerBf.getBottom() - 0.5f,
+               innerBf.getRight() - (corner - 1.0f), innerBf.getBottom() - 0.5f, 1.0f);
+
+    // Outer accent line (subtle green border)
+    g.setColour(Colours::neonGreen.withAlpha(0.25f));
     g.drawRoundedRectangle(bf.reduced(0.5f), corner, 1.0f);
 }
 

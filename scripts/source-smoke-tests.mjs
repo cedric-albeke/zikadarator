@@ -172,6 +172,20 @@ assertContains(stepGrid, "e.mods.isShiftDown()", "off-cell wheel preset cycling 
 if (stepGrid.includes("lane = hoverLane >= 0 ? hoverLane : selectedLane")) {
   fail("step grid wheel cycling must not silently fall back from off-cell wheel movement to hover/selection");
 }
+
+const laf = read("src/ui/ZikadaLookAndFeel.cpp");
+assertContains(laf, "drawPremiumPanel", "ZikadaLookAndFeel must draw premium panels with depth");
+assertContains(laf, "drawDeviceDisplay", "ZikadaLookAndFeel must draw device displays with bezel");
+assertContains(laf, "Colours::black.withAlpha(0.30f)", "premium panels must have a subtle drop shadow");
+assertContains(laf, "Colours::panelRaised.withAlpha(0.40f)", "premium panels must have a depth gradient from panelRaised");
+assertContains(laf, "Colours::white.withAlpha(0.08f)", "premium panels must have an outer rim stroke");
+assertContains(laf, "Colours::black.withAlpha(0.40f)", "premium panels must have an inner bezel shadow");
+assertContains(laf, "Colours::white.withAlpha(0.04f)", "premium panels must have an inner bezel highlight");
+assertContains(laf, "Colours::neonGreen.withAlpha(0.65f)", "premium panel top accent must be bright neon green");
+assertContains(laf, "Colours::neonGreen.withAlpha(0.25f)", "premium panel top accent must have a glow");
+assertContains(laf, "juce::Colours::black.withAlpha(0.50f)", "device displays must have an inset shadow");
+assertContains(laf, "juce::Colours::black.withAlpha(0.30f)", "device displays must have a bottom shadow");
+assertContains(laf, "Colours::neonGreen.withAlpha(0.25f)", "device displays must have a subtle green accent border");
 assertContains(editor, "onStepPresetEditStarting", "editor must snapshot before wheel-driven preset changes");
 assertContains(editor, "onStepPresetChanged", "editor must listen for wheel-driven preset changes");
 assertContains(knobHeader, "KnobDisplayMode", "knobs must expose unit-aware display modes");
