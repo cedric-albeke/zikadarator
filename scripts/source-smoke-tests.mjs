@@ -48,6 +48,7 @@ const presetManager = read("src/state/PresetManager.cpp");
 const parameterIDs = read("src/state/ParameterIDs.h");
 const sequencerEngine = read("src/engine/SequencerEngine.cpp");
 const sliceEngine = read("src/engine/SliceEngine.cpp");
+const envelopeShape = read("src/engine/EnvelopeShape.cpp");
 const loopEngine = read("src/engine/LoopEngine.cpp");
 const loopEngineHeader = read("src/engine/LoopEngine.h");
 const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
@@ -143,6 +144,11 @@ assertContains(processor, "SliceEngine::PlaybackMode::Stutter", "slice preset ma
 if (processor.includes("getSliceIndexForPreset")) {
   fail("slice preset mapping must not collapse back to index-only configuration");
 }
+assertContains(processor, "computeEnvelopeShape", "processor must use the shared envelope shape mapper");
+assertContains(envelopeShape, "case 13:", "EnvelopeShape must back the advertised Swell preset");
+assertContains(envelopeShape, "case 15:", "EnvelopeShape must back the advertised Tremolo preset");
+assertContains(envelopeShape, "case 16:", "EnvelopeShape must back the advertised Wobble preset");
+assertContains(envelopeShape, "case 20:", "EnvelopeShape must back the advertised Hold preset");
 assertContains(loopEngine, "loopBufferL.assign", "LoopEngine must preallocate snapshot buffers during prepare");
 if ([setLoopParameters, ensureLoopBufferSize, refreshLoopSnapshot].some((body) => body.includes(".resize(") || body.includes(".assign("))) {
   fail("LoopEngine render-called loop setup/snapshot paths must not allocate on the audio thread");

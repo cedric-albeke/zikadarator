@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "engine/EnvelopeShape.h"
 #include "PluginEditor.h"
 #include "engine/MixUtils.h"
 
@@ -254,20 +255,7 @@ void applyEnvelopeShape(float* left, float* right, int numSamples, int presetInd
     for (int i = 0; i < numSamples; ++i)
     {
         const float phase = static_cast<float>(std::fmod(phaseStart + phaseDelta * static_cast<double>(i), 1.0));
-        float shape = 1.0f;
-
-        switch (presetIndex)
-        {
-            case 5: shape = phase; break;
-            case 6: shape = 1.0f - phase; break;
-            case 7: shape = 0.75f; break;
-            case 8: shape = phase < 0.65f ? 1.0f : 0.0f; break;
-            case 9: shape = std::exp(-6.0f * phase); break;
-            case 10: shape = 0.35f + 0.65f * std::sin(phase * 3.14159265f); break;
-            case 11: shape = phase * phase; break;
-            case 12: shape = std::sin(phase * 6.2831853f) > 0.0f ? 1.0f : 0.25f; break;
-            default: break;
-        }
+        const float shape = computeEnvelopeShape(presetIndex, phase);
 
         const float gain = juce::jlimit(0.0f, 2.0f, volume * shape);
         left[i] *= gain * leftPanGain;

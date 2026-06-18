@@ -80,6 +80,7 @@ target_sources(ZikadaFX
         src/engine/SliceEngine.cpp
         src/engine/FilterEngine.cpp
         src/engine/DelayEngine.cpp
+        src/engine/EnvelopeShape.cpp
         src/engine/ReverbEngine.cpp
         src/engine/BitcrushEngine.cpp
         src/engine/PitchEngine.cpp
@@ -121,6 +122,7 @@ enable_testing()
 
 add_executable(ZikadaEngineTests
     tests/engine/EngineTestMain.cpp
+    tests/engine/EnvelopeShapeTests.cpp
     tests/engine/RealtimeRingBufferTests.cpp
     tests/engine/SliceEngineTests.cpp
     tests/engine/StepSchedulerTests.cpp
@@ -137,6 +139,7 @@ target_sources(ZikadaEngineTests
     PRIVATE
         src/engine/CircularAudioBuffer.cpp
         src/engine/DelayEngine.cpp
+        src/engine/EnvelopeShape.cpp
         src/engine/FilterEngine.cpp
         src/engine/LoopEngine.cpp
         src/engine/SliceEngine.cpp
@@ -175,8 +178,9 @@ add_executable(ZikadaProcessorTests
     src/engine/LoopEngine.cpp
     src/engine/SliceEngine.cpp
     src/engine/FilterEngine.cpp
-    src/engine/DelayEngine.cpp
-    src/engine/ReverbEngine.cpp
+        src/engine/DelayEngine.cpp
+        src/engine/EnvelopeShape.cpp
+        src/engine/ReverbEngine.cpp
     src/engine/BitcrushEngine.cpp
     src/engine/PitchEngine.cpp
     src/engine/MotionEngine.cpp

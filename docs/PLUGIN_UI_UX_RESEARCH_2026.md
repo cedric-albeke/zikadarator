@@ -49,6 +49,6 @@ Date: 2026-06-18
 
 ## FX Roadmap Integrity Notes
 
-- Existing real groove pieces: Slice forward/reverse/repeat/stutter playback modes, Loop forward/reverse windows, loop speed changes, long tails, Envelope `GATE`, FX2 short wobble/modulated delay, FX1 tremolo, and global ducking/sidechain mix modes.
-- Misaligned or incomplete promises: several later Envelope labels fall through to default gain behavior; vinyl/tape-stop/scratch should not be advertised until dedicated DSP exists.
+- Existing real groove pieces: Slice forward/reverse/repeat/stutter playback modes, Loop forward/reverse windows, loop speed changes, long tails, Envelope attack/decay/swell/fade/tremolo/wobble/punch/snap/glide/hold shapes, FX2 short wobble/modulated delay, FX1 tremolo, and global ducking/sidechain mix modes.
+- Misaligned or incomplete promises: vinyl/tape-stop/scratch should not be advertised until dedicated DSP exists.
 - Recommended DSP implementation path: deepen Slice scatter/retrigger click-safety, then rate-glide/tape-stop in the Loop/time path, then vinyl scratch once there is a deliberate resampling/scrub model.
