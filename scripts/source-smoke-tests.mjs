@@ -229,6 +229,12 @@ assertContains(waveformDisplayHeader, "historyData", "waveform display must reta
 assertContains(waveformDisplayHeader, "displayGain", "waveform display must normalize quiet waveform windows for readability");
 assertContains(waveformDisplay, "rebuildDisplayBins", "waveform display must render bins from rolling history, not only the latest timer chunk");
 assertContains(waveformDisplay, "targetGain", "waveform display must compute a display-only waveform normalization gain");
+assertContains(waveformDisplay, "isBeat", "waveform display must distinguish beat markers from regular step boundaries");
+assertContains(waveformDisplay, "getSpaceMonoFont(9.0f)", "waveform display must show beat numbers in compact 9px font");
+assertContains(waveformDisplay, "Colours::neonGreen.withAlpha(0.35f)", "playhead glow must be brighter for AAA visibility");
+assertContains(waveformDisplay, "Colours::neonGreen.withAlpha(0.45f)", "playhead shadow lines must be visible");
+assertContains(waveformDisplay, "Colours::white10.withAlpha(0.15f)", "waveform lane must have quarter-amplitude grid lines");
+assertContains(waveformDisplay, "colour.withAlpha(0.88f)", "waveform stroke must be crisp and bright");
 assertContains(processBlock, "processedWaveformTap.pushFromAudioThread(leftChannel, numSamples)", "processBlock must publish processed output waveform samples");
 if (stepGridTimer.includes("\n    repaint();")) {
   fail("StepGrid timer must not repaint the whole grid on every animation tick");

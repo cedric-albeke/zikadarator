@@ -25,44 +25,72 @@ void WaveformDisplay::paint(juce::Graphics& g)
     bounds.removeFromTop(laneGap);
     auto outputBounds = bounds;
 
+    // Divider between input and output lanes
     g.setColour(Colours::white10.withAlpha(0.35f));
     g.drawLine(inputBounds.getX(), inputBounds.getBottom() + laneGap * 0.5f,
                inputBounds.getRight(), inputBounds.getBottom() + laneGap * 0.5f, 1.0f);
 
-    drawWaveLane(g, inputBounds, inputLane, Colours::laneSlice, 0.20f);
-    drawWaveLane(g, outputBounds, outputLane, Colours::waveform, 0.26f);
-
+    // Draw grid: step boundaries with lane colors, beat markers stronger
     for (int i = 1; i < numSlices; ++i)
     {
         auto x = inputBounds.getX() + (static_cast<float>(i) / static_cast<float>(numSlices)) * inputBounds.getWidth();
         int lane = (i - 1) % 6;
-        auto laneCol = laneInfos[lane].colour.withAlpha(0.12f);
-        g.setColour(laneCol);
-        g.drawLine(x, inputBounds.getY() + 1.0f, x, outputBounds.getBottom() - 1.0f, 1.0f);
+        auto laneCol = laneInfos[lane].colour;
+        
+        // Beat markers (every 4 steps) are stronger
+        bool isBeat = (i % 4 == 0);
+        float alpha = isBeat ? 0.22f : 0.10f;
+        float lineWidth = isBeat ? 1.2f : 0.8f;
+        
+        g.setColour(laneCol.withAlpha(alpha));
+        g.drawLine(x, inputBounds.getY() + 1.0f, x, outputBounds.getBottom() - 1.0f, lineWidth);
     }
 
+    // Draw step numbers at bottom of output lane
+    const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+    for (int i = 0; i < numSlices; ++i)
+    {
+        if (i % 4 != 0) continue; // Only show beat numbers
+        auto x = inputBounds.getX() + (static_cast<float>(i) / static_cast<float>(numSlices)) * inputBounds.getWidth();
+        g.setColour(Colours::white.withAlpha(0.35f));
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(9.0f)
+                                 : juce::Font(juce::FontOptions().withHeight(9.0f)));
+        g.drawText(juce::String(i + 1),
+                   juce::Rectangle<int>(static_cast<int>(x) - 6, 
+                                        static_cast<int>(outputBounds.getBottom()) - 12, 12, 10),
+                   juce::Justification::centred, false);
+    }
+
+    drawWaveLane(g, inputBounds, inputLane, Colours::laneSlice, 0.22f);
+    drawWaveLane(g, outputBounds, outputLane, Colours::waveform, 0.28f);
+
+    // Playhead rendering
     const float playheadX = inputBounds.getX() + playheadPos.load() * inputBounds.getWidth();
     const float fullCentreY = fullBounds.toFloat().getCentreY();
 
+    // Playhead glow (wider, more diffuse)
     juce::ColourGradient playheadGlow(
-        Colours::neonGreen.withAlpha(0.30f), playheadX, fullCentreY,
-        Colours::neonGreen.withAlpha(0.0f), playheadX - 18.0f, fullCentreY, true);
+        Colours::neonGreen.withAlpha(0.35f), playheadX, fullCentreY,
+        Colours::neonGreen.withAlpha(0.0f), playheadX - 22.0f, fullCentreY, true);
     g.setGradientFill(playheadGlow);
-    g.fillRect(playheadX - 18.0f, inputBounds.getY(), 18.0f, outputBounds.getBottom() - inputBounds.getY());
+    g.fillRect(playheadX - 22.0f, inputBounds.getY(), 22.0f, outputBounds.getBottom() - inputBounds.getY());
     playheadGlow.point1 = juce::Point<float>(playheadX, fullCentreY);
-    playheadGlow.point2 = juce::Point<float>(playheadX + 18.0f, fullCentreY);
+    playheadGlow.point2 = juce::Point<float>(playheadX + 22.0f, fullCentreY);
     g.setGradientFill(playheadGlow);
-    g.fillRect(playheadX, inputBounds.getY(), 18.0f, outputBounds.getBottom() - inputBounds.getY());
+    g.fillRect(playheadX, inputBounds.getY(), 22.0f, outputBounds.getBottom() - inputBounds.getY());
 
+    // Playhead line
     g.setColour(Colours::neonGreen);
-    g.drawLine(playheadX, inputBounds.getY(), playheadX, outputBounds.getBottom(), 2.2f);
+    g.drawLine(playheadX, inputBounds.getY(), playheadX, outputBounds.getBottom(), 2.5f);
 
-    g.setColour(Colours::neonGreen.withAlpha(0.4f));
+    // Playhead shadow lines
+    g.setColour(Colours::neonGreen.withAlpha(0.45f));
     g.drawLine(playheadX - 3.0f, inputBounds.getY(), playheadX - 3.0f, outputBounds.getBottom(), 1.0f);
     g.drawLine(playheadX + 3.0f, inputBounds.getY(), playheadX + 3.0f, outputBounds.getBottom(), 1.0f);
 
+    // Playhead dot at center
     g.setColour(Colours::neonGreen.brighter(0.3f));
-    g.fillEllipse(playheadX - 3.4f, outputBounds.getCentreY() - 3.4f, 6.8f, 6.8f);
+    g.fillEllipse(playheadX - 3.5f, outputBounds.getCentreY() - 3.5f, 7.0f, 7.0f);
 }
 
 void WaveformDisplay::resized()
@@ -179,14 +207,18 @@ void WaveformDisplay::drawWaveLane(juce::Graphics& g,
                                    juce::Colour colour,
                                    float fillAlpha)
 {
-    g.setColour(Colours::displayBezel.withAlpha(0.46f));
+    g.setColour(Colours::displayBezel.withAlpha(0.50f));
     g.fillRoundedRectangle(bounds, 3.0f);
 
     const float centreY = bounds.getCentreY();
     const float amplitude = bounds.getHeight() * 0.46f;
 
-    g.setColour(Colours::white10.withAlpha(0.55f));
+    // Horizontal grid lines (center + quarter marks)
+    g.setColour(Colours::white10.withAlpha(0.35f));
     g.drawLine(bounds.getX(), centreY, bounds.getRight(), centreY, 1.0f);
+    g.setColour(Colours::white10.withAlpha(0.15f));
+    g.drawLine(bounds.getX(), centreY - amplitude * 0.5f, bounds.getRight(), centreY - amplitude * 0.5f, 0.5f);
+    g.drawLine(bounds.getX(), centreY + amplitude * 0.5f, bounds.getRight(), centreY + amplitude * 0.5f, 0.5f);
 
     juce::Path waveform;
     waveform.startNewSubPath(bounds.getX(), centreY);
@@ -209,10 +241,11 @@ void WaveformDisplay::drawWaveLane(juce::Graphics& g,
     g.setColour(colour.withAlpha(fillAlpha));
     g.fillPath(waveform);
 
-    g.setColour(colour.withAlpha(0.82f));
-    g.strokePath(waveform, juce::PathStrokeType(1.25f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.setColour(colour.withAlpha(0.88f));
+    g.strokePath(waveform, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-    g.setColour(colour.withAlpha(0.38f));
+    // Vertical tick marks at every 6th bin
+    g.setColour(colour.withAlpha(0.42f));
     for (int i = 0; i < displayBinCount; i += 6)
     {
         const float x = bounds.getX() + (static_cast<float>(i) / static_cast<float>(displayBinCount - 1)) * bounds.getWidth();
