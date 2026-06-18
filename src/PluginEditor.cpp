@@ -67,11 +67,13 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     setOpaque(true);
     setLookAndFeel(&lookAndFeel);
 
-    addAndMakeVisible(headerPanel);
-    addAndMakeVisible(sequencerPanel);
-    addAndMakeVisible(footerPanel);
-    addAndMakeVisible(sidebarPanel);
-    addAndMakeVisible(workspacePanel);
+    addAndMakeVisible(editorCanvas);
+    editorCanvas.setInterceptsMouseClicks(false, true);
+    editorCanvas.addAndMakeVisible(headerPanel);
+    editorCanvas.addAndMakeVisible(sequencerPanel);
+    editorCanvas.addAndMakeVisible(footerPanel);
+    editorCanvas.addAndMakeVisible(sidebarPanel);
+    editorCanvas.addAndMakeVisible(workspacePanel);
     workspacePanel.bindToParameters(processorRef.getPluginState().getValueTreeState());
 
     headerPanel.onPageSelected = [this](HeaderPanel::Page page)
@@ -333,8 +335,25 @@ void PluginEditor::paint(juce::Graphics& g)
 
 void PluginEditor::resized()
 {
+    const auto widthScale = static_cast<float>(getWidth()) / static_cast<float>(kDefaultEditorWidth);
+    const auto heightScale = static_cast<float>(getHeight()) / static_cast<float>(kDefaultEditorHeight);
+    const auto canvasScale = juce::jlimit(0.1f, 4.0f, juce::jmin(widthScale, heightScale));
+    const auto scaledWidth = juce::roundToInt(static_cast<float>(kDefaultEditorWidth) * canvasScale);
+    const auto scaledHeight = juce::roundToInt(static_cast<float>(kDefaultEditorHeight) * canvasScale);
+    const auto offsetX = static_cast<float>((getWidth() - scaledWidth) / 2);
+    const auto offsetY = static_cast<float>((getHeight() - scaledHeight) / 2);
+
+    editorCanvas.setTransform({});
+    editorCanvas.setBounds(0, 0, kDefaultEditorWidth, kDefaultEditorHeight);
+    editorCanvas.setTransform(juce::AffineTransform::scale(canvasScale).translated(offsetX, offsetY));
+
+    layoutEditorCanvas(editorCanvas.getLocalBounds());
+}
+
+void PluginEditor::layoutEditorCanvas(juce::Rectangle<int> logicalBounds)
+{
     namespace PM = PanelMetrics;
-    auto bounds = getLocalBounds().reduced(PM::kShellInset);
+    auto bounds = logicalBounds.reduced(PM::kShellInset);
 
     headerPanel.setBounds(bounds.removeFromTop(80));
     bounds.removeFromTop(PM::kModuleGap);

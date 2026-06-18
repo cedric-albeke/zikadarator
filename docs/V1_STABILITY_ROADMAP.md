@@ -17,11 +17,12 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - `SequencerState` now publishes plain-value snapshots through fixed buffers, removing `atomic<shared_ptr>` refcount traffic from the audio path.
 - The branch is rebased onto the newer `codex/windows-engine-rebuild` line, preserving the rebuilt engine core and newer FX preset/icon work.
 - Mono processing now renders with an independent right-side scratch channel and folds stereo wet/dry output back to mono, covered by a processor regression test.
+- The editor now lays out the authored 1200x800 Zikada interface on a logical canvas and scales it to supported host sizes, preventing the compact view from crushing fixed panels.
 
 ## V1 Blockers
 
-1. Make the sequencer usable at every supported editor size.
-   The 900x600 minimum is visually cramped. Either raise the minimum, add a compact breakpoint, or scale the 1200x800 logical layout.
+1. Finish the AAA interaction polish pass.
+   The compact canvas protects proportions, but the header preset menu, sidebar detail persistence, keyboard/wheel control, unit-aware knobs, playhead rail, and waveform framing still need dedicated passes.
 
 ## Next AAA UI/UX Polish
 

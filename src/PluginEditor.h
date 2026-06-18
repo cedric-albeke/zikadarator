@@ -39,6 +39,7 @@ private:
     };
 
     void timerCallback() override;
+    void layoutEditorCanvas(juce::Rectangle<int> logicalBounds);
     void setPage(Page page);
     void refreshSequencerFromState();
     void refreshPresetBrowser();
@@ -58,6 +59,7 @@ private:
 
     PluginProcessor& processorRef;
     ZikadaLookAndFeel lookAndFeel;
+    juce::Component editorCanvas;
     HeaderPanel headerPanel;
     SequencerPanel sequencerPanel;
     FooterPanel footerPanel;

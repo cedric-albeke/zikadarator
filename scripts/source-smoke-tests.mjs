@@ -104,6 +104,9 @@ if (processSegment.includes("left[i] *= mix") || processSegment.includes("right[
 }
 assertContains(processSegment, "blendLaneOutput", "processSegment must blend each lane output against that lane input");
 assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resizing to a fixed aspect ratio");
+assertContains(editor, "layoutEditorCanvas", "plugin editor must lay out panels on a logical canvas");
+assertContains(editor, "editorCanvas.setTransform(juce::AffineTransform::scale", "plugin editor must scale the logical canvas for compact sizes");
+assertContains(read("src/PluginEditor.h"), "editorCanvas", "plugin editor must own a logical canvas component");
 assertContains(parameterIDs, 'juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1', "step resolution choices must include 1/16 while defaulting to 1/8");
 assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must map step resolution index 0 to 1/16");
 assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");
