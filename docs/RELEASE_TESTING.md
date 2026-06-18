@@ -62,6 +62,7 @@ powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1
 ```
 
 For a clean diagnostic read, set `ZIKADARATOR_DEBUG_LOG=1` and delete or archive `%APPDATA%\ZIKADARATOR\UI-Debug.log` immediately before the manual test. Normal release builds should not create or grow this file unless that opt-in flag is present.
+Use `-RequireZikadaLog` when `ZIKADARATOR_DEBUG_LOG=1` is part of the test and a missing diagnostic log should fail the pass.
 
 Expected scanner result:
 

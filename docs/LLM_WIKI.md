@@ -93,7 +93,7 @@ These should stay conservative until the next Ableton acceptance pass confirms t
 Task 8 and the factory-bank slice of Task 10 are done. Best next task:
 
 1. Close Ableton Live, then install the latest Release VST3 into the system VST3 folder.
-2. Run the Ableton Live 12 acceptance loop with a clean `UI-Debug.log`.
+2. Run the Ableton Live 12 acceptance loop with `ZIKADARATOR_DEBUG_LOG=1` and a clean `UI-Debug.log` when diagnostic log capture is needed.
 3. Use `scripts/ableton-log-scan.ps1` to review logs.
 4. Audition the LOOP lane presets specifically and adjust icons/audio mappings where the audio-visual link is weak.
 5. Fix any audible clicks, restore issues, or log storms found in Live.
@@ -104,6 +104,12 @@ Windows log scanner:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1
+```
+
+For a strict diagnostic-log pass after setting `ZIKADARATOR_DEBUG_LOG=1`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1 -RequireZikadaLog
 ```
 
 It locates the newest Ableton Live 12 log under `%APPDATA%\Ableton`, scans `%APPDATA%\ZIKADARATOR\UI-Debug.log` when diagnostic logging is explicitly enabled with `ZIKADARATOR_DEBUG_LOG=1`, and lists recent Ableton usage logs. Treat crash/fatal/exception/restore-failure lines as blockers before sharing tester builds.

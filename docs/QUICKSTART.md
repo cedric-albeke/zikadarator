@@ -89,7 +89,7 @@ When filing feedback, include:
 
 ### Windows
 
-If you are testing a debug-enabled build, collect:
+Normal release builds do not create ZIKADARATOR UI logs unless diagnostic logging is enabled. If you are testing a debug-enabled build, or you set `ZIKADARATOR_DEBUG_LOG=1`, collect:
 
 - `%APPDATA%\ZIKADARATOR\UI-Debug.log`
 - `%APPDATA%\Ableton\Live 12.3.7\Preferences\Log.txt` when testing Ableton Live 12
@@ -100,7 +100,7 @@ On Windows, developers can summarize those logs with:
 powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1
 ```
 
-For a clean manual test, archive or delete `%APPDATA%\ZIKADARATOR\UI-Debug.log` before launching the DAW.
+For a clean diagnostic manual test, set `ZIKADARATOR_DEBUG_LOG=1`, then archive or delete `%APPDATA%\ZIKADARATOR\UI-Debug.log` before launching the DAW. The scanner treats a missing UI log as expected for normal release builds.
 
 ### macOS
 

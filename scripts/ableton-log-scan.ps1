@@ -1,3 +1,7 @@
+param(
+    [switch] $RequireZikadaLog
+)
+
 $ErrorActionPreference = "Stop"
 
 function Write-Section {
@@ -26,6 +30,16 @@ function Get-LatestAbletonLog {
     }
 
     return $null
+}
+
+function Test-ZikadaDebugLogOptIn {
+    $value = $env:ZIKADARATOR_DEBUG_LOG
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return $false
+    }
+
+    $normalised = $value.Trim().ToLowerInvariant()
+    return @("1", "true", "yes").Contains($normalised)
 }
 
 function Show-Matches {
@@ -58,6 +72,7 @@ function Show-Matches {
 $abletonLog = Get-LatestAbletonLog
 $zikLog = Join-Path $env:APPDATA "ZIKADARATOR\UI-Debug.log"
 $usageDir = Join-Path $env:APPDATA "Ableton\Live Reports\Usage"
+$zikadaDebugLogOptIn = Test-ZikadaDebugLogOptIn
 
 Write-Section "Ableton Live log"
 if ($abletonLog) {
@@ -76,24 +91,34 @@ if ($abletonLog) {
 }
 
 Write-Section "ZIKADARATOR UI log"
-Show-Matches -Path $zikLog -Patterns @(
-    "error",
-    "fail",
-    "exception",
-    "processBlock",
-    "setSelectedSlot",
-    "createEditor",
-    "destructed",
-    "constructed"
-) -Last 120
-
 if (Test-Path -LiteralPath $zikLog) {
+    if (-not $zikadaDebugLogOptIn) {
+        Write-Host "Existing UI log found. This may be historical or from a debug-enabled run; normal release builds do not write this file unless ZIKADARATOR_DEBUG_LOG=1 is set."
+    }
+
+    Show-Matches -Path $zikLog -Patterns @(
+        "error",
+        "fail",
+        "exception",
+        "processBlock",
+        "setSelectedSlot",
+        "createEditor",
+        "destructed",
+        "constructed"
+    ) -Last 120
+
     $tail = Get-Content -LiteralPath $zikLog -Tail 2000 -ErrorAction SilentlyContinue
     $hotCount = ($tail | Select-String -Pattern @(
         "processBlock",
         "setSelectedSlot"
     ) -ErrorAction SilentlyContinue | Measure-Object).Count
     Write-Host ("Hot debug line count in last 2000 lines: {0}" -f $hotCount)
+} elseif ($RequireZikadaLog -or $zikadaDebugLogOptIn) {
+    Write-Host "No ZIKADARATOR UI log found even though diagnostic logging was requested."
+    Write-Host "Expected path: $zikLog"
+    exit 1
+} else {
+    Write-Host "No ZIKADARATOR UI log found. This is expected for normal release builds because file logging is opt-in; set ZIKADARATOR_DEBUG_LOG=1 to collect diagnostics."
 }
 
 Write-Section "Latest Ableton usage logs"

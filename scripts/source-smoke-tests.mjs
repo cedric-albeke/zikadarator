@@ -58,6 +58,7 @@ const waveformDisplay = read("src/ui/components/WaveformDisplay.cpp");
 const headerPanelHeader = read("src/ui/panels/HeaderPanel.h");
 const headerPanel = read("src/ui/panels/HeaderPanel.cpp");
 const windowsPackageScript = read("scripts/package-windows-release.ps1");
+const abletonLogScanScript = read("scripts/ableton-log-scan.ps1");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
@@ -127,6 +128,9 @@ assertContains(editor, "getEnvironmentVariable(\"ZIKADARATOR_DEBUG_LOG\"", "edit
 assertContains(processor, "getEnvironmentVariable(\"ZIKADARATOR_DEBUG_LOG\"", "processor debug logging must read an explicit opt-in environment variable");
 assertContains(editor, "if (! isDebugFileLoggingEnabled())", "editor debug logging must skip file writes unless enabled");
 assertContains(processor, "if (! isDebugFileLoggingEnabled())", "processor debug logging must skip file writes unless enabled");
+assertContains(abletonLogScanScript, "ZIKADARATOR_DEBUG_LOG", "Ableton log scanner must understand opt-in ZIKADARATOR diagnostic logging");
+assertContains(abletonLogScanScript, "RequireZikadaLog", "Ableton log scanner must support strict diagnostic-log checks when requested");
+assertContains(abletonLogScanScript, "expected for normal release builds", "Ableton log scanner must treat a missing UI log as expected for quiet release builds");
 if (footer.includes("Logger::writeToLog")) {
   fail("FooterPanel interaction helpers must not write release debug logs");
 }
