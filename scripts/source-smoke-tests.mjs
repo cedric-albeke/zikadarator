@@ -201,6 +201,16 @@ assertContains(knob, "juce::Colours::black.withAlpha(0.40f)", "knobs must have a
 assertContains(knob, "dotRadius", "knobs must have a center dot that responds to hover");
 assertContains(knob, "getSpaceMonoFont(10.0f)", "knobs must use compact 10px value labels");
 assertContains(knob, "getSpaceMonoFont(11.0f)", "knobs must use compact 11px labels");
+
+const stepCell = read("src/ui/components/StepCell.cpp");
+assertContains(stepCell, "playing", "step cell must support playing state indicator");
+assertContains(stepCell, "Colours::neonGreen.withAlpha(0.35f)", "playing step must have a neon green outer glow");
+assertContains(stepCell, "Colours::neonGreen.withAlpha(0.65f)", "playing step must have a neon green border");
+assertContains(stepCell, "getSpaceMonoFont(9.0f)", "active step numbers must be compact 9px");
+assertContains(stepCell, "getSpaceMonoFont(11.0f)", "inactive step numbers must be 11px");
+assertContains(stepCell, "juce::Colours::black.withAlpha(0.25f)", "active step cells must have a bottom shadow");
+assertContains(stepCell, "cellColour.withAlpha(0.75f)", "active step cells must have a strong lane color border");
+assertContains(stepCell, "Colours::white.withAlpha(0.15f)", "hovered active cells must have a white highlight border");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Hertz)", "filter cutoff knobs must display Hz/kHz");
 assertContains(footer, "setScaleMode(KnobScaleMode::Logarithmic)", "filter cutoff knobs must use logarithmic movement");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Pan)", "pan knobs must display L/C/R position");
