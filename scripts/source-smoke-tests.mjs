@@ -182,6 +182,12 @@ assertContains(sidebar, "kFactoryPresetCount = 16", "sidebar preset browser must
 assertContains(sidebar, "kUserSlotCols = 4", "sidebar preset browser must place U1-U4 in a separated four-slot row");
 assertContains(sidebar, "drawPresetLabel", "sidebar preset browser must draw visible short labels, not icon-only cells");
 assertContains(sidebar, "USER SLOTS", "sidebar preset browser must visually separate user slots from factory presets");
+assertContains(read("src/ui/panels/SidebarPanel.h"), "keyPressed", "sidebar preset browser must support keyboard navigation");
+assertContains(sidebar, "setWantsKeyboardFocus(true)", "sidebar preset browser must be keyboard focusable");
+assertContains(sidebar, "focusedPresetButtonIndex", "sidebar preset browser must track keyboard focus separately from hover");
+assertContains(sidebar, "moveFocusedPresetBy", "sidebar preset browser must support arrow-key focus movement");
+assertContains(sidebar, "activateFocusedPreset", "sidebar preset browser must activate focused presets from keyboard");
+assertContains(sidebar, "juce::KeyPress::spaceKey", "sidebar preset browser must handle space/return activation");
 if (sidebar.includes("Hover a preset to see details...")) {
   fail("sidebar detail panel must not depend on hover-only copy");
 }

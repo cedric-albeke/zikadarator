@@ -25,6 +25,7 @@ public:
     void resized() override;
     void mouseMove(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent& e) override;
+    bool keyPressed(const juce::KeyPress& key) override;
 
     void setSelectedStep(int lane, int step, const StepData& stepData);
 
@@ -40,6 +41,7 @@ private:
     bool hasSelection{false};
     int hoveredPresetIndex{-1};
     int selectedPresetIndex{-1};
+    int focusedPresetButtonIndex{-1};
 
     juce::Label infoLabel;
     std::vector<std::unique_ptr<juce::TextButton>> presetButtons;
@@ -50,6 +52,9 @@ private:
     void notifyPresetAssigned(int presetIndex);
     void updateInfoForSelection();
     void updateInfoForHover(int presetIndex);
+    void moveFocusedPresetBy(int columnDelta, int rowDelta);
+    void activateFocusedPreset();
+    int findPresetButtonIndex(int presetIndex) const;
 };
 
 }

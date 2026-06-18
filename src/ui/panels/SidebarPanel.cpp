@@ -33,6 +33,7 @@ namespace {
 
 SidebarPanel::SidebarPanel()
 {
+    setWantsKeyboardFocus(true);
     infoLabel.setJustificationType(juce::Justification::centredLeft);
     infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
     infoLabel.setColour(juce::Label::textColourId, Colours::white50);
@@ -199,8 +200,10 @@ void SidebarPanel::buildPresetGrid()
         int pidx = presets[i].presetIndex;
         btn->onClick = [this, pidx]
         {
+            grabKeyboardFocus();
             notifyPresetAssigned(pidx);
             selectedPresetIndex = pidx;
+            focusedPresetButtonIndex = findPresetButtonIndex(pidx);
             highlightPresetButton(pidx);
             updateInfoForSelection();
         };
@@ -220,6 +223,7 @@ void SidebarPanel::buildPresetGrid()
     }
 
     hoveredPresetIndex = -1;
+    focusedPresetButtonIndex = presetButtons.empty() ? -1 : 0;
     updateInfoForSelection();
     rebuildSidebarLayoutAsync(juce::Component::SafePointer<SidebarPanel>(this));
 }
@@ -233,6 +237,16 @@ void SidebarPanel::highlightPresetButton(int presetIndex)
         presetButtons[i]->setToggleState(active, juce::dontSendNotification);
     }
     repaint();
+}
+
+int SidebarPanel::findPresetButtonIndex(int presetIndex) const
+{
+    auto presets = getPresetsForLane(currentLane);
+    for (size_t i = 0; i < presets.size() && i < presetButtons.size(); ++i)
+        if (presets[i].presetIndex == presetIndex)
+            return static_cast<int>(i);
+
+    return -1;
 }
 
 void SidebarPanel::updateInfoForHover(int presetIndex)
@@ -360,12 +374,22 @@ void SidebarPanel::paintOverChildren(juce::Graphics& g)
         auto fullBounds = presetButtons[i]->getBounds().toFloat().reduced(4.0f);
         bool active = presetButtons[i]->getToggleState();
         bool hovered = (presets[i].presetIndex == hoveredPresetIndex);
+        bool focused = hasKeyboardFocus(false) && static_cast<int>(i) == focusedPresetButtonIndex;
         auto iconColour = active ? Colours::bgPrimary : (hovered ? laneColour.brighter(0.3f) : laneColour);
         auto iconBounds = fullBounds.withTrimmedBottom(12.0f).reduced(isUserSlotButton(i) ? 6.0f : 4.0f);
         PresetIcons::drawPresetIcon(g, currentLane, presets[i].presetIndex,
                                     iconBounds, iconColour);
         drawPresetLabel(fullBounds.removeFromBottom(11.0f), presets[i].label,
                         active ? Colours::bgPrimary : Colours::white.withAlpha(hovered ? 0.92f : 0.68f));
+
+        if (focused)
+        {
+            auto focusBounds = presetButtons[i]->getBounds().toFloat().reduced(2.0f);
+            g.setColour(Colours::white.withAlpha(0.38f));
+            g.drawRoundedRectangle(focusBounds, 4.0f, 1.4f);
+            g.setColour(laneColour.withAlpha(0.32f));
+            g.drawRoundedRectangle(focusBounds.expanded(2.0f), 5.0f, 1.0f);
+        }
     }
 
     if (presetButtons.size() > static_cast<size_t>(kFactoryPresetCount))
@@ -443,6 +467,8 @@ void SidebarPanel::mouseMove(const juce::MouseEvent& e)
     }
     if (hoveredPresetIndex != prevHover)
     {
+        if (hoveredPresetIndex > 0)
+            focusedPresetButtonIndex = findPresetButtonIndex(hoveredPresetIndex);
         updateInfoForHover(hoveredPresetIndex);
         repaint();
     }
@@ -474,6 +500,12 @@ void SidebarPanel::setSelectedStep(int lane, int step, const StepData& stepData)
     else
         updateInfoForSelection();
 
+    const int selectedButtonIndex = findPresetButtonIndex(stepData.presetIndex);
+    if (selectedButtonIndex >= 0)
+        focusedPresetButtonIndex = selectedButtonIndex;
+    else if (focusedPresetButtonIndex < 0 && !presetButtons.empty())
+        focusedPresetButtonIndex = 0;
+
     highlightPresetButton(stepData.presetIndex);
 }
 
@@ -483,6 +515,63 @@ void SidebarPanel::notifyPresetAssigned(int presetIndex)
         return;
 
     onPresetAssigned(currentLane, currentStep, presetIndex);
+}
+
+void SidebarPanel::moveFocusedPresetBy(int columnDelta, int rowDelta)
+{
+    if (presetButtons.empty())
+        return;
+
+    const int current = focusedPresetButtonIndex >= 0 ? focusedPresetButtonIndex : 0;
+    const bool userSlot = isUserSlotButton(static_cast<size_t>(current));
+    const int sectionStart = userSlot ? kFactoryPresetCount : 0;
+    const int sectionEnd = userSlot ? static_cast<int>(presetButtons.size()) : juce::jmin(kFactoryPresetCount, static_cast<int>(presetButtons.size()));
+    const int cols = userSlot ? kUserSlotCols : kFactoryGridCols;
+    const int local = current - sectionStart;
+    const int row = local / cols;
+    const int col = local % cols;
+    int target = sectionStart + (row + rowDelta) * cols + col + columnDelta;
+
+    if (!userSlot && rowDelta > 0 && target >= sectionEnd && sectionEnd < static_cast<int>(presetButtons.size()))
+        target = sectionEnd + juce::jlimit(0, kUserSlotCols - 1, col);
+    else if (userSlot && rowDelta < 0 && target < sectionStart)
+        target = juce::jlimit(0, sectionStart - 1, (kFactoryPresetCount - kFactoryGridCols) + col);
+
+    target = juce::jlimit(0, static_cast<int>(presetButtons.size()) - 1, target);
+    focusedPresetButtonIndex = target;
+
+    auto presets = getPresetsForLane(currentLane);
+    if (static_cast<size_t>(focusedPresetButtonIndex) < presets.size())
+        updateInfoForHover(presets[static_cast<size_t>(focusedPresetButtonIndex)].presetIndex);
+    repaint();
+}
+
+void SidebarPanel::activateFocusedPreset()
+{
+    auto presets = getPresetsForLane(currentLane);
+    if (focusedPresetButtonIndex < 0 || static_cast<size_t>(focusedPresetButtonIndex) >= presets.size())
+        return;
+
+    const auto presetIndex = presets[static_cast<size_t>(focusedPresetButtonIndex)].presetIndex;
+    notifyPresetAssigned(presetIndex);
+    selectedPresetIndex = presetIndex;
+    highlightPresetButton(presetIndex);
+    updateInfoForSelection();
+}
+
+bool SidebarPanel::keyPressed(const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress::leftKey)  { moveFocusedPresetBy(-1, 0); return true; }
+    if (key == juce::KeyPress::rightKey) { moveFocusedPresetBy(1, 0); return true; }
+    if (key == juce::KeyPress::upKey)    { moveFocusedPresetBy(0, -1); return true; }
+    if (key == juce::KeyPress::downKey)  { moveFocusedPresetBy(0, 1); return true; }
+    if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey)
+    {
+        activateFocusedPreset();
+        return true;
+    }
+
+    return false;
 }
 
 juce::String SidebarPanel::getPresetLabel(int lane, int presetIndex) const
