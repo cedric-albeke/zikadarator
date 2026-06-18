@@ -44,7 +44,6 @@ StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& se
     setWantsKeyboardFocus(true);
     setMouseClickGrabsKeyboardFocus(true);
     setupGrid();
-    startTimerHz(12);
 }
 
 StepGrid::~StepGrid()
@@ -54,6 +53,12 @@ StepGrid::~StepGrid()
 
 void StepGrid::timerCallback()
 {
+    if (! hasAnimatedChains())
+    {
+        updateChainAnimationTimer();
+        return;
+    }
+
     chainAnimPhase = (chainAnimPhase + 1) % 16;
 
     for (int lane = 0; lane < numLanes; ++lane)
@@ -78,6 +83,34 @@ int StepGrid::findChainRoot(int lane, int step) const
             return lookback;
     }
     return step;
+}
+
+bool StepGrid::hasAnimatedChains() const
+{
+    for (int lane = 0; lane < numLanes; ++lane)
+    {
+        for (int step = 0; step < numSteps; ++step)
+        {
+            const auto& s = sequencerState.getStepData(lane, step);
+            if (s.active && s.presetIndex > 0 && s.chainLength > 1)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+void StepGrid::updateChainAnimationTimer()
+{
+    if (hasAnimatedChains())
+    {
+        if (! isTimerRunning())
+            startTimerHz(12);
+    }
+    else if (isTimerRunning())
+    {
+        stopTimer();
+    }
 }
 
 void StepGrid::setupGrid()
@@ -973,6 +1006,8 @@ void StepGrid::refreshChainVisuals(int lane)
         }
         cells[lane][step]->setChainable(canExtend);
     }
+
+    updateChainAnimationTimer();
 }
 
 void StepGrid::setStepChainLength(int lane, int step, int length)

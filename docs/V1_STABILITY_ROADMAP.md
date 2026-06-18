@@ -30,7 +30,7 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - A column-wide playhead rail is now drawn in the step grid at the current playing step, spanning all lanes with a subtle neon glow.
 - StepGrid layout metrics are centralized across painting, resizing, hit testing, and playhead drawing, and each lane now has subtle four-step beat-group backplates to make the sequencer read more musically.
 - Passive sequencer framing and inactive/active step glow have been reduced so the grid hierarchy favors selected, playing, hovered, and active musical events over decoration.
-- StepGrid now caches its static ruler, lane chips, beat-group backplates, and control-strip chrome; playhead movement repaints only the previous and current step columns.
+- StepGrid now caches its static ruler, lane chips, beat-group backplates, and control-strip chrome; playhead movement repaints only the previous and current step columns, and chain animation timers run only while chains exist.
 - Footer selected-step controls now have lane-aware group headers, making the seven knobs scan as related control families instead of a flat strip.
 - Footer selected-step and modulation controls now stay hidden until a step is selected, keeping the empty state honest and preventing default-looking controls from implying active edits.
 - Waveform display double framing is removed: the SequencerPanel already draws the device bezel, so WaveformDisplay no longer draws its own redundant bezel.

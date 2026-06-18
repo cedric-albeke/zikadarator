@@ -42,6 +42,7 @@ const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const footer = read("src/ui/panels/FooterPanel.cpp");
 const stepGridHeader = read("src/ui/components/StepGrid.h");
 const stepGrid = read("src/ui/components/StepGrid.cpp");
+const stepCell = read("src/ui/components/StepCell.cpp");
 const knobHeader = read("src/ui/components/Knob.h");
 const knob = read("src/ui/components/Knob.cpp");
 const presetManager = read("src/state/PresetManager.cpp");
@@ -87,6 +88,10 @@ const refreshLoopSnapshot = extractFunction(
 const stepGridTimer = extractFunction(
   stepGrid,
   "void StepGrid::timerCallback()",
+);
+const stepGridConstructor = extractFunction(
+  stepGrid,
+  "StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& seqState)",
 );
 
 [
@@ -279,7 +284,6 @@ assertContains(knob, "dotRadius", "knobs must have a center dot that responds to
 assertContains(knob, "getSpaceMonoFont(10.0f)", "knobs must use compact 10px value labels");
 assertContains(knob, "getSpaceMonoFont(11.0f)", "knobs must use compact 11px labels");
 
-const stepCell = read("src/ui/components/StepCell.cpp");
 assertContains(stepCell, "playing", "step cell must support playing state indicator");
 assertContains(stepCell, "kPlayingGlowAlpha = 0.26f", "playing step glow must stay visible but restrained");
 assertContains(stepCell, "Colours::neonGreen.withAlpha(0.65f)", "playing step must have a neon green border");
@@ -330,6 +334,19 @@ assertContains(processBlock, "processedWaveformTap.pushFromAudioThread(leftChann
 if (stepGridTimer.includes("\n    repaint();")) {
   fail("StepGrid timer must not repaint the whole grid on every animation tick");
 }
+if (stepGridConstructor.includes("startTimerHz(12);")) {
+  fail("StepGrid chain animation timer must not run permanently when no chains exist");
+}
+assertContains(stepGridHeader, "hasAnimatedChains", "StepGrid must detect whether chain animation is needed");
+assertContains(stepGridHeader, "updateChainAnimationTimer", "StepGrid must gate chain animation timer by actual chain state");
+assertContains(stepGrid, "if (hasAnimatedChains())", "StepGrid must start chain animation only when animated chains exist");
+assertContains(stepGrid, "if (! isTimerRunning())", "StepGrid must avoid restarting an already-running chain timer");
+assertContains(stepGrid, "else if (isTimerRunning())", "StepGrid must stop the chain timer when chains are removed");
+assertContains(stepCell, "if (tied == t)", "StepCell tied setter must skip no-op repaints");
+assertContains(stepCell, "if (chained == c)", "StepCell chained setter must skip no-op repaints");
+assertContains(stepCell, "if (chainable == c)", "StepCell chainable setter must skip no-op repaints");
+assertContains(stepCell, "if (playing == p)", "StepCell playing setter must skip no-op repaints");
+assertContains(stepCell, "if (selected == s)", "StepCell selected setter must skip no-op repaints");
 
 [
   ["Grain", "sidebar must not advertise granular DSP until it exists"],

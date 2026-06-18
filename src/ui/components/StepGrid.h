@@ -94,6 +94,8 @@ private:
     void renderStaticGridLayer(juce::Graphics& g);
     void invalidateStaticGridLayer();
     juce::Rectangle<int> getStepColumnBounds(int step) const;
+    bool hasAnimatedChains() const;
+    void updateChainAnimationTimer();
     std::pair<int, int> hitTestCell(juce::Point<int> pos) const;
     void applyPaintToCell(int lane, int step);
     void cyclePresetAt(int lane, int step, int direction);

@@ -211,30 +211,45 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 
 void StepCell::setActive(bool a)
 {
+    if (active == a)
+        return;
+
     active = a;
     repaint();
 }
 
 void StepCell::setTied(bool t)
 {
+    if (tied == t)
+        return;
+
     tied = t;
     repaint();
 }
 
 void StepCell::setChained(bool c)
 {
+    if (chained == c)
+        return;
+
     chained = c;
     repaint();
 }
 
 void StepCell::setChainable(bool c)
 {
+    if (chainable == c)
+        return;
+
     chainable = c;
     repaint();
 }
 
 void StepCell::setHovered(bool h)
 {
+    if (hovered == h)
+        return;
+
     hovered = h;
     repaint();
 }
@@ -246,18 +261,27 @@ void StepCell::setChainAnimPhase(int phase)
 
 void StepCell::setPlaying(bool p)
 {
+    if (playing == p)
+        return;
+
     playing = p;
     repaint();
 }
 
 void StepCell::setSelected(bool s)
 {
+    if (selected == s)
+        return;
+
     selected = s;
     repaint();
 }
 
 void StepCell::setPresetIndex(int index)
 {
+    if (presetIndex == index)
+        return;
+
     presetIndex = index;
     repaint();
 }
