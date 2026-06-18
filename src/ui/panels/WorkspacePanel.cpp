@@ -27,7 +27,7 @@ void configureFilterButton(juce::TextButton& button)
     button.setRadioGroupId(2201);
     button.setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
     button.setColour(juce::TextButton::buttonOnColourId, Colours::neonGreen);
-    button.setColour(juce::TextButton::textColourOffId, Colours::white85);
+    button.setColour(juce::TextButton::textColourOffId, Colours::white50);
     button.setColour(juce::TextButton::textColourOnId, Colours::bgPrimary);
 }
 
@@ -43,7 +43,7 @@ void configureInlineChoiceButton(juce::TextButton& button)
 {
     button.setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
     button.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
-    button.setColour(juce::TextButton::textColourOffId, Colours::white85);
+    button.setColour(juce::TextButton::textColourOffId, Colours::white50);
     button.setColour(juce::TextButton::textColourOnId, Colours::white);
 }
 
@@ -56,9 +56,9 @@ void configureSlider(juce::Slider& slider)
 void configureCombo(juce::ComboBox& combo)
 {
     combo.setColour(juce::ComboBox::backgroundColourId, Colours::bgSurface);
-    combo.setColour(juce::ComboBox::textColourId, Colours::white85);
+    combo.setColour(juce::ComboBox::textColourId, Colours::white50);
     combo.setColour(juce::ComboBox::outlineColourId, Colours::white10);
-    combo.setColour(juce::ComboBox::arrowColourId, Colours::neonGreen);
+    combo.setColour(juce::ComboBox::arrowColourId, Colours::white50);
 }
 
 void configureValueLabel(juce::Label& label)
@@ -71,18 +71,18 @@ void styleComponentTree(juce::Component& component)
     if (auto* combo = dynamic_cast<juce::ComboBox*>(&component))
     {
         combo->setColour(juce::ComboBox::backgroundColourId, Colours::bgSurface);
-        combo->setColour(juce::ComboBox::textColourId, Colours::white85);
+        combo->setColour(juce::ComboBox::textColourId, Colours::white50);
         combo->setColour(juce::ComboBox::outlineColourId, Colours::white10);
-        combo->setColour(juce::ComboBox::arrowColourId, Colours::neonGreen);
+        combo->setColour(juce::ComboBox::arrowColourId, Colours::white50);
     }
     else if (auto* label = dynamic_cast<juce::Label*>(&component))
     {
-        label->setColour(juce::Label::textColourId, Colours::white85);
+        label->setColour(juce::Label::textColourId, Colours::white50);
         label->setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     }
     else if (auto* toggle = dynamic_cast<juce::ToggleButton*>(&component))
     {
-        toggle->setColour(juce::ToggleButton::textColourId, Colours::white85);
+        toggle->setColour(juce::ToggleButton::textColourId, Colours::white50);
         toggle->setColour(juce::ToggleButton::tickColourId, Colours::neonGreen);
         toggle->setColour(juce::ToggleButton::tickDisabledColourId, Colours::white50);
     }
@@ -90,7 +90,7 @@ void styleComponentTree(juce::Component& component)
     {
         textButton->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
         textButton->setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
-        textButton->setColour(juce::TextButton::textColourOffId, Colours::white85);
+        textButton->setColour(juce::TextButton::textColourOffId, Colours::white50);
         textButton->setColour(juce::TextButton::textColourOnId, Colours::white);
     }
     else if (auto* listBox = dynamic_cast<juce::ListBox*>(&component))
@@ -103,7 +103,7 @@ void styleComponentTree(juce::Component& component)
         slider->setColour(juce::Slider::trackColourId, Colours::white10);
         slider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
         slider->setColour(juce::Slider::backgroundColourId, juce::Colours::transparentBlack);
-        slider->setColour(juce::Slider::textBoxTextColourId, Colours::white85);
+        slider->setColour(juce::Slider::textBoxTextColourId, Colours::white);
         slider->setColour(juce::Slider::textBoxBackgroundColourId, Colours::bgSurface);
         slider->setColour(juce::Slider::textBoxOutlineColourId, Colours::white10);
     }
@@ -116,25 +116,24 @@ void styleComponentTree(juce::Component& component)
 
 WorkspacePanel::WorkspacePanel()
 {
-    configureLabel(titleLabel, 28.0f, Colours::white, juce::Justification::centredLeft);
-    configureLabel(bodyLabel, 14.0f, Colours::white85, juce::Justification::topLeft);
-    bodyLabel.setMinimumHorizontalScale(1.0f);
+    configureLabel(titleLabel, 18.0f, Colours::white, juce::Justification::centredLeft);
+    configureLabel(bodyLabel, 11.0f, Colours::white50, juce::Justification::topLeft);
 
     configureLabel(presetHintLabel, 11.0f, Colours::white50, juce::Justification::centredLeft);
-    configureLabel(presetDetailTitle, 24.0f, Colours::white, juce::Justification::centredLeft, true);
-    configureLabel(presetDetailMeta, 12.0f, Colours::neonGreen, juce::Justification::centredLeft, true);
-    configureLabel(presetDetailBody, 13.0f, Colours::white85, juce::Justification::topLeft);
+    configureLabel(presetDetailTitle, 18.0f, Colours::white, juce::Justification::centredLeft, true);
+    configureLabel(presetDetailMeta, 11.0f, Colours::white50, juce::Justification::centredLeft, true);
+    configureLabel(presetDetailBody, 11.0f, Colours::white50, juce::Justification::topLeft);
     configureLabel(presetSaveLabel, 11.0f, Colours::white50, juce::Justification::centredLeft);
-    configureLabel(presetInfoTitleA, 12.0f, Colours::neonGreen, juce::Justification::topLeft, true);
-    configureLabel(presetInfoBodyA, 12.0f, Colours::white85, juce::Justification::topLeft);
-    configureLabel(presetInfoTitleB, 12.0f, Colours::neonGreen, juce::Justification::topLeft, true);
-    configureLabel(presetInfoBodyB, 12.0f, Colours::white85, juce::Justification::topLeft);
+    configureLabel(presetInfoTitleA, 11.0f, Colours::white, juce::Justification::topLeft, true);
+    configureLabel(presetInfoBodyA, 11.0f, Colours::white50, juce::Justification::topLeft);
+    configureLabel(presetInfoTitleB, 11.0f, Colours::white, juce::Justification::topLeft, true);
+    configureLabel(presetInfoBodyB, 11.0f, Colours::white50, juce::Justification::topLeft);
 
-    configureLabel(settingsLeadLabel, 13.0f, Colours::white85, juce::Justification::topLeft);
-    configureLabel(settingsDeviceTitle, 13.0f, Colours::neonGreen, juce::Justification::topLeft, true);
-    configureLabel(settingsProductTitle, 13.0f, Colours::neonGreen, juce::Justification::topLeft, true);
-    configureLabel(settingsNotesTitle, 13.0f, Colours::neonGreen, juce::Justification::topLeft, true);
-    configureLabel(settingsNotesBody, 12.0f, Colours::white85, juce::Justification::topLeft);
+    configureLabel(settingsLeadLabel, 11.0f, Colours::white50, juce::Justification::topLeft);
+    configureLabel(settingsDeviceTitle, 11.0f, Colours::white, juce::Justification::topLeft, true);
+    configureLabel(settingsProductTitle, 11.0f, Colours::white, juce::Justification::topLeft, true);
+    configureLabel(settingsNotesTitle, 11.0f, Colours::white, juce::Justification::topLeft, true);
+    configureLabel(settingsNotesBody, 11.0f, Colours::white50, juce::Justification::topLeft);
     configureLabel(standaloneMuteLabel, 11.0f, Colours::white50, juce::Justification::centredLeft, true);
     configureValueLabel(dryWetLabel);
     configureValueLabel(outputGainLabel);
@@ -151,7 +150,7 @@ WorkspacePanel::WorkspacePanel()
 
     presetSearchEditor.setTextToShowWhenEmpty("Search presets", Colours::white50);
     presetSearchEditor.setColour(juce::TextEditor::backgroundColourId, Colours::bgSurface);
-    presetSearchEditor.setColour(juce::TextEditor::textColourId, Colours::white85);
+    presetSearchEditor.setColour(juce::TextEditor::textColourId, Colours::white);
     presetSearchEditor.setColour(juce::TextEditor::outlineColourId, Colours::white10);
     presetSearchEditor.onTextChange = [this] { rebuildPresetFilter(); };
 
@@ -168,7 +167,7 @@ WorkspacePanel::WorkspacePanel()
 
     presetNameEditor.setTextToShowWhenEmpty("New user preset name", Colours::white50);
     presetNameEditor.setColour(juce::TextEditor::backgroundColourId, Colours::bgSurface);
-    presetNameEditor.setColour(juce::TextEditor::textColourId, Colours::white85);
+    presetNameEditor.setColour(juce::TextEditor::textColourId, Colours::white);
     presetNameEditor.setColour(juce::TextEditor::outlineColourId, Colours::white10);
 
     configureFilterButton(allFilterButton);
@@ -219,7 +218,7 @@ WorkspacePanel::WorkspacePanel()
     settingsNotesTitle.setText("SETTINGS NOTES", juce::dontSendNotification);
     settingsNotesBody.setText("The upper panel is the real JUCE standalone device selector. The lower product settings keep global editor behavior, clocking, and output controls close to the host-device setup instead of scattering them through the editor.", juce::dontSendNotification);
     standaloneMuteLabel.setText("FEEDBACK LOOP", juce::dontSendNotification);
-    standaloneMuteButton.setColour(juce::ToggleButton::textColourId, Colours::white85);
+    standaloneMuteButton.setColour(juce::ToggleButton::textColourId, Colours::white50);
     standaloneMuteButton.setClickingTogglesState(true);
     dryWetLabel.setText("GLOBAL DRY/WET", juce::dontSendNotification);
     outputGainLabel.setText("OUTPUT GAIN", juce::dontSendNotification);
@@ -251,7 +250,7 @@ WorkspacePanel::WorkspacePanel()
     clockSourceButton.onClick = [this] { cycleSettingsChoice(clockSourceBox); };
     stepResolutionButton.onClick = [this] { cycleSettingsChoice(stepResolutionBox); };
 
-    bypassToggle.setColour(juce::ToggleButton::textColourId, Colours::white85);
+    bypassToggle.setColour(juce::ToggleButton::textColourId, Colours::white50);
 
     rebuildStandaloneSettingsComponent();
 

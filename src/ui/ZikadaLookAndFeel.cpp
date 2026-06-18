@@ -13,29 +13,29 @@ void ZikadaLookAndFeel::loadFonts()
 {
     auto vcrFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::VCROSDMONO_ttf, BinaryData::VCROSDMONO_ttfSize);
-    vcrFont = juce::Font(juce::FontOptions(vcrFace).withHeight(14.0f));
+    vcrFont = juce::Font(juce::FontOptions(vcrFace).withHeight(11.0f));
 
     auto spaceMonoFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::SpaceMonoRegular_ttf, BinaryData::SpaceMonoRegular_ttfSize);
-    spaceMonoFont = juce::Font(juce::FontOptions(spaceMonoFace).withHeight(16.0f));
+    spaceMonoFont = juce::Font(juce::FontOptions(spaceMonoFace).withHeight(11.0f));
 
     auto spaceMonoBoldFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::SpaceMonoBold_ttf, BinaryData::SpaceMonoBold_ttfSize);
-    spaceMonoBoldFont = juce::Font(juce::FontOptions(spaceMonoBoldFace).withHeight(16.0f));
+    spaceMonoBoldFont = juce::Font(juce::FontOptions(spaceMonoBoldFace).withHeight(11.0f));
 
     auto antaFace = juce::Typeface::createSystemTypefaceFor(
         BinaryData::AntaRegular_ttf, BinaryData::AntaRegular_ttfSize);
-    antaFont = juce::Font(juce::FontOptions(antaFace).withHeight(28.0f));
+    antaFont = juce::Font(juce::FontOptions(antaFace).withHeight(22.0f));
 
-    interFont = juce::Font(juce::FontOptions().withName(juce::Font::getDefaultSansSerifFontName()).withHeight(18.0f));
+    interFont = juce::Font(juce::FontOptions().withName(juce::Font::getDefaultSansSerifFontName()).withHeight(11.0f));
 }
 
 void ZikadaLookAndFeel::initialiseColours()
 {
     setColour(juce::ResizableWindow::backgroundColourId, Colours::bgPrimary);
-    setColour(juce::TextButton::buttonColourId, Colours::neonGreen);
+    setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
     setColour(juce::TextButton::buttonOnColourId, Colours::neonGreen);
-    setColour(juce::TextButton::textColourOffId, Colours::white85);
+    setColour(juce::TextButton::textColourOffId, Colours::white50);
     setColour(juce::TextButton::textColourOnId, Colours::white);
     setColour(juce::Slider::thumbColourId, Colours::neonGreen);
     setColour(juce::Slider::trackColourId, Colours::neonGreen);

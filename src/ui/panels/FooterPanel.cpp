@@ -63,7 +63,7 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     bypassButton.setClickingTogglesState(true);
     bypassButton.setColour(juce::TextButton::buttonColourId,   Colours::bgSurface);
     bypassButton.setColour(juce::TextButton::buttonOnColourId,  Colours::neonGreen);
-    bypassButton.setColour(juce::TextButton::textColourOffId,   Colours::white85);
+    bypassButton.setColour(juce::TextButton::textColourOffId,   Colours::white50);
     bypassButton.setColour(juce::TextButton::textColourOnId,    Colours::bgPrimary);
     addAndMakeVisible(bypassButton);
     bypassAttachment = std::make_unique<
@@ -78,16 +78,16 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
 
     stepResolutionBox.addItemList({"1/16", "1/8", "1/4", "1/2"}, 1);
     stepResolutionBox.setColour(juce::ComboBox::backgroundColourId,    Colours::bgSurface);
-    stepResolutionBox.setColour(juce::ComboBox::textColourId,           Colours::neonGreen);
+    stepResolutionBox.setColour(juce::ComboBox::textColourId,           Colours::white50);
     stepResolutionBox.setColour(juce::ComboBox::outlineColourId,        Colours::white50.withAlpha(0.35f));
-    stepResolutionBox.setColour(juce::ComboBox::arrowColourId,          Colours::neonGreen);
+    stepResolutionBox.setColour(juce::ComboBox::arrowColourId,          Colours::white50);
     stepResolutionBox.setColour(juce::ComboBox::focusedOutlineColourId, Colours::neonGreen);
     stepResolutionBox.onChange = [this] { syncInlineControlState(); };
     addChildComponent(stepResolutionBox);
 
     stepResolutionButton.setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
     stepResolutionButton.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
-    stepResolutionButton.setColour(juce::TextButton::textColourOffId, Colours::neonGreen);
+    stepResolutionButton.setColour(juce::TextButton::textColourOffId, Colours::white50);
     stepResolutionButton.setColour(juce::TextButton::textColourOnId, Colours::white);
     stepResolutionButton.onClick = [this] { cycleStepResolution(); };
     addAndMakeVisible(stepResolutionButton);
@@ -113,7 +113,7 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     modModeButton.setClickingTogglesState(true);
     modModeButton.setColour(juce::TextButton::buttonColourId,   Colours::bgSurface);
     modModeButton.setColour(juce::TextButton::buttonOnColourId, Colours::neonGreen);
-    modModeButton.setColour(juce::TextButton::textColourOffId,  Colours::white85);
+    modModeButton.setColour(juce::TextButton::textColourOffId,  Colours::white50);
     modModeButton.setColour(juce::TextButton::textColourOnId,   Colours::bgPrimary);
     modModeButton.onClick = [this]
     {

@@ -26,7 +26,7 @@ SidebarPanel::SidebarPanel()
 {
     infoLabel.setJustificationType(juce::Justification::centredLeft);
     infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
-    infoLabel.setColour(juce::Label::textColourId, Colours::white85);
+    infoLabel.setColour(juce::Label::textColourId, Colours::white50);
     infoLabel.setMinimumHorizontalScale(1.0f);
     infoLabel.setText("Select a step to inspect presets.", juce::dontSendNotification);
     addAndMakeVisible(infoLabel);

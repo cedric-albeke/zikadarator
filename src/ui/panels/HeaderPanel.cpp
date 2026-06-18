@@ -165,10 +165,9 @@ void HeaderPanel::paint(juce::Graphics& g)
     const auto bounds = getLocalBounds().toFloat();
     const auto* laf   = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
 
-    g.setColour(Colours::bgPrimary.darker(0.20f));
-    g.fillAll();
+    ZikadaLookAndFeel::drawPremiumPanel(g, getLocalBounds(), true);
 
-    g.setColour(Colours::neonGreen.withAlpha(0.50f));
+    g.setColour(Colours::white50);
     g.drawLine(0.0f, bounds.getBottom() - 1.5f,
                bounds.getRight(), bounds.getBottom() - 1.5f, 2.0f);
 
@@ -358,7 +357,7 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
             path.lineTo(cx + sz * 0.5f, cy);
             path.lineTo(cx - sz * 0.5f, cy + sz);
         }
-        g.setColour(enabled ? Colours::white85 : Colours::white.withAlpha(0.25f));
+        g.setColour(enabled ? Colours::white50 : Colours::white.withAlpha(0.25f));
         g.strokePath(path, juce::PathStrokeType(1.8f, juce::PathStrokeType::curved,
                                                  juce::PathStrokeType::rounded));
     };
