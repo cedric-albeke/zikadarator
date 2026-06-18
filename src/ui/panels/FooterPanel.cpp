@@ -11,6 +11,8 @@ namespace {
     constexpr int kLabelH   = 10;
     constexpr int kInnerPad = 6;
     constexpr int kKnobGap  = 3;
+    constexpr int kDetailGroupHeaderH = 12;
+    constexpr int kDetailGroupGap = 3;
 
     constexpr std::array<double, 7> kKnobMin  = { 20.0, 0.1,   0.0, 0.0, 0.0, 0.0, -1.0 };
     constexpr std::array<double, 7> kKnobMax  = { 20000.0, 10.0, 1.0, 1.0, 1.0, 2.0,  1.0 };
@@ -24,6 +26,16 @@ namespace {
     constexpr std::array<const char*, 7> kLoopKnobLabel = {
         "LEN", "RATE", "REV", "FADE", "MIX", "VOL", "PAN"
     };
+
+    juce::Rectangle<int> getKnobGroupBounds(juce::Rectangle<int> area, int firstKnob, int knobCount)
+    {
+        constexpr int numKnobs = 7;
+        const int totalGaps = (numKnobs - 1) * kKnobGap;
+        const int knobW = juce::jmax(4, (area.getWidth() - totalGaps) / numKnobs);
+        const int x = area.getX() + firstKnob * (knobW + kKnobGap);
+        const int w = knobCount * knobW + (knobCount - 1) * kKnobGap;
+        return { x, area.getY(), w, area.getHeight() };
+    }
 
     void debugFooterLog(const juce::String& message)
     {
@@ -119,6 +131,7 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     {
         modModeActive = modModeButton.getToggleState();
         applyModModeVisibility();
+        resized();
         repaint();
     };
     addAndMakeVisible(modModeButton);
@@ -377,6 +390,35 @@ void FooterPanel::drawDetailDock(juce::Graphics& g) const
             g.drawRoundedRectangle(cell, 3.0f, 0.8f);
         }
     }
+
+    if (!modModeActive)
+        drawDetailGroupHeaders(g, inner);
+}
+
+void FooterPanel::drawDetailGroupHeaders(juce::Graphics& g, juce::Rectangle<int> knobArea) const
+{
+    knobArea.removeFromTop(kDetailGroupGap);
+    auto headerArea = knobArea.removeFromTop(kDetailGroupHeaderH);
+    if (headerArea.getWidth() < 80)
+        return;
+
+    const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+    auto drawGroupHeader = [&](juce::Rectangle<int> bounds, const juce::String& label)
+    {
+        auto b = bounds.reduced(1, 0).toFloat();
+        g.setColour(Colours::bgSurface.withAlpha(0.38f));
+        g.fillRoundedRectangle(b, 2.0f);
+        g.setColour(Colours::white.withAlpha(0.07f));
+        g.drawRoundedRectangle(b, 2.0f, 0.8f);
+        g.setFont(laf != nullptr ? laf->getSpaceMonoFont(9.0f, true)
+                                  : juce::Font(juce::FontOptions().withHeight(9.0f).withStyle("Bold")));
+        g.setColour(Colours::white50);
+        g.drawText(label, b, juce::Justification::centred, false);
+    };
+
+    drawGroupHeader(getKnobGroupBounds(headerArea, 0, 2), selectedLane == 1 ? "LOOP" : "TONE");
+    drawGroupHeader(getKnobGroupBounds(headerArea, 2, 2), selectedLane == 1 ? "TEXTURE" : "SPACE");
+    drawGroupHeader(getKnobGroupBounds(headerArea, 4, 3), "OUTPUT");
 }
 
 void FooterPanel::drawSignalModule(juce::Graphics& g) const
@@ -456,6 +498,12 @@ void FooterPanel::resized()
         auto inner = detailZone.reduced(kInnerPad, 4);
         auto labelRow = inner.removeFromTop(kLabelH);
         modModeButton.setBounds(labelRow.removeFromRight(50).withSizeKeepingCentre(50, 18));
+        if (!modModeActive)
+        {
+            inner.removeFromTop(kDetailGroupGap);
+            inner.removeFromTop(kDetailGroupHeaderH);
+            inner.removeFromTop(kDetailGroupGap);
+        }
 
         constexpr int numKnobs = 7;
         const int     totalGaps = (numKnobs - 1) * kKnobGap;

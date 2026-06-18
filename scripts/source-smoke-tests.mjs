@@ -269,6 +269,11 @@ assertContains(stepCell, "cellColour.withAlpha(0.68f)", "active step cells must 
 assertContains(stepCell, "Colours::white.withAlpha(0.28f)", "hovered active cells must use a restrained white highlight border");
 assertContains(read("src/ui/panels/SequencerPanel.cpp"), "kGridSurfaceAlpha = 0.30f", "sequencer passive grid surface must be quieter than active step/panel states");
 assertContains(read("src/ui/panels/SequencerPanel.cpp"), "kGridBorderAlpha = 0.045f", "sequencer passive grid border must be quieter than active step/panel states");
+assertContains(footer, "kDetailGroupHeaderH = 12", "footer detail dock must reserve stable space for lane-aware knob group headers");
+assertContains(footer, "drawDetailGroupHeaders", "footer detail dock must draw knob groups instead of a flat seven-control strip");
+assertContains(footer, "selectedLane == 1 ? \"LOOP\" : \"TONE\"", "footer group labels must adapt to loop lane versus tone-style lanes");
+assertContains(footer, "selectedLane == 1 ? \"TEXTURE\" : \"SPACE\"", "footer group labels must adapt the middle knob group to lane context");
+assertContains(footer, "drawGroupHeader", "footer group headers must use a shared painter for consistent hierarchy");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Hertz)", "filter cutoff knobs must display Hz/kHz");
 assertContains(footer, "setScaleMode(KnobScaleMode::Logarithmic)", "filter cutoff knobs must use logarithmic movement");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Pan)", "pan knobs must display L/C/R position");

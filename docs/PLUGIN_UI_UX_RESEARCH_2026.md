@@ -43,12 +43,13 @@ Date: 2026-06-18
 - Expanded the sidebar selected-preset readout into a roomier device-display panel with separate title/body labels and a lane-color accent.
 - Centralized StepGrid layout metrics and added subtle four-step beat-group backplates so the sequencer reads as musical phrases, not only a table.
 - Quieted passive sequencer framing and step-cell glow so selected, playing, hovered, and active cells keep the strongest hierarchy.
+- Added lane-aware footer group headers so selected-step controls scan as Tone/Space/Output, or Loop/Texture/Output on the loop lane.
 
 ## Recommended Next Slices
 
 1. Sequencer hierarchy follow-up: continue evaluating selected/playing/tied state priority in real DAW sizes after the passive glow reduction.
 2. Sidebar follow-up: add direct lane-category grouping if the preset set grows beyond 16 factory options.
-3. Footer rework: split selected-step controls into lane-aware groups with more knob spacing and fewer always-visible globals.
+3. Footer follow-up: test the grouped selected-step controls at minimum DAW size and decide whether globals should collapse behind a compact utility strip.
 4. Engine FX slice: implement one real groove effect before adding labels. The lowest-risk first slice is real Slice-lane reverse/repeat/stutter/retrigger playback, because the UI already exposes those concepts and the existing `SliceEngine` can be extended without promising vinyl/tape-stop yet.
 5. Performance slice: cache static grid/panel layers and repaint only old/new playhead columns plus active CRT bounds.
 

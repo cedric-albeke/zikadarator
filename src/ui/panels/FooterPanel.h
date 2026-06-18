@@ -67,6 +67,7 @@ private:
 
     void drawDryWetModule (juce::Graphics& g) const;
     void drawDetailDock   (juce::Graphics& g) const;
+    void drawDetailGroupHeaders(juce::Graphics& g, juce::Rectangle<int> knobArea) const;
     void drawSignalModule (juce::Graphics& g) const;
     void notifySlotDataChanged();
     void cycleStepResolution();
