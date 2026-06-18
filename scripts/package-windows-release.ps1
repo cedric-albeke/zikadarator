@@ -163,11 +163,21 @@ setlocal
 set VST3_DIR=%ProgramFiles%\Common Files\VST3
 echo Installing ZIKADARATOR.vst3 to "%VST3_DIR%"
 if not exist "%VST3_DIR%" mkdir "%VST3_DIR%"
+if errorlevel 1 goto install_failed
 xcopy /E /I /Y "%~dp0ZIKADARATOR.vst3" "%VST3_DIR%\ZIKADARATOR.vst3"
+if errorlevel 1 goto install_failed
 echo.
 echo Optional standalone app is included as ZIKADARATOR.exe next to this installer.
 echo Done.
 pause
+exit /b 0
+
+:install_failed
+echo.
+echo ERROR: VST3 install failed.
+echo Run this script as Administrator, or manually copy "%~dp0ZIKADARATOR.vst3" to "%VST3_DIR%\ZIKADARATOR.vst3".
+pause
+exit /b 1
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "install.bat") -Encoding ASCII
 
 @"

@@ -21,8 +21,9 @@ Installed paths:
 
 1. Download `ZIKADARATOR-windows-zip`.
 2. Extract it.
-3. Copy `VST3/ZIKADARATOR.vst3` into `C:\Program Files\Common Files\VST3\`.
-4. Optionally run the standalone app from the extracted `Standalone` folder.
+3. Run `install.bat` as Administrator, or manually copy root-level `ZIKADARATOR.vst3` into `C:\Program Files\Common Files\VST3\`.
+4. Optionally run the root-level standalone app `ZIKADARATOR.exe`.
+5. Optionally compare the package contents with `SHA256SUMS.txt` after transfer.
 
 ## macOS
 

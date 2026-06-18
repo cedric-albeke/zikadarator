@@ -19,7 +19,7 @@ Manual fallback:
 
 1. Download `ZIKADARATOR-windows-zip`.
 2. Extract it.
-3. Copy `VST3/ZIKADARATOR.vst3` to `C:\Program Files\Common Files\VST3\`.
+3. Run `install.bat` as Administrator, or copy root-level `ZIKADARATOR.vst3` to `C:\Program Files\Common Files\VST3\`.
 
 ### macOS
 
