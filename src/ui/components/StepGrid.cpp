@@ -3,6 +3,41 @@
 
 namespace zikada {
 
+namespace StepGridMetrics {
+    constexpr int kLaneLabelWidth = 110;
+    constexpr int kLaneLabelGap = 8;
+    constexpr int kLaneControlStripWidth = 56;
+    constexpr int kRulerHeight = 14;
+    constexpr int kBeatGroupSize = 4;
+}
+
+namespace {
+    void drawBeatGroupBackgrounds(juce::Graphics& g, int cellAreaX, int cellAreaW,
+                                  int laneY, int laneHeight, int stepWidth)
+    {
+        using namespace StepGridMetrics;
+
+        for (int beat = 0; beat < StepGrid::numSteps / kBeatGroupSize; ++beat)
+        {
+            const int groupX = cellAreaX + beat * kBeatGroupSize * stepWidth;
+            const int groupW = juce::jmin(kBeatGroupSize * stepWidth, cellAreaX + cellAreaW - groupX);
+            if (groupW <= 0)
+                continue;
+
+            auto beatGroupBounds = juce::Rectangle<int>(groupX, laneY + 2, groupW, laneHeight - 4).toFloat();
+            g.setColour((beat % 2 == 0 ? Colours::displayBezel : Colours::bgAccent).withAlpha(0.22f));
+            g.fillRoundedRectangle(beatGroupBounds.reduced(1.0f, 0.0f), 3.0f);
+
+            if (beat > 0)
+            {
+                g.setColour(Colours::neonGreen.withAlpha(0.18f));
+                g.drawLine(beatGroupBounds.getX(), beatGroupBounds.getY() + 4.0f,
+                           beatGroupBounds.getX(), beatGroupBounds.getBottom() - 4.0f, 1.2f);
+            }
+        }
+    }
+}
+
 StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& seqState)
     : apvts(state), sequencerState(seqState)
 {
@@ -123,13 +158,15 @@ void StepGrid::setupGrid()
 
 void StepGrid::paint(juce::Graphics& g)
 {
+    using namespace StepGridMetrics;
+
     g.fillAll(Colours::bgPrimary);
 
     const auto  bounds       = getLocalBounds();
-    const int   labelWidth   = 110;
-    const int   labelGap     = 8;
-    const int   knobStripW   = 56;
-    const int   rulerHeight  = 14;
+    const int   labelWidth   = kLaneLabelWidth;
+    const int   labelGap     = kLaneLabelGap;
+    const int   knobStripW   = kLaneControlStripWidth;
+    const int   rulerHeight  = kRulerHeight;
     const int   totalW       = bounds.getWidth();
     const int   cellAreaW    = totalW - labelWidth - labelGap - knobStripW;
     const int   stepWidth    = cellAreaW / numSteps;
@@ -145,7 +182,7 @@ void StepGrid::paint(juce::Graphics& g)
 
         for (int beat = 0; beat < 4; ++beat)
         {
-            const int bx = cellAreaX + beat * 4 * stepWidth;
+            const int bx = cellAreaX + beat * kBeatGroupSize * stepWidth;
 
             if (beat > 0)
             {
@@ -197,6 +234,8 @@ void StepGrid::paint(juce::Graphics& g)
             g.fillRect(bounds.getX(), ly, totalW, laneHeight);
         }
 
+        drawBeatGroupBackgrounds(g, cellAreaX, cellAreaW, ly, laneHeight, stepWidth);
+
         const auto chipBounds = juce::Rectangle<int>(
             bounds.getX() + 2, ly + 3, labelWidth - 4, laneHeight - 6).toFloat();
 
@@ -236,8 +275,8 @@ void StepGrid::paint(juce::Graphics& g)
 
         for (int grp = 1; grp < 4; ++grp)
         {
-            const float divX = static_cast<float>(cellAreaX + grp * 4 * stepWidth);
-            g.setColour(Colours::neonGreen.withAlpha(0.10f));
+            const float divX = static_cast<float>(cellAreaX + grp * kBeatGroupSize * stepWidth);
+            g.setColour(Colours::neonGreen.withAlpha(0.16f));
             g.drawLine(divX, static_cast<float>(ly + 4),
                        divX, static_cast<float>(ly + laneHeight - 4), 1.0f);
         }
@@ -326,11 +365,13 @@ void StepGrid::drawPlayheadRail(juce::Graphics& g)
     if (lastPlayingStep < 0 || lastPlayingStep >= numSteps)
         return;
 
+    using namespace StepGridMetrics;
+
     const auto bounds = getLocalBounds();
-    const int labelWidth = 110;
-    const int labelGap = 8;
-    const int knobStripW = 56;
-    const int rulerHeight = 14;
+    const int labelWidth = kLaneLabelWidth;
+    const int labelGap = kLaneLabelGap;
+    const int knobStripW = kLaneControlStripWidth;
+    const int rulerHeight = kRulerHeight;
     const int cellAreaW = bounds.getWidth() - labelWidth - labelGap - knobStripW;
     const int stepWidth = cellAreaW / numSteps;
     const int cellAreaX = bounds.getX() + labelWidth + labelGap;
@@ -351,12 +392,14 @@ void StepGrid::drawPlayheadRail(juce::Graphics& g)
 
 void StepGrid::resized()
 {
+    using namespace StepGridMetrics;
+
     auto bounds = getLocalBounds();
 
-    const int labelWidth     = 110;
-    const int labelGap       = 8;
-    const int knobStripWidth = 56;
-    const int rulerHeight    = 14;
+    const int labelWidth     = kLaneLabelWidth;
+    const int labelGap       = kLaneLabelGap;
+    const int knobStripWidth = kLaneControlStripWidth;
+    const int rulerHeight    = kRulerHeight;
 
     bounds.removeFromTop(rulerHeight);
 
@@ -418,10 +461,12 @@ void StepGrid::setSelectedStep(int lane, int step)
 
 std::pair<int, int> StepGrid::hitTestCell(juce::Point<int> pos) const
 {
-    const int labelWidth     = 110;
-    const int labelGap       = 8;
-    const int knobStripWidth = 56;
-    const int rulerHeight    = 14;
+    using namespace StepGridMetrics;
+
+    const int labelWidth     = kLaneLabelWidth;
+    const int labelGap       = kLaneLabelGap;
+    const int knobStripWidth = kLaneControlStripWidth;
+    const int rulerHeight    = kRulerHeight;
 
     const auto bounds  = getLocalBounds();
     const int cellAreaX = bounds.getX() + labelWidth + labelGap;

@@ -214,6 +214,10 @@ assertContains(stepGrid, "moveSelectionBy", "step grid must expose arrow-key sel
 assertContains(stepGrid, "toggleSelectedStep", "step grid must expose keyboard activation for the selected step");
 assertContains(stepGrid, "drawKeyboardFocusRing", "step grid must draw a visible keyboard focus ring");
 assertContains(stepGrid, "drawPlayheadRail", "step grid must draw a column-wide playhead rail");
+assertContains(stepGrid, "namespace StepGridMetrics", "step grid layout metrics must be centralized instead of repeated across paint/resized/hit-test");
+assertContains(stepGrid, "kBeatGroupSize = 4", "step grid must explicitly model four-step beat groups");
+assertContains(stepGrid, "drawBeatGroupBackgrounds", "step grid must draw subtle beat-group backplates so the sequencer reads musically");
+assertContains(stepGrid, "beatGroupBounds", "step grid beat-group drawing must use stable group bounds instead of ad hoc separator lines only");
 assertContains(stepGrid, "juce::KeyPress::leftKey", "step grid must handle left/right arrow keys");
 assertContains(stepGrid, "juce::KeyPress::spaceKey", "step grid must handle space/return activation");
 assertContains(stepGrid, "e.mods.isShiftDown()", "off-cell wheel preset cycling must require an explicit Shift gesture");
