@@ -44,6 +44,7 @@ Date: 2026-06-18
 - Centralized StepGrid layout metrics and added subtle four-step beat-group backplates so the sequencer reads as musical phrases, not only a table.
 - Quieted passive sequencer framing and step-cell glow so selected, playing, hovered, and active cells keep the strongest hierarchy.
 - Added lane-aware footer group headers so selected-step controls scan as Tone/Space/Output, or Loop/Texture/Output on the loop lane.
+- Fixed the footer empty state so selected-step knobs and modulation controls stay hidden until a step is actually selected.
 
 ## Recommended Next Slices
 

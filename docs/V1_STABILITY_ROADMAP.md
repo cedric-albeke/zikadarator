@@ -28,6 +28,7 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - StepGrid layout metrics are centralized across painting, resizing, hit testing, and playhead drawing, and each lane now has subtle four-step beat-group backplates to make the sequencer read more musically.
 - Passive sequencer framing and inactive/active step glow have been reduced so the grid hierarchy favors selected, playing, hovered, and active musical events over decoration.
 - Footer selected-step controls now have lane-aware group headers, making the seven knobs scan as related control families instead of a flat strip.
+- Footer selected-step and modulation controls now stay hidden until a step is selected, keeping the empty state honest and preventing default-looking controls from implying active edits.
 - Waveform display double framing is removed: the SequencerPanel already draws the device bezel, so WaveformDisplay no longer draws its own redundant bezel.
 - Validation scripts now auto-discover Steinberg VST3 validator on common Windows/macOS paths.
 - Windows CI now syntax-checks the macOS validation script via Bash (`bash -n`).

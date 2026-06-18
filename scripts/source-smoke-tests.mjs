@@ -274,6 +274,10 @@ assertContains(footer, "drawDetailGroupHeaders", "footer detail dock must draw k
 assertContains(footer, "selectedLane == 1 ? \"LOOP\" : \"TONE\"", "footer group labels must adapt to loop lane versus tone-style lanes");
 assertContains(footer, "selectedLane == 1 ? \"TEXTURE\" : \"SPACE\"", "footer group labels must adapt the middle knob group to lane context");
 assertContains(footer, "drawGroupHeader", "footer group headers must use a shared painter for consistent hierarchy");
+assertContains(footer, "const bool showStepControls = hasSelection && !modModeActive", "footer must hide step knobs until a step is selected");
+assertContains(footer, "const bool showModControls = hasSelection && modModeActive", "footer must hide modulation controls until a step is selected");
+assertContains(footer, "modModeButton.setEnabled(hasSelection)", "footer mod mode must be disabled until a step is selected");
+assertContains(footer, "if (!hasSelection) modModeActive = false", "footer must leave modulation mode when selection is unavailable");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Hertz)", "filter cutoff knobs must display Hz/kHz");
 assertContains(footer, "setScaleMode(KnobScaleMode::Logarithmic)", "filter cutoff knobs must use logarithmic movement");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Pan)", "pan knobs must display L/C/R position");

@@ -267,16 +267,23 @@ void FooterPanel::setupModulationControls()
 
 void FooterPanel::applyModModeVisibility()
 {
+    if (!hasSelection) modModeActive = false;
+    modModeButton.setToggleState(modModeActive, juce::dontSendNotification);
+    modModeButton.setEnabled(hasSelection);
+
+    const bool showStepControls = hasSelection && !modModeActive;
+    const bool showModControls = hasSelection && modModeActive;
+
     for (auto& knob : stepKnobs)
-        knob->setVisible(!modModeActive);
+        knob->setVisible(showStepControls);
 
     for (int i = 0; i < kNumModSlots; ++i)
     {
-        modTargetButtons[i]->setVisible(modModeActive);
-        modSourceButtons[i]->setVisible(modModeActive);
-        modAmountSliders[i]->setVisible(modModeActive);
-        modParamSliders[i]->setVisible(modModeActive);
-        modParamLabels[i]->setVisible(modModeActive);
+        modTargetButtons[i]->setVisible(showModControls);
+        modSourceButtons[i]->setVisible(showModControls);
+        modAmountSliders[i]->setVisible(showModControls);
+        modParamSliders[i]->setVisible(showModControls);
+        modParamLabels[i]->setVisible(showModControls);
     }
 }
 
