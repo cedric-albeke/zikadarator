@@ -61,3 +61,4 @@ Date: 2026-06-18
 - Recommended DSP implementation path: deepen Slice scatter/retrigger click-safety, then rate-glide/tape-stop in the Loop/time path, then vinyl scratch once there is a deliberate resampling/scrub model.
 - Current stability pass: frozen slice playback now has bounded start/end edge fades for click reduction; vinyl/tape/scratch naming should still wait for dedicated rate-glide or scrub DSP.
 - Current modulation pass: filter-lane MOD now backs cutoff, resonance, volume, and pan targets; the footer target picker is lane-aware and hides unbacked delay/FX targets until their DSP routing exists.
+- Current performance pass: StepGrid now caches static ruler/lane/beat chrome and repaints only old/new playhead columns during playback, keeping the main sequencer surface smoother at DAW sizes.

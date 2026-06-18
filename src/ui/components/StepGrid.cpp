@@ -158,6 +158,25 @@ void StepGrid::setupGrid()
 
 void StepGrid::paint(juce::Graphics& g)
 {
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
+    if (staticGridLayer.isNull()
+        || staticGridLayerDirty
+        || staticGridLayer.getWidth() != getWidth()
+        || staticGridLayer.getHeight() != getHeight())
+    {
+        staticGridLayer = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
+        juce::Graphics layerGraphics(staticGridLayer);
+        renderStaticGridLayer(layerGraphics);
+        staticGridLayerDirty = false;
+    }
+
+    g.drawImageAt(staticGridLayer, 0, 0);
+}
+
+void StepGrid::renderStaticGridLayer(juce::Graphics& g)
+{
     using namespace StepGridMetrics;
 
     g.fillAll(Colours::bgPrimary);
@@ -424,10 +443,14 @@ void StepGrid::resized()
         knobArea.removeFromTop(2);
         mixKnobs[lane]->setBounds(knobArea);
     }
+
+    invalidateStaticGridLayer();
 }
 
 void StepGrid::setPlayingStep(int step)
 {
+    const int previousPlayingStep = lastPlayingStep;
+
     if (lastPlayingStep >= 0 && lastPlayingStep < numSteps)
     {
         for (int lane = 0; lane < numLanes; ++lane)
@@ -441,6 +464,43 @@ void StepGrid::setPlayingStep(int step)
     }
 
     lastPlayingStep = step;
+
+    if (previousPlayingStep >= 0 && previousPlayingStep < numSteps)
+        repaint(getStepColumnBounds(previousPlayingStep).expanded(4, 0));
+
+    if (lastPlayingStep >= 0 && lastPlayingStep < numSteps && lastPlayingStep != previousPlayingStep)
+        repaint(getStepColumnBounds(lastPlayingStep).expanded(4, 0));
+}
+
+void StepGrid::lookAndFeelChanged()
+{
+    invalidateStaticGridLayer();
+}
+
+void StepGrid::invalidateStaticGridLayer()
+{
+    staticGridLayerDirty = true;
+    repaint();
+}
+
+juce::Rectangle<int> StepGrid::getStepColumnBounds(int step) const
+{
+    if (step < 0 || step >= numSteps)
+        return {};
+
+    using namespace StepGridMetrics;
+
+    const auto bounds = getLocalBounds();
+    const int cellAreaW = bounds.getWidth() - kLaneLabelWidth - kLaneLabelGap - kLaneControlStripWidth;
+    const int stepWidth = cellAreaW / numSteps;
+
+    if (stepWidth <= 0)
+        return {};
+
+    const int cellAreaX = bounds.getX() + kLaneLabelWidth + kLaneLabelGap;
+    const int x = cellAreaX + step * stepWidth;
+    const int y = bounds.getY() + kRulerHeight;
+    return { x, y, stepWidth, juce::jmax(0, bounds.getHeight() - kRulerHeight) };
 }
 
 void StepGrid::setSelectedStep(int lane, int step)

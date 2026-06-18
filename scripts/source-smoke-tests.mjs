@@ -232,6 +232,12 @@ assertContains(stepGrid, "moveSelectionBy", "step grid must expose arrow-key sel
 assertContains(stepGrid, "toggleSelectedStep", "step grid must expose keyboard activation for the selected step");
 assertContains(stepGrid, "drawKeyboardFocusRing", "step grid must draw a visible keyboard focus ring");
 assertContains(stepGrid, "drawPlayheadRail", "step grid must draw a column-wide playhead rail");
+assertContains(stepGridHeader, "staticGridLayer", "step grid must cache its static background chrome");
+assertContains(stepGrid, "renderStaticGridLayer", "step grid must render static chrome through a dedicated cache painter");
+assertContains(stepGrid, "invalidateStaticGridLayer", "step grid must expose a cheap cache invalidation path");
+assertContains(stepGrid, "getStepColumnBounds", "step grid must compute bounded repaint regions for playhead movement");
+assertContains(stepGrid, "repaint(getStepColumnBounds(previousPlayingStep)", "step grid must repaint the old playhead column only");
+assertContains(stepGrid, "repaint(getStepColumnBounds(lastPlayingStep)", "step grid must repaint the new playhead column only");
 assertContains(stepGrid, "namespace StepGridMetrics", "step grid layout metrics must be centralized instead of repeated across paint/resized/hit-test");
 assertContains(stepGrid, "kBeatGroupSize = 4", "step grid must explicitly model four-step beat groups");
 assertContains(stepGrid, "drawBeatGroupBackgrounds", "step grid must draw subtle beat-group backplates so the sequencer reads musically");

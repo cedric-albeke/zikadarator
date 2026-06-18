@@ -17,6 +17,7 @@ public:
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
+    void lookAndFeelChanged() override;
 
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
@@ -85,9 +86,14 @@ private:
     int  chainEraseOriginalLength{1};
 
     int chainAnimPhase{0};
+    juce::Image staticGridLayer;
+    bool staticGridLayerDirty{true};
 
     void setupGrid();
     void timerCallback() override;
+    void renderStaticGridLayer(juce::Graphics& g);
+    void invalidateStaticGridLayer();
+    juce::Rectangle<int> getStepColumnBounds(int step) const;
     std::pair<int, int> hitTestCell(juce::Point<int> pos) const;
     void applyPaintToCell(int lane, int step);
     void cyclePresetAt(int lane, int step, int direction);
