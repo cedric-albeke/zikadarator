@@ -36,6 +36,7 @@ void SliceEngine::reset()
     rightBuffer.reset();
     playbackPosition = 0;
     playbackLength = 0;
+    edgeFadeSamples = 0;
     isPlayingSlice = false;
 }
 
@@ -82,6 +83,7 @@ void SliceEngine::triggerSlice(int sliceIndex)
     }
     
     playbackPosition = 0;
+    edgeFadeSamples = playbackLength > 8 ? juce::jlimit(1, 64, playbackLength / 16) : 0;
     isPlayingSlice = true;
 }
 
@@ -101,8 +103,10 @@ void SliceEngine::process(float* outputLeft, float* outputRight, int numSamples)
     
     for (int i = 0; i < samplesToPlay; ++i)
     {
-        outputLeft[i] = playbackBufferLeft[static_cast<size_t>(playbackPosition + i)];
-        outputRight[i] = playbackBufferRight[static_cast<size_t>(playbackPosition + i)];
+        const int position = playbackPosition + i;
+        const float gain = getEdgeFadeGain(position);
+        outputLeft[i] = playbackBufferLeft[static_cast<size_t>(position)] * gain;
+        outputRight[i] = playbackBufferRight[static_cast<size_t>(position)] * gain;
     }
     
     for (int i = samplesToPlay; i < numSamples; ++i)
@@ -114,6 +118,26 @@ void SliceEngine::process(float* outputLeft, float* outputRight, int numSamples)
     playbackPosition += samplesToPlay;
     if (playbackPosition >= playbackLength)
         isPlayingSlice = false;
+}
+
+float SliceEngine::getEdgeFadeGain(int position) const
+{
+    if (edgeFadeSamples <= 0)
+        return 1.0f;
+
+    float gain = 1.0f;
+    if (position < edgeFadeSamples)
+        gain = juce::jlimit(0.0f, 1.0f, static_cast<float>(position) / static_cast<float>(edgeFadeSamples));
+
+    const int samplesUntilEnd = playbackLength - 1 - position;
+    if (samplesUntilEnd < edgeFadeSamples)
+    {
+        const float fadeOut = juce::jlimit(0.0f, 1.0f,
+                                           static_cast<float>(samplesUntilEnd) / static_cast<float>(edgeFadeSamples));
+        gain = juce::jmin(gain, fadeOut);
+    }
+
+    return gain;
 }
 
 int SliceEngine::getPlaybackSampleAge(int sliceStartSamples, int position) const

@@ -59,3 +59,4 @@ Date: 2026-06-18
 - Existing real groove pieces: Slice forward/reverse/repeat/stutter playback modes, Loop forward/reverse windows, loop speed changes, long tails, Envelope attack/decay/swell/fade/tremolo/wobble/punch/snap/glide/hold shapes, FX2 short wobble/modulated delay, FX1 tremolo, and global ducking/sidechain mix modes.
 - Misaligned or incomplete promises: vinyl/tape-stop/scratch should not be advertised until dedicated DSP exists.
 - Recommended DSP implementation path: deepen Slice scatter/retrigger click-safety, then rate-glide/tape-stop in the Loop/time path, then vinyl scratch once there is a deliberate resampling/scrub model.
+- Current stability pass: frozen slice playback now has bounded start/end edge fades for click reduction; vinyl/tape/scratch naming should still wait for dedicated rate-glide or scrub DSP.

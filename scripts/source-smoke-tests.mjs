@@ -142,6 +142,10 @@ if (triggerSlice.includes(".resize(") || triggerSlice.includes(".assign(")) {
   fail("SliceEngine triggerSlice must not allocate on the audio thread");
 }
 assertContains(read("src/engine/SliceEngine.h"), "enum class PlaybackMode", "SliceEngine must expose real playback modes for slice presets");
+assertContains(read("src/engine/SliceEngine.h"), "edgeFadeSamples", "SliceEngine must keep a realtime-safe edge fade for click reduction");
+assertContains(read("src/engine/SliceEngine.h"), "getEdgeFadeGain", "SliceEngine must centralize slice de-click gain calculation");
+assertContains(sliceEngine, "getEdgeFadeGain(position)", "SliceEngine process must apply de-click gain while rendering frozen slices");
+assertContains(sliceEngine, "playbackLength > 8 ? juce::jlimit(1, 64, playbackLength / 16) : 0", "SliceEngine must derive bounded edge fades from the frozen slice length");
 assertContains(processor, "getSliceConfigForPreset", "processor must map slice presets to playback configs, not only slice indexes");
 assertContains(processor, "SliceEngine::PlaybackMode::Reverse", "slice preset mapping must back the Reverse preset with DSP");
 assertContains(processor, "SliceEngine::PlaybackMode::Repeat", "slice preset mapping must back the Repeat preset with DSP");

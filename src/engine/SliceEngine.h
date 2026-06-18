@@ -45,9 +45,11 @@ private:
     std::vector<float> playbackBufferRight;
     int playbackPosition{0};
     int playbackLength{0};
+    int edgeFadeSamples{0};
     bool isPlayingSlice{false};
 
     int getPlaybackSampleAge(int sliceStartSamples, int position) const;
+    float getEdgeFadeGain(int position) const;
 };
 
 }

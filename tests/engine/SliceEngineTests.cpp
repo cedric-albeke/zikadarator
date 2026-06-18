@@ -51,9 +51,9 @@ void addSliceEngineTests(std::vector<std::pair<std::string, std::function<void()
         std::vector<float> right(16, 0.0f);
         engine.process(left.data(), right.data(), 16);
 
-        requireNear(left[0], 16.0f, 0.0001f, "reverse playback should start from the newest slice sample");
-        requireNear(left[15], 1.0f, 0.0001f, "reverse playback should end on the oldest slice sample");
-        requireNear(right[0], 116.0f, 0.0001f, "reverse playback should preserve stereo right data");
+        requireNear(left[1], 15.0f, 0.0001f, "reverse playback should continue from the newest slice sample after the fade-in edge");
+        requireNear(left[14], 2.0f, 0.0001f, "reverse playback should approach the oldest slice sample before the fade-out edge");
+        requireNear(right[1], 115.0f, 0.0001f, "reverse playback should preserve stereo right data");
     }});
 
     tests.push_back({"SliceEngine stutter mode repeats a short grain without chasing new input", []
@@ -75,12 +75,35 @@ void addSliceEngineTests(std::vector<std::pair<std::string, std::function<void()
         std::vector<float> right(16, 0.0f);
         engine.process(left.data(), right.data(), 16);
 
-        for (int repeat = 0; repeat < 4; ++repeat)
+        for (int repeat = 1; repeat < 3; ++repeat)
         {
             const int offset = repeat * 4;
             requireNear(left[static_cast<size_t>(offset + 0)], 1.0f, 0.0001f, "stutter should repeat the frozen grain start");
             requireNear(left[static_cast<size_t>(offset + 3)], 4.0f, 0.0001f, "stutter should repeat the frozen grain end");
         }
+    }});
+
+    tests.push_back({"SliceEngine applies de-click fades to slice edges", []
+    {
+        constexpr double sampleRate = 64.0;
+        constexpr int blockSize = 16;
+        SliceEngine engine;
+        engine.prepare(sampleRate, blockSize);
+        engine.setTempo(60.0);
+        engine.setPlaybackMode(SliceEngine::PlaybackMode::Forward, 1);
+
+        std::vector<float> ones(blockSize, 1.0f);
+        engine.writeToBuffer(ones.data(), ones.data(), blockSize);
+        engine.triggerSlice(0);
+
+        std::vector<float> left(blockSize, 0.0f);
+        std::vector<float> right(blockSize, 0.0f);
+        engine.process(left.data(), right.data(), blockSize);
+
+        requireNear(left.front(), 0.0f, 0.0001f, "slice fade-in should suppress the first sample discontinuity");
+        requireNear(right.front(), 0.0f, 0.0001f, "slice fade-in should suppress the first right-channel sample discontinuity");
+        requireNear(left[static_cast<size_t>(blockSize / 2)], 1.0f, 0.0001f, "slice fade should leave the body of the slice untouched");
+        requireNear(left.back(), 0.0f, 0.0001f, "slice fade-out should suppress the last sample discontinuity");
     }});
 }
 
