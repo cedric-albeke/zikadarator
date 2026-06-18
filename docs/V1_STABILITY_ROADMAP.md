@@ -26,6 +26,10 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Keyboard focus, arrow navigation, visible focus rings, and space/return activation are now implemented on the StepGrid. Off-cell wheel preset cycling requires an explicit Shift gesture.
 - A column-wide playhead rail is now drawn in the step grid at the current playing step, spanning all lanes with a subtle neon glow.
 - Waveform display double framing is removed: the SequencerPanel already draws the device bezel, so WaveformDisplay no longer draws its own redundant bezel.
+- Validation scripts now auto-discover Steinberg VST3 validator on common Windows/macOS paths.
+- Windows CI now syntax-checks the macOS validation script via Bash (`bash -n`).
+- Processor regression tests now cover host-state roundtrip (`exportFullState` / `applyFullState`) and host-layout changes (mono → stereo → mono).
+- Windows and macOS CI workflows now include optional code signing and notarization steps that run only when signing secrets are present, producing unsigned tester builds otherwise.
 
 ## V1 Blockers
 
@@ -34,6 +38,6 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 ## Release Hardening
 
 1. Run the macOS validation workflow on a real macOS runner; Windows can only syntax-check the script.
-2. Add Steinberg VST3 validator paths to Windows/macOS validation where available.
+2. Add Steinberg VST3 validator paths to CI runners where available.
 3. Add host-state roundtrip and additional host-layout processor regression tests.
 4. Add signing/notarization paths for public V1 artifacts; keep unsigned packages labeled as tester builds.

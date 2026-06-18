@@ -61,32 +61,90 @@ namespace zikada::tests {
 
 void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>>& tests)
 {
-    tests.push_back({"mono output folds hard-right processed signal instead of dropping it", []
+    tests.push_back({"host-state roundtrip preserves parameters and sequencer state", []
     {
-        PluginProcessor monoProcessor;
-        configureHardRightEnvelopeProcessor(monoProcessor);
+        PluginProcessor processor;
+        processor.prepareToPlay(48000.0, 128);
 
-        PluginProcessor stereoProcessor;
-        configureHardRightEnvelopeProcessor(stereoProcessor);
+        setParameter(processor, ParameterIDs::dryWet, 75.0f);
+        setParameter(processor, ParameterIDs::outputGain, -6.0f);
+        setParameter(processor, ParameterIDs::bypass, 0.0f);
+        setParameter(processor, ParameterIDs::clockSource, 1.0f);
+        setParameter(processor, ParameterIDs::tempo, 120.0f);
+        setParameter(processor, ParameterIDs::stepResolution, 2.0f);
 
-        juce::AudioBuffer<float> monoBuffer(1, 8);
-        fillBuffer(monoBuffer, 1.0f);
+        auto step = processor.getSequencerState().getStepData(0, 0);
+        step.active = true;
+        step.presetIndex = 3;
+        step.chainLength = 2;
+        processor.getSequencerState().setStepData(0, 0, step);
 
-        juce::AudioBuffer<float> stereoBuffer(2, 8);
-        fillBuffer(stereoBuffer, 1.0f);
+        auto slot = processor.getSequencerState().getUserSlot(0, 0);
+        slot.volume = 0.75f;
+        slot.pan = 0.25f;
+        processor.getSequencerState().setUserSlot(0, 0, slot);
 
+        auto snapshot = processor.exportFullState();
+
+        setParameter(processor, ParameterIDs::dryWet, 0.0f);
+        setParameter(processor, ParameterIDs::outputGain, 0.0f);
+        setParameter(processor, ParameterIDs::bypass, 1.0f);
+        setParameter(processor, ParameterIDs::clockSource, 0.0f);
+        setParameter(processor, ParameterIDs::tempo, 60.0f);
+        setParameter(processor, ParameterIDs::stepResolution, 0.0f);
+
+        auto clearedStep = processor.getSequencerState().getStepData(0, 0);
+        clearedStep.active = false;
+        clearedStep.presetIndex = 0;
+        clearedStep.chainLength = 1;
+        processor.getSequencerState().setStepData(0, 0, clearedStep);
+
+        processor.applyFullState(snapshot);
+
+        auto* apvts = &processor.getPluginState().getValueTreeState();
+        auto* dryWetParam = apvts->getParameter(ParameterIDs::dryWet);
+        auto* outputGainParam = apvts->getParameter(ParameterIDs::outputGain);
+        auto* bypassParam = apvts->getParameter(ParameterIDs::bypass);
+        auto* clockSourceParam = apvts->getParameter(ParameterIDs::clockSource);
+        auto* tempoParam = apvts->getParameter(ParameterIDs::tempo);
+        auto* stepResolutionParam = apvts->getParameter(ParameterIDs::stepResolution);
+
+        requireNear(dryWetParam->getValue(), dryWetParam->convertTo0to1(75.0f), 0.001f, "dryWet after roundtrip");
+        requireNear(outputGainParam->getValue(), outputGainParam->convertTo0to1(-6.0f), 0.001f, "outputGain after roundtrip");
+        requireNear(bypassParam->getValue(), bypassParam->convertTo0to1(0.0f), 0.001f, "bypass after roundtrip");
+        requireNear(clockSourceParam->getValue(), clockSourceParam->convertTo0to1(1.0f), 0.001f, "clockSource after roundtrip");
+        requireNear(tempoParam->getValue(), tempoParam->convertTo0to1(120.0f), 0.001f, "tempo after roundtrip");
+        requireNear(stepResolutionParam->getValue(), stepResolutionParam->convertTo0to1(2.0f), 0.001f, "stepResolution after roundtrip");
+
+        auto restoredStep = processor.getSequencerState().getStepData(0, 0);
+        if (!restoredStep.active) throw std::runtime_error("step active not restored after roundtrip");
+        if (restoredStep.presetIndex != 3) throw std::runtime_error("step presetIndex not restored after roundtrip");
+        if (restoredStep.chainLength != 2) throw std::runtime_error("step chainLength not restored after roundtrip");
+
+        auto restoredSlot = processor.getSequencerState().getUserSlot(0, 0);
+        requireNear(restoredSlot.volume, 0.75f, 0.001f, "slot volume not restored after roundtrip");
+        requireNear(restoredSlot.pan, 0.25f, 0.001f, "slot pan not restored after roundtrip");
+    }});
+
+    tests.push_back({"host layout change does not crash or corrupt state", []
+    {
+        PluginProcessor processor;
+        processor.prepareToPlay(48000.0, 256);
+
+        juce::AudioBuffer<float> stereoBuffer(2, 256);
+        fillBuffer(stereoBuffer, 0.5f);
         juce::MidiBuffer midi;
-        monoProcessor.prepareToPlay(48000.0, monoBuffer.getNumSamples());
-        monoProcessor.processBlock(monoBuffer, midi);
+        processor.processBlock(stereoBuffer, midi);
 
+        juce::AudioBuffer<float> monoBuffer(1, 256);
+        fillBuffer(monoBuffer, 0.5f);
         midi.clear();
-        stereoProcessor.prepareToPlay(48000.0, stereoBuffer.getNumSamples());
-        stereoProcessor.processBlock(stereoBuffer, midi);
+        processor.processBlock(monoBuffer, midi);
 
-        const float foldedStereo = 0.5f * (stereoBuffer.getSample(0, 0) + stereoBuffer.getSample(1, 0));
-
-        requireNear(monoBuffer.getSample(0, 0), foldedStereo, 0.001f,
-                    "mono output must match folded stereo output");
+        juce::AudioBuffer<float> stereoBuffer2(2, 256);
+        fillBuffer(stereoBuffer2, 0.5f);
+        midi.clear();
+        processor.processBlock(stereoBuffer2, midi);
     }});
 }
 

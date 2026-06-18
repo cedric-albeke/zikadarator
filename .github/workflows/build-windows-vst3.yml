@@ -28,6 +28,10 @@ jobs:
         with:
           arch: x64
 
+      - name: Syntax-check macOS validation script
+        shell: bash
+        run: bash -n scripts/validate-macos.sh
+
       - name: Validate Windows plugin gate
         shell: pwsh
         run: |
@@ -89,6 +93,29 @@ jobs:
         run: |
           iscc.exe /DMyAppName="${{ env.PRODUCT_NAME }}" /DMyAppVersion="${{ env.PRODUCT_VERSION }}" /DMySourceDir="$PWD\\packaging\\windows\\package-root" /DMyOutputDir="$PWD\\packaging\\windows\\artifacts" "packaging\\windows\\ZIKADARATOR.iss"
 
+      - name: Sign Windows artifacts (if certificate available)
+        if: env.WINDOWS_CERTIFICATE != ''
+        shell: pwsh
+        run: |
+          $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          $certPath = "$env:RUNNER_TEMP\\zikada-cert.pfx"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+          $exePath = "packaging\\windows\\artifacts\\ZIKADARATOR-Setup.exe"
+          $vst3Path = "build\\ZikadaFX_artefacts\\Release\\VST3\\ZIKADARATOR.vst3"
+          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22000.0\x64\signtool.exe"
+          if (-not (Test-Path $signtool)) {
+            $signtool = (Get-Command signtool.exe -ErrorAction SilentlyContinue).Source
+          }
+          if ($signtool) {
+            & $signtool sign /f $certPath /p "$env:WINDOWS_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
+            & $signtool sign /f $certPath /p "$env:WINDOWS_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $vst3Path
+          } else {
+            Write-Host "signtool not found; skipping Windows code signing"
+          }
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4
         with:
@@ -109,3 +136,17 @@ jobs:
           name: ZIKADARATOR-windows-installer
           path: packaging/windows/artifacts/ZIKADARATOR-Setup.exe
           if-no-files-found: error
+
+      - name: Create signed/unsigned manifest note
+        shell: pwsh
+        run: |
+          $manifestPath = "packaging\windows\artifacts\BUILD-INFO.txt"
+          if ($env:WINDOWS_CERTIFICATE -ne '') {
+            "Build: SIGNED with code signing certificate" | Out-File $manifestPath
+          } else {
+            "Build: UNSIGNED - tester build only" | Out-File $manifestPath
+          }
+          "Product: ZIKADARATOR" | Add-Content $manifestPath
+          "Version: $env:PRODUCT_VERSION" | Add-Content $manifestPath
+          "Commit: $env:GITHUB_SHA" | Add-Content $manifestPath
+          "Date: $(Get-Date -Format u)" | Add-Content $manifestPath

@@ -67,6 +67,45 @@ jobs:
             --scripts packaging/macos/scripts \
             packaging/macos/artifacts/${PRODUCT_NAME}-Installer.pkg
 
+      - name: Sign and notarize macOS artifacts (if credentials available)
+        if: env.MACOS_CERTIFICATE != ''
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
+          MACOS_NOTARIZATION_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+          MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
+        run: |
+          # Decode certificate
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/zikada-cert.p12"
+          # Create keychain
+          security create-keychain -p "$MACOS_CERTIFICATE_PASSWORD" "$RUNNER_TEMP/zikada.keychain"
+          security unlock-keychain -p "$MACOS_CERTIFICATE_PASSWORD" "$RUNNER_TEMP/zikada.keychain"
+          security import "$RUNNER_TEMP/zikada-cert.p12" -k "$RUNNER_TEMP/zikada.keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
+          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/zikada.keychain"
+          security list-keychains -s "$RUNNER_TEMP/zikada.keychain"
+          # Sign artifacts
+          codesign --force --options runtime --timestamp --sign "Developer ID Application" \
+            "build/ZikadaFX_artefacts/Release/VST3/ZIKADARATOR.vst3" \
+            "build/ZikadaFX_artefacts/Release/AU/ZIKADARATOR.component" \
+            "build/ZikadaFX_artefacts/Release/Standalone/ZIKADARATOR.app"
+          # Sign installer
+          productsign --sign "Developer ID Installer" \
+            "packaging/macos/artifacts/ZIKADARATOR-Installer.pkg" \
+            "packaging/macos/artifacts/ZIKADARATOR-Installer-Signed.pkg"
+          mv "packaging/macos/artifacts/ZIKADARATOR-Installer-Signed.pkg" \
+            "packaging/macos/artifacts/ZIKADARATOR-Installer.pkg"
+          # Notarize (if notarization credentials are available)
+          if [[ -n "$MACOS_NOTARIZATION_APPLE_ID" && -n "$MACOS_NOTARIZATION_PASSWORD" ]]; then
+            xcrun notarytool submit \
+              "packaging/macos/artifacts/ZIKADARATOR-Installer.pkg" \
+              --apple-id "$MACOS_NOTARIZATION_APPLE_ID" \
+              --password "$MACOS_NOTARIZATION_PASSWORD" \
+              --team-id "$MACOS_NOTARIZATION_TEAM_ID" \
+              --wait
+            xcrun stapler staple "packaging/macos/artifacts/ZIKADARATOR-Installer.pkg"
+          fi
+
       - name: Upload macOS VST3 artifact
         uses: actions/upload-artifact@v4
         with:
@@ -94,3 +133,15 @@ jobs:
           name: ZIKADARATOR-macos-installer
           path: packaging/macos/artifacts/ZIKADARATOR-Installer.pkg
           if-no-files-found: error
+
+      - name: Create signed/unsigned manifest note
+        run: |
+          if [[ -n "${{ secrets.MACOS_CERTIFICATE }}" ]]; then
+            echo "Build: SIGNED with Developer ID" > packaging/macos/artifacts/BUILD-INFO.txt
+          else
+            echo "Build: UNSIGNED — tester build only" > packaging/macos/artifacts/BUILD-INFO.txt
+          fi
+          echo "Product: ZIKADARATOR" >> packaging/macos/artifacts/BUILD-INFO.txt
+          echo "Version: ${PRODUCT_VERSION}" >> packaging/macos/artifacts/BUILD-INFO.txt
+          echo "Commit: ${GITHUB_SHA}" >> packaging/macos/artifacts/BUILD-INFO.txt
+          echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> packaging/macos/artifacts/BUILD-INFO.txt

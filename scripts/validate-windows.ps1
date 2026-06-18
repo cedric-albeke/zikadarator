@@ -61,6 +61,29 @@ $pluginvalZip = Join-Path $repoRoot "build/pluginval-$PluginvalVersion.zip"
 $pluginvalResults = Join-Path $repoRoot "build/pluginval-results"
 $vst3Path = Join-Path $buildPath "ZikadaFX_artefacts/$Configuration/VST3/ZIKADARATOR.vst3"
 
+$commonVst3ValidatorPaths = @(
+    $Vst3ValidatorPath,
+    "${env:ProgramFiles}/Steinberg/VST3 Validator/validator.exe",
+    "${env:ProgramFiles(x86)}/Steinberg/VST3 Validator/validator.exe",
+    "C:/Program Files/Steinberg/VST3 Validator/validator.exe",
+    "C:/Program Files (x86)/Steinberg/VST3 Validator/validator.exe",
+    "${env:LOCALAPPDATA}/Programs/VST3 Validator/validator.exe"
+)
+
+$resolvedVst3Validator = $null
+foreach ($candidate in $commonVst3ValidatorPaths) {
+    if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+        $resolvedVst3Validator = $candidate
+        break
+    }
+}
+
+$vst3ValidatorParam = $Vst3ValidatorPath
+if ($resolvedVst3Validator) {
+    Write-Host "Found VST3 validator: $resolvedVst3Validator"
+    $vst3ValidatorParam = $resolvedVst3Validator
+}
+
 Invoke-Step "Validate release metadata" {
     $postinstallPath = "packaging/macos/scripts/postinstall"
     $postinstallStage = git ls-files --stage -- $postinstallPath
@@ -149,15 +172,15 @@ Invoke-Step "Run pluginval level $PluginvalStrictness" {
         "--output-filename", "ZIKADARATOR-pluginval-level$PluginvalStrictness.log"
     )
 
-    if ($Vst3ValidatorPath.Trim().Length -gt 0) {
-        if (-not (Test-Path -LiteralPath $Vst3ValidatorPath)) {
-            throw "VST3 validator path does not exist: $Vst3ValidatorPath"
+    if ($vst3ValidatorParam.Trim().Length -gt 0) {
+        if (-not (Test-Path -LiteralPath $vst3ValidatorParam)) {
+            throw "VST3 validator path does not exist: $vst3ValidatorParam"
         }
 
-        $pluginvalArgs += @("--vst3validator", $Vst3ValidatorPath)
+        $pluginvalArgs += @("--vst3validator", $vst3ValidatorParam)
     }
     else {
-        Write-Host "No VST3 validator path supplied; pluginval will skip Steinberg's VST3 validator subtest."
+        Write-Host "No VST3 validator path supplied or found; pluginval will skip Steinberg's VST3 validator subtest."
     }
 
     $pluginvalArgs += @("--validate", $vst3Path)

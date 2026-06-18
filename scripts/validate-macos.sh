@@ -115,6 +115,22 @@ step "Run pluginval level $PLUGINVAL_STRICTNESS"
 pluginval_results="build/pluginval-results"
 mkdir -p "$pluginval_results"
 
+vst3_validator_param="$VST3_VALIDATOR_PATH"
+common_vst3_validator_paths=(
+  "$VST3_VALIDATOR_PATH"
+  "/Applications/Steinberg/VST3 Validator/validator"
+  "/usr/local/bin/validator"
+  "/opt/steinberg/vst3-validator/validator"
+)
+
+for candidate in "${common_vst3_validator_paths[@]}"; do
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    vst3_validator_param="$candidate"
+    echo "Found VST3 validator: $vst3_validator_param"
+    break
+  fi
+done
+
 pluginval_base_args=(
   --strictness-level "$PLUGINVAL_STRICTNESS"
   --timeout-ms "$PLUGINVAL_TIMEOUT_MS"
@@ -124,15 +140,15 @@ pluginval_base_args=(
 pluginval_vst3_args=("${pluginval_base_args[@]}"
   --output-filename "ZIKADARATOR-macos-vst3-pluginval-level${PLUGINVAL_STRICTNESS}.log")
 
-if [[ -n "$VST3_VALIDATOR_PATH" ]]; then
-  if [[ ! -x "$VST3_VALIDATOR_PATH" ]]; then
-    echo "VST3 validator path does not exist or is not executable: $VST3_VALIDATOR_PATH" >&2
+if [[ -n "$vst3_validator_param" ]]; then
+  if [[ ! -x "$vst3_validator_param" ]]; then
+    echo "VST3 validator path does not exist or is not executable: $vst3_validator_param" >&2
     exit 1
   fi
 
-  pluginval_vst3_args+=(--vst3validator "$VST3_VALIDATOR_PATH")
+  pluginval_vst3_args+=(--vst3validator "$vst3_validator_param")
 else
-  echo "No VST3 validator path supplied; pluginval will skip Steinberg's VST3 validator subtest."
+  echo "No VST3 validator path supplied or found; pluginval will skip Steinberg's VST3 validator subtest."
 fi
 
 pluginval_vst3_args+=(--validate "$vst3_path")
