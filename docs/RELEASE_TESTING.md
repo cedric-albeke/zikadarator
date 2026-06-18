@@ -11,6 +11,7 @@ Use this checklist before sharing a build with external testers.
 - `ZIKADARATOR-windows-installer`
 - `SHA256SUMS.txt` inside the Windows ZIP/package matches the shipped standalone and VST3 binary.
 - `BUILD_INFO.txt` inside the Windows ZIP/package records the git commit, branch, tracked tree state, build directory, and configuration.
+- `verify-checksums.bat` inside the Windows ZIP/package passes after extraction.
 
 ### macOS
 

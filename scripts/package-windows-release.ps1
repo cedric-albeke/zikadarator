@@ -59,6 +59,8 @@ function Write-PackageChecksums {
         @{ Label = "ZIKADARATOR.vst3/Contents/Resources/moduleinfo.json"; Path = Join-Path $PackagePath "ZIKADARATOR.vst3/Contents/Resources/moduleinfo.json" },
         @{ Label = "BUILD_INFO.txt"; Path = Join-Path $PackagePath "BUILD_INFO.txt" },
         @{ Label = "install.bat"; Path = Join-Path $PackagePath "install.bat" },
+        @{ Label = "verify-checksums.bat"; Path = Join-Path $PackagePath "verify-checksums.bat" },
+        @{ Label = "verify-checksums.ps1"; Path = Join-Path $PackagePath "verify-checksums.ps1" },
         @{ Label = "README.txt"; Path = Join-Path $PackagePath "README.txt" }
     )
 
@@ -229,12 +231,66 @@ exit /b 1
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "install.bat") -Encoding ASCII
 
 @"
+param(
+    [string] `$ManifestPath = "`$PSScriptRoot\SHA256SUMS.txt"
+)
+
+`$ErrorActionPreference = "Stop"
+`$packageRoot = Split-Path -Parent `$ManifestPath
+
+if (-not (Test-Path -LiteralPath `$ManifestPath -PathType Leaf)) {
+    throw "Checksum manifest not found: `$ManifestPath"
+}
+
+`$entries = Get-Content -LiteralPath `$ManifestPath | Where-Object {
+    `$_ -match '^[0-9a-f]{64}\s{2}.+'
+}
+
+if (`$entries.Count -eq 0) {
+    throw "No checksum entries found in `$ManifestPath"
+}
+
+foreach (`$entry in `$entries) {
+    `$parts = `$entry -split '\s{2}', 2
+    `$expectedHash = `$parts[0]
+    `$relativePath = `$parts[1] -replace '/', [System.IO.Path]::DirectorySeparatorChar
+    `$artifactPath = Join-Path `$packageRoot `$relativePath
+
+    if (-not (Test-Path -LiteralPath `$artifactPath -PathType Leaf)) {
+        throw "Missing package artifact: `$(`$parts[1])"
+    }
+
+    `$actualHash = (Get-FileHash -LiteralPath `$artifactPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if (`$actualHash -ne `$expectedHash) {
+        throw "Checksum mismatch for `$(`$parts[1]): expected `$expectedHash, got `$actualHash"
+    }
+}
+
+Write-Host "All ZIKADARATOR package checksums verified."
+"@ | Set-Content -LiteralPath (Join-Path $packagePath "verify-checksums.ps1") -Encoding ASCII
+
+@"
+@echo off
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify-checksums.ps1"
+if errorlevel 1 (
+  echo.
+  echo ERROR: Package checksum verification failed.
+  pause
+  exit /b 1
+)
+echo.
+echo Package checksum verification passed.
+pause
+"@ | Set-Content -LiteralPath (Join-Path $packagePath "verify-checksums.bat") -Encoding ASCII
+
+@"
 ZIKADARATOR V1 Windows Test Package
 
 Contents:
 - ZIKADARATOR.exe: standalone test app
 - ZIKADARATOR.vst3: VST3 plugin bundle
 - install.bat: copies the VST3 bundle into the common VST3 folder
+- verify-checksums.bat: validates extracted package files against SHA256SUMS.txt
 - installer/ZIKADARATOR-Setup.iss: Inno Setup script for building an installer
 
 If Windows Application Control blocks JUCE's VST3 helper, this package script restores
@@ -245,7 +301,7 @@ BUILD_INFO.txt records the git commit, branch, tracked tree state, build directo
 and configuration used to create this tester package.
 
 SHA256SUMS.txt lists checksums for the standalone, VST3 binary, moduleinfo, installer
-helper, build info, and this README so tester downloads can be verified after transfer.
+helper, verifier scripts, build info, and this README so tester downloads can be verified after transfer.
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "README.txt") -Encoding ASCII
 
 Write-BuildInfo -PackagePath $packagePath -BuildDir $BuildDir -Configuration $Configuration

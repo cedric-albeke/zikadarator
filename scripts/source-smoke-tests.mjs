@@ -162,6 +162,8 @@ assertContains(windowsPackageScript, "ERROR: VST3 install failed", "Windows pack
 assertContains(windowsPackageScript, "Run this script as Administrator", "Windows package install.bat must tell testers how to fix Program Files write failures");
 assertContains(windowsPackageScript, "BUILD_INFO.txt", "Windows package script must include git/build metadata for tester traceability");
 assertContains(windowsPackageScript, "rev-parse", "Windows package build metadata must include the git commit");
+assertContains(windowsPackageScript, "verify-checksums.ps1", "Windows package must include an extracted-package checksum verifier");
+assertContains(windowsPackageScript, "All ZIKADARATOR package checksums verified.", "Windows package checksum verifier must report success clearly");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }
