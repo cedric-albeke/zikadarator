@@ -79,8 +79,8 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 
         if (hovered)
         {
-            g.setColour(Colours::white.withAlpha(0.15f));
-            g.drawRoundedRectangle(bounds, corner, 2.0f);
+            g.setColour(Colours::white.withAlpha(0.40f));
+            g.drawRoundedRectangle(bounds, corner, 2.5f);
         }
 
         // Step number (bottom-right, 9px, white50)
@@ -122,14 +122,14 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
                    1.0f);
 
         // Border (subtle, group start slightly stronger)
-        const float borderAlpha = hovered ? 0.45f
+        const float borderAlpha = hovered ? 0.60f
                                 : (isGroupStart ? 0.18f : 0.10f);
         g.setColour(Colours::white.withAlpha(borderAlpha));
-        g.drawRoundedRectangle(bounds, corner, hovered ? 1.5f : 1.0f);
+        g.drawRoundedRectangle(bounds, corner, hovered ? 2.0f : 1.0f);
 
         if (hovered)
         {
-            g.setColour(Colours::white.withAlpha(0.06f));
+            g.setColour(Colours::white.withAlpha(0.10f));
             g.fillRoundedRectangle(bounds, corner);
         }
 

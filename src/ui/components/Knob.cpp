@@ -71,10 +71,12 @@ void Knob::paint(juce::Graphics& g)
         valueArc.addCentredArc(centre.x, centre.y, radius - 2.0f, radius - 2.0f,
                                0.0f, startAngle, valueAngle, true);
 
-        // Glow (thick, low alpha)
-        g.setColour(accentColour.withAlpha(0.18f * arcAlpha));
+        // Glow (thick, low alpha) — expands on hover
+        const float glowWidth = isHovering ? 7.0f : 5.0f;
+        const float glowAlpha = isHovering ? 0.25f : 0.18f;
+        g.setColour(accentColour.withAlpha(glowAlpha * arcAlpha));
         g.strokePath(valueArc,
-                     juce::PathStrokeType(5.0f, juce::PathStrokeType::curved,
+                     juce::PathStrokeType(glowWidth, juce::PathStrokeType::curved,
                                           juce::PathStrokeType::rounded));
 
         // Core arc (precise, high alpha)
@@ -110,7 +112,7 @@ void Knob::paint(juce::Graphics& g)
     g.drawEllipse(capBounds.translated(0.0f, 0.5f).reduced(1.0f), 1.0f);
 
     // Center dot (value indicator, grows on hover)
-    const float dotRadius = isHovering ? 3.0f : 2.5f;
+    const float dotRadius = isHovering ? 3.5f : 2.5f;
     const float dotAlpha = isHovering ? 1.0f : 0.70f;
     g.setColour(accentColour.withAlpha(dotAlpha));
     g.fillEllipse(centre.x - dotRadius, centre.y - dotRadius,

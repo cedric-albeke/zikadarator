@@ -195,7 +195,8 @@ assertContains(knob, "backgroundArc", "knobs must have a background arc track");
 assertContains(knob, "valueArc", "knobs must have a colored value arc indicator");
 assertContains(knob, "capGrad", "knobs must have a 3D center cap with radial gradient");
 assertContains(knob, "isMouseOverOrDragging", "knobs must react to hover state");
-assertContains(knob, "accentColour.withAlpha(0.18f", "knobs must have a subtle glow behind the value arc");
+assertContains(knob, "glowAlpha", "knobs must have a dynamic glow that responds to hover");
+assertContains(knob, "0.18f", "knobs must have a base glow alpha of 0.18");
 assertContains(knob, "accentColour.withAlpha(0.90f", "knobs must have a precise core value arc");
 assertContains(knob, "juce::Colours::black.withAlpha(0.40f)", "knobs must have a center cap shadow for depth");
 assertContains(knob, "dotRadius", "knobs must have a center dot that responds to hover");
@@ -210,7 +211,7 @@ assertContains(stepCell, "getSpaceMonoFont(9.0f)", "active step numbers must be 
 assertContains(stepCell, "getSpaceMonoFont(11.0f)", "inactive step numbers must be 11px");
 assertContains(stepCell, "juce::Colours::black.withAlpha(0.25f)", "active step cells must have a bottom shadow");
 assertContains(stepCell, "cellColour.withAlpha(0.75f)", "active step cells must have a strong lane color border");
-assertContains(stepCell, "Colours::white.withAlpha(0.15f)", "hovered active cells must have a white highlight border");
+assertContains(stepCell, "Colours::white.withAlpha(0.40f)", "hovered active cells must have a stronger white highlight border for AAA visibility");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Hertz)", "filter cutoff knobs must display Hz/kHz");
 assertContains(footer, "setScaleMode(KnobScaleMode::Logarithmic)", "filter cutoff knobs must use logarithmic movement");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Pan)", "pan knobs must display L/C/R position");
