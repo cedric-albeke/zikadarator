@@ -29,6 +29,8 @@ public:
     void setRedoEnabled(bool enabled);
     void setPresetDisplay(const juce::String& presetName, const juce::String& presetMeta, bool dirty);
     void setPresetStepEnabled(bool previousEnabled, bool nextEnabled);
+    void setFxDisplayState(int lane, int step, int presetIndex, const juce::String& presetLabel);
+    void setFxDisplayPlayhead(int step, int activeLaneMask);
     juce::Component* getPresetMenuTarget() { return &presetSelectButton; }
 
     std::function<void(Page)> onPageSelected;
@@ -52,10 +54,20 @@ private:
     juce::TextButton presetPrevButton{"<"};
     juce::TextButton presetNextButton{">"};
     juce::Label presetMetaLabel;
+    juce::Rectangle<int> fxDisplayBounds;
     Page selectedPage{Page::Sequencer};
     juce::String currentPresetName{"CURRENT STATE"};
     juce::String currentPresetMeta{"UNSAVED SNAPSHOT"};
+    juce::String fxDisplayLabel{"NO FX"};
+    int fxDisplayLane{-1};
+    int fxDisplayStep{-1};
+    int fxDisplayPresetIndex{-1};
+    int fxDisplayPlayheadStep{-1};
+    int fxDisplayActiveLaneMask{0};
+    double fxDisplayLastPulseMs{0.0};
     bool presetDirty{false};
+
+    void drawFxCrtDisplay(juce::Graphics& g);
 };
 
 }

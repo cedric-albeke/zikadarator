@@ -1,6 +1,8 @@
 #include "ui/panels/HeaderPanel.h"
 #include "BinaryData.h"
 
+#include <cmath>
+
 namespace zikada {
 
 namespace HeaderLayout {
@@ -12,6 +14,8 @@ namespace HeaderLayout {
     constexpr int kTabW          = 90;
     constexpr int kTabGap        = 2;
     constexpr float kTabCorner   = 3.0f;
+    constexpr int kFxDisplayW    = 128;
+    constexpr int kFxDisplayGap  = 8;
     constexpr int kPresetStripW  = 320;
     constexpr int kNavW          = 26;
     constexpr int kActionW       = 32;
@@ -119,6 +123,27 @@ HeaderPanel::HeaderPanel()
     setRedoEnabled(false);
     setPresetStepEnabled(false, false);
     setPresetDisplay(currentPresetName, currentPresetMeta, false);
+}
+
+void HeaderPanel::setFxDisplayState(int lane, int step, int presetIndex, const juce::String& presetLabel)
+{
+    fxDisplayLane = lane;
+    fxDisplayStep = step;
+    fxDisplayPresetIndex = presetIndex;
+    fxDisplayLabel = presetLabel.isNotEmpty() ? presetLabel.toUpperCase() : "NO FX";
+    fxDisplayLastPulseMs = juce::Time::getMillisecondCounterHiRes();
+    repaint(fxDisplayBounds.expanded(8));
+}
+
+void HeaderPanel::setFxDisplayPlayhead(int step, int activeLaneMask)
+{
+    if (step == fxDisplayPlayheadStep && activeLaneMask == fxDisplayActiveLaneMask)
+        return;
+
+    fxDisplayPlayheadStep = step;
+    fxDisplayActiveLaneMask = activeLaneMask;
+    fxDisplayLastPulseMs = juce::Time::getMillisecondCounterHiRes();
+    repaint(fxDisplayBounds.expanded(8));
 }
 
 void HeaderPanel::setSelectedPage(Page page)
@@ -246,6 +271,8 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
                           : juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold"));
     auto presetFont = laf ? laf->getSpaceMonoFont(14.0f, false)
                           : juce::Font(juce::FontOptions().withHeight(14.0f));
+
+    drawFxCrtDisplay(g);
 
     // ── Tab cells (underline indicator, no dots) ────────────────────
     auto drawTab = [&](const juce::TextButton& tab, const juce::String& label, bool active)
@@ -378,6 +405,106 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
     drawActionIcon(redoIcon.get(), redoButton.getBounds().toFloat(), redoButton.isEnabled());
 }
 
+void HeaderPanel::drawFxCrtDisplay(juce::Graphics& g)
+{
+    if (fxDisplayBounds.isEmpty())
+        return;
+
+    const auto* laf = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
+    auto r = fxDisplayBounds.toFloat();
+    auto screen = r.reduced(7.0f, 5.0f);
+    const double nowMs = juce::Time::getMillisecondCounterHiRes();
+    const float pulse = juce::jlimit(0.0f, 1.0f, 1.0f - static_cast<float>((nowMs - fxDisplayLastPulseMs) / 420.0));
+    const auto laneColour = fxDisplayLane >= 0 && fxDisplayLane < 6
+        ? laneInfos[fxDisplayLane].colour
+        : Colours::neonGreen;
+
+    juce::ColourGradient bezelGrad(Colours::bgHover.brighter(0.06f), r.getCentreX(), r.getY(),
+                                   juce::Colours::black.withAlpha(0.88f), r.getCentreX(), r.getBottom(), false);
+    g.setGradientFill(bezelGrad);
+    g.fillRoundedRectangle(r, 6.0f);
+    g.setColour(juce::Colours::black.withAlpha(0.55f));
+    g.drawRoundedRectangle(r.reduced(1.0f), 6.0f, 2.0f);
+    g.setColour(laneColour.withAlpha(0.20f + pulse * 0.18f));
+    g.drawRoundedRectangle(r.reduced(2.0f), 5.0f, 1.0f);
+
+    juce::ColourGradient glassGrad(juce::Colours::black.withAlpha(0.96f), screen.getCentreX(), screen.getBottom(),
+                                   juce::Colour::fromRGB(0x04, 0x23, 0x18), screen.getCentreX(), screen.getY(), false);
+    g.setGradientFill(glassGrad);
+    g.fillRoundedRectangle(screen, 3.0f);
+    g.setColour(Colours::neonGreen.withAlpha(0.10f));
+    g.drawRoundedRectangle(screen.reduced(0.5f), 3.0f, 1.0f);
+
+    auto clip = screen.reduced(3.0f);
+    juce::Graphics::ScopedSaveState ss(g);
+    g.reduceClipRegion(clip.toNearestInt());
+
+    g.setColour(Colours::neonGreen.withAlpha(0.055f));
+    for (float y = clip.getY(); y < clip.getBottom(); y += 4.0f)
+        g.drawHorizontalLine(static_cast<int>(std::round(y)), clip.getX(), clip.getRight());
+
+    const float scanLineY = clip.getY() + std::fmod(static_cast<float>(nowMs * 0.028), juce::jmax(1.0f, clip.getHeight()));
+    g.setColour(laneColour.withAlpha(0.18f + pulse * 0.12f));
+    g.fillRect(clip.getX(), scanLineY, clip.getWidth(), 1.0f);
+
+    auto traceArea = clip.reduced(5.0f, 11.0f).withTrimmedLeft(33.0f).withTrimmedRight(6.0f);
+    juce::Path phosphorPath;
+    const int points = 24;
+    int activeLaneCount = 0;
+    for (int lane = 0; lane < 6; ++lane)
+        if ((fxDisplayActiveLaneMask & (1 << lane)) != 0)
+            ++activeLaneCount;
+    const float activeBoost = static_cast<float>(activeLaneCount) / 6.0f;
+    for (int i = 0; i < points; ++i)
+    {
+        const float n = static_cast<float>(i) / static_cast<float>(points - 1);
+        const float stepPhase = static_cast<float>((fxDisplayPlayheadStep + 16) % 16) * 0.38f;
+        const float wobble = std::sin(n * juce::MathConstants<float>::twoPi * 1.75f + stepPhase)
+                           + 0.45f * std::sin(n * juce::MathConstants<float>::twoPi * 4.0f + static_cast<float>(nowMs * 0.006));
+        const float amp = traceArea.getHeight() * (0.16f + activeBoost * 0.16f + pulse * 0.08f);
+        const float x = traceArea.getX() + traceArea.getWidth() * n;
+        const float y = traceArea.getCentreY() + wobble * amp;
+        if (i == 0)
+            phosphorPath.startNewSubPath(x, y);
+        else
+            phosphorPath.lineTo(x, y);
+    }
+
+    g.setColour(laneColour.withAlpha(0.16f + pulse * 0.16f));
+    g.strokePath(phosphorPath, juce::PathStrokeType(5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.setColour(laneColour.withAlpha(0.88f));
+    g.strokePath(phosphorPath, juce::PathStrokeType(1.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    auto microFont = laf ? laf->getSpaceMonoFont(7.5f, true)
+                         : juce::Font(juce::FontOptions().withHeight(7.5f).withStyle("Bold"));
+    auto labelFont = laf ? laf->getSpaceMonoFont(10.0f, true)
+                         : juce::Font(juce::FontOptions().withHeight(10.0f).withStyle("Bold"));
+
+    g.setFont(microFont);
+    g.setColour(Colours::white50);
+    g.drawText("FX MON", clip.removeFromTop(9.0f), juce::Justification::centredLeft, false);
+
+    const auto stepText = fxDisplayStep >= 0 ? "S" + juce::String(fxDisplayStep + 1).paddedLeft('0', 2) : "--";
+    g.setColour(laneColour.withAlpha(0.80f));
+    g.drawText(stepText, juce::Rectangle<float>(clip.getX(), screen.getBottom() - 14.0f, 28.0f, 10.0f),
+               juce::Justification::centredLeft, false);
+
+    g.setFont(labelFont);
+    g.setColour(Colours::white.withAlpha(fxDisplayPresetIndex > 0 ? 0.92f : 0.56f));
+    g.drawText(fxDisplayLabel, juce::Rectangle<float>(clip.getX() + 31.0f, screen.getBottom() - 16.0f,
+                                                      clip.getRight() - clip.getX() - 35.0f, 12.0f),
+               juce::Justification::centredLeft, true);
+
+    for (int lane = 0; lane < 6; ++lane)
+    {
+        const bool laneActive = (fxDisplayActiveLaneMask & (1 << lane)) != 0;
+        const float meterX = screen.getRight() - 8.0f;
+        const float meterY = screen.getY() + 6.0f + static_cast<float>(lane) * 4.8f;
+        g.setColour(laneInfos[lane].colour.withAlpha(laneActive ? 0.88f : 0.18f));
+        g.fillRoundedRectangle(meterX, meterY, 3.0f, laneActive ? 3.2f : 1.6f, 1.0f);
+    }
+}
+
 void HeaderPanel::resized()
 {
     namespace HL = HeaderLayout;
@@ -390,6 +517,10 @@ void HeaderPanel::resized()
     const int logoBlockW = HL::kLogoSize + HL::kLogoGap + HL::kWordmarkW;
     row.removeFromLeft(logoBlockW);
     row.removeFromLeft(HL::kSectionGap);
+
+    fxDisplayBounds = row.removeFromLeft(juce::jmin(row.getWidth(), HL::kFxDisplayW));
+    fxDisplayBounds = fxDisplayBounds.withHeight(cellH).withCentre(fxDisplayBounds.getCentre());
+    row.removeFromLeft(HL::kFxDisplayGap);
 
     // ── Tabs (left) ─────────────────────────────────────────────────
     auto tabArea = row.removeFromLeft(HL::kTabW * 3 + HL::kTabGap * 2);

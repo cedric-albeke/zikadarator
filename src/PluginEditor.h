@@ -48,6 +48,7 @@ private:
     void setCurrentPresetIndex(int index, bool dirty);
     void markCurrentPresetDirty();
     void syncHeaderPresetDisplay();
+    void updateHeaderFxDisplay(int lane, int step, const StepData& stepData);
     void pushUndoSnapshot();
     void applyHistoryState(const juce::ValueTree& stateTree);
     void undoLastChange();

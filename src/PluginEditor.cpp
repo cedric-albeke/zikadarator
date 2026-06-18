@@ -164,6 +164,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     {
         const auto& stepData = processorRef.getSequencerState().getStepData(lane, step);
         sidebarPanel.setSelectedStep(lane, step, stepData);
+        updateHeaderFxDisplay(lane, step, stepData);
 
         int slotIndex = stepData.presetIndex >= 1 && stepData.presetIndex <= 4
                           ? stepData.presetIndex - 1
@@ -186,6 +187,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     {
         const auto& stepData = processorRef.getSequencerState().getStepData(lane, step);
         sidebarPanel.setSelectedStep(lane, step, stepData);
+        updateHeaderFxDisplay(lane, step, stepData);
 
         const int slotIndex = presetIndex >= 1 && presetIndex <= 4 ? presetIndex - 1 : 0;
         const auto& userSlot = processorRef.getSequencerState().getUserSlot(lane, slotIndex);
@@ -217,6 +219,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
                           : 0;
         const auto& userSlot = processorRef.getSequencerState().getUserSlot(lane, slotIndex);
         footerPanel.setSelectedSlot(lane, slotIndex, userSlot, laneInfos[lane].name);
+        updateHeaderFxDisplay(lane, step, stepData);
         markCurrentPresetDirty();
     };
 
@@ -298,6 +301,7 @@ void PluginEditor::timerCallback()
         if (lastPlayingStep >= 0)
         {
             sequencerPanel.getStepGrid().setPlayingStep(-1);
+            headerPanel.setFxDisplayPlayhead(-1, 0);
             lastPlayingStep = -1;
         }
         return;
@@ -306,6 +310,14 @@ void PluginEditor::timerCallback()
     if (step != lastPlayingStep)
     {
         sequencerPanel.getStepGrid().setPlayingStep(step);
+        int activeLaneMask = 0;
+        for (int lane = 0; lane < 6; ++lane)
+        {
+            const auto& stepData = processorRef.getSequencerState().getStepData(lane, step);
+            if (stepData.active && stepData.presetIndex > 0)
+                activeLaneMask |= 1 << lane;
+        }
+        headerPanel.setFxDisplayPlayhead(step, activeLaneMask);
         lastPlayingStep = step;
     }
 }
@@ -618,6 +630,18 @@ void PluginEditor::syncHeaderPresetDisplay()
 
     const bool hasPresets = !items.empty();
     headerPanel.setPresetStepEnabled(hasPresets, hasPresets);
+}
+
+void PluginEditor::updateHeaderFxDisplay(int lane, int step, const StepData& stepData)
+{
+    juce::String label;
+    if (stepData.active && stepData.presetIndex > 0)
+        label = sidebarPanel.getPresetLabel(lane, stepData.presetIndex);
+
+    if (label.isEmpty())
+        label = stepData.active ? laneInfos[lane].name : "NO FX";
+
+    headerPanel.setFxDisplayState(lane, step, stepData.active ? stepData.presetIndex : 0, label);
 }
 
 void PluginEditor::pushUndoSnapshot()

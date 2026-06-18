@@ -52,6 +52,8 @@ const loopEngine = read("src/engine/LoopEngine.cpp");
 const loopEngineHeader = read("src/engine/LoopEngine.h");
 const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
 const waveformDisplay = read("src/ui/components/WaveformDisplay.cpp");
+const headerPanelHeader = read("src/ui/panels/HeaderPanel.h");
+const headerPanel = read("src/ui/panels/HeaderPanel.cpp");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
@@ -150,6 +152,15 @@ assertContains(editor, "Open browser...", "header preset quick menu must offer f
 if (editor.includes("redirecting to preset browser")) {
   fail("header preset menu must not redirect straight to the full preset browser");
 }
+assertContains(headerPanelHeader, "setFxDisplayState", "header must expose the CRT FX display state API");
+assertContains(headerPanelHeader, "setFxDisplayPlayhead", "header must expose the CRT playhead pulse API");
+assertContains(headerPanelHeader, "fxDisplayBounds", "header must reserve stable bounds for the CRT FX monitor");
+assertContains(headerPanel, "drawFxCrtDisplay", "header must draw a dedicated CRT-style FX monitor");
+assertContains(headerPanel, "FX MON", "CRT FX monitor must be labeled as a live FX monitor");
+assertContains(headerPanel, "scanLineY", "CRT FX monitor must include scanline motion");
+assertContains(headerPanel, "phosphorPath", "CRT FX monitor must include a triggered phosphor waveform");
+assertContains(editor, "headerPanel.setFxDisplayState", "editor must update the CRT display from selected step state");
+assertContains(editor, "headerPanel.setFxDisplayPlayhead", "editor must pulse the CRT display from the playhead");
 assertContains(sidebar, "selectedPresetIndex", "sidebar must track selected preset details separately from hover");
 assertContains(sidebar, "updateInfoForSelection", "sidebar must restore selected preset details when hover leaves");
 if (sidebar.includes("Hover a preset to see details...")) {
