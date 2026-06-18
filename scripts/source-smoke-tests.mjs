@@ -163,6 +163,11 @@ if ([setLoopParameters, ensureLoopBufferSize, refreshLoopSnapshot].some((body) =
   fail("LoopEngine render-called loop setup/snapshot paths must not allocate on the audio thread");
 }
 assertContains(processSegment, "blendLaneOutput", "processSegment must blend each lane output against that lane input");
+assertContains(processSegment, "ModulationTarget::FilterCutoff", "filter lane modulation must apply cutoff target");
+assertContains(processSegment, "ModulationTarget::FilterResonance", "filter lane modulation must apply resonance target");
+assertContains(processSegment, "ModulationTarget::Volume", "filter lane modulation must apply volume target");
+assertContains(processSegment, "ModulationTarget::Pan", "filter lane modulation must apply pan target");
+assertContains(processor, "applyGainPanSample", "processor must support per-sample gain/pan modulation for filter lane targets");
 assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resizing to a fixed aspect ratio");
 assertContains(editor, "layoutEditorCanvas", "plugin editor must lay out panels on a logical canvas");
 assertContains(editor, "editorCanvas.setTransform(juce::AffineTransform::scale", "plugin editor must scale the logical canvas for compact sizes");

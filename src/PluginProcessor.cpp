@@ -230,6 +230,19 @@ void applyGainPan(float* left, float* right, int numSamples, float volume, float
     }
 }
 
+void applyGainPanSample(float& left, float& right, float volume, float pan)
+{
+    const float clampedVolume = juce::jlimit(0.0f, 2.0f, volume);
+    const float clampedPan = juce::jlimit(-1.0f, 1.0f, pan);
+    constexpr float panLaw = 0.70710678f;
+    const float angle = (clampedPan + 1.0f) * 0.25f * 3.14159265f;
+    const float leftGain = clampedVolume * panLaw * std::cos(angle) * 2.0f;
+    const float rightGain = clampedVolume * panLaw * std::sin(angle) * 2.0f;
+
+    left *= leftGain;
+    right *= rightGain;
+}
+
 void applyTremolo(float* left, float* right, int numSamples, float depth, double phaseStart, double phaseDelta)
 {
     const float clampedDepth = juce::jlimit(0.0f, 1.0f, depth);
@@ -1088,15 +1101,21 @@ void PluginProcessor::processSegment(float* leftChannel,
             modulationEngine.processSample(wetLeft[i], wetRight[i], modValues);
 
             const float cutoffMod = modValues[static_cast<int>(ModulationTarget::FilterCutoff)];
+            const float resonanceMod = modValues[static_cast<int>(ModulationTarget::FilterResonance)];
+            const float volumeMod = modValues[static_cast<int>(ModulationTarget::Volume)];
+            const float panMod = modValues[static_cast<int>(ModulationTarget::Pan)];
             const float modCutoff = filterSlot.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
+            const float modResonance = juce::jlimit(0.1f, 10.0f, filterSlot.filterResonance * std::pow(2.0f, resonanceMod * 1.5f));
+            const float modVolume = juce::jlimit(0.0f, 2.0f, filterSlot.volume * (1.0f + volumeMod));
+            const float modPan = juce::jlimit(-1.0f, 1.0f, filterSlot.pan + panMod);
             filterEngine.setCutoff(modCutoff);
-            filterEngine.setResonance(filterSlot.filterResonance);
+            filterEngine.setResonance(modResonance);
 
             wetLeft[i] = filterEngine.processSampleLeft(wetLeft[i]);
             wetRight[i] = filterEngine.processSampleRight(wetRight[i]);
+            applyGainPanSample(wetLeft[i], wetRight[i], modVolume, modPan);
         }
 
-        applyGainPan(wetLeft, wetRight, numSamples, filterSlot.volume, filterSlot.pan);
         blendLaneOutput(kFilterLane, numSamples);
     }
 

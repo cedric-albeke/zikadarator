@@ -60,3 +60,4 @@ Date: 2026-06-18
 - Misaligned or incomplete promises: vinyl/tape-stop/scratch should not be advertised until dedicated DSP exists.
 - Recommended DSP implementation path: deepen Slice scatter/retrigger click-safety, then rate-glide/tape-stop in the Loop/time path, then vinyl scratch once there is a deliberate resampling/scrub model.
 - Current stability pass: frozen slice playback now has bounded start/end edge fades for click reduction; vinyl/tape/scratch naming should still wait for dedicated rate-glide or scrub DSP.
+- Current modulation pass: filter-lane MOD now backs cutoff, resonance, volume, and pan targets; delay-related MOD targets still need FX-lane routing before they should be emphasized.

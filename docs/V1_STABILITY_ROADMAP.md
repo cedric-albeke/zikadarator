@@ -23,6 +23,7 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Step cells now support mouse-wheel preset cycling on the hovered or selected cell, with undo snapshotting, sidebar/footer refresh, APVTS active-state sync, and dirty-preset tracking.
 - Footer knobs now render real units and move through the right scale: cutoff uses Hz/kHz with logarithmic travel, resonance uses decimals, timing uses milliseconds/seconds, mix-style controls use percentages, volume/rate controls use multipliers, and pan uses L/C/R readouts.
 - Processor rendering now captures one immutable `SequencerState::Snapshot` per block and renders segments from that snapshot instead of reading mutable UI-owned sequencer state directly on the audio thread.
+- Filter-lane modulation now applies the advertised cutoff, resonance, volume, and pan targets instead of only consuming cutoff.
 - SliceEngine now applies a bounded realtime-safe edge fade to frozen slice playback, reducing hard start/end discontinuities on reverse, repeat, and stutter slices.
 - Keyboard focus, arrow navigation, visible focus rings, and space/return activation are now implemented on the StepGrid. Off-cell wheel preset cycling requires an explicit Shift gesture.
 - A column-wide playhead rail is now drawn in the step grid at the current playing step, spanning all lanes with a subtle neon glow.
