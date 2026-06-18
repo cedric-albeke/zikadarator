@@ -95,7 +95,10 @@ if (processBlock.includes("Logger::writeToLog")) {
 assertContains(processorHeader, "dryLeftBuffer", "processor must own reusable dry scratch buffers");
 assertContains(processorHeader, "wetLeftBuffer", "processor must own reusable wet scratch buffers");
 assertContains(processorHeader, "laneInputLeftBuffer", "processor must own reusable per-lane input scratch buffers");
+assertContains(processorHeader, "monoRightBuffer", "processor must own reusable mono right-side scratch");
 assertContains(processorHeader, "ensureScratchBuffers", "processor must expose scratch-buffer sizing helper");
+assertContains(processBlock, "monoRightBuffer.data()", "mono processing must avoid aliasing left/right pointers");
+assertContains(processSegment, "0.5f * (outLeft + outRight)", "mono processing must fold rendered stereo output to mono");
 if (processSegment.includes("left[i] *= mix") || processSegment.includes("right[i] *= mix")) {
   fail("lane mix must dry/wet blend the lane result, not multiply the whole shared wet chain");
 }

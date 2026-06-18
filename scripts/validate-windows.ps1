@@ -94,6 +94,9 @@ Invoke-Step "Run source smoke tests" {
 Invoke-Step "Build regression test targets" {
     & $cmake --build $buildPath --config $Configuration --target ZikadaEngineTests
     if ($LASTEXITCODE -ne 0) { throw "ZikadaEngineTests build failed with exit code $LASTEXITCODE" }
+
+    & $cmake --build $buildPath --config $Configuration --target ZikadaProcessorTests
+    if ($LASTEXITCODE -ne 0) { throw "ZikadaProcessorTests build failed with exit code $LASTEXITCODE" }
 }
 
 Invoke-Step "Run CTest" {

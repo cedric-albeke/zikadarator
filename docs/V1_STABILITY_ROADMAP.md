@@ -16,13 +16,11 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Waveform capture is now processor-owned: audio-thread waveform taps publish input and processed output for the editor timer.
 - `SequencerState` now publishes plain-value snapshots through fixed buffers, removing `atomic<shared_ptr>` refcount traffic from the audio path.
 - The branch is rebased onto the newer `codex/windows-engine-rebuild` line, preserving the rebuilt engine core and newer FX preset/icon work.
+- Mono processing now renders with an independent right-side scratch channel and folds stereo wet/dry output back to mono, covered by a processor regression test.
 
 ## V1 Blockers
 
-1. Fix mono processing explicitly.
-   Mono output is supported, but the current stereo path aliases left/right buffers. Add a mono branch or render stereo scratch then fold down once.
-
-2. Make the sequencer usable at every supported editor size.
+1. Make the sequencer usable at every supported editor size.
    The 900x600 minimum is visually cramped. Either raise the minimum, add a compact breakpoint, or scale the 1200x800 logical layout.
 
 ## Next AAA UI/UX Polish
@@ -38,5 +36,5 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 
 1. Run the macOS validation workflow on a real macOS runner; Windows can only syntax-check the script.
 2. Add Steinberg VST3 validator paths to Windows/macOS validation where available.
-3. Add host-state roundtrip and mono-path processor regression tests.
+3. Add host-state roundtrip and additional host-layout processor regression tests.
 4. Add signing/notarization paths for public V1 artifacts; keep unsigned packages labeled as tester builds.

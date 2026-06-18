@@ -30,7 +30,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-windows.p
 Expected:
 
 - Source smoke passes.
-- Engine tests pass through CTest.
+- Engine and processor regression tests pass through CTest.
 - VST3 builds.
 - pluginval exits with code 0 at strictness level 5.
 

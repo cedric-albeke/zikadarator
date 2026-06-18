@@ -44,6 +44,7 @@ node scripts/source-smoke-tests.mjs
 
 step "Build regression test targets"
 cmake --build "$BUILD_DIR" --config "$CONFIGURATION" --target ZikadaEngineTests
+cmake --build "$BUILD_DIR" --config "$CONFIGURATION" --target ZikadaProcessorTests
 
 step "Run CTest"
 ctest --test-dir "$BUILD_DIR" -C "$CONFIGURATION" --output-on-failure

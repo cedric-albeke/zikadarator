@@ -728,6 +728,7 @@ void PluginProcessor::ensureScratchBuffers(int numSamples)
 
     ensureSize(dryLeftBuffer);
     ensureSize(dryRightBuffer);
+    ensureSize(monoRightBuffer);
     ensureSize(wetLeftBuffer);
     ensureSize(wetRightBuffer);
     ensureSize(sliceLeftBuffer);
@@ -762,7 +763,11 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     ensureScratchBuffers(numSamples);
 
     auto* leftChannel = buffer.getWritePointer(0);
-    auto* rightChannel = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : leftChannel;
+    const bool hasRightChannel = buffer.getNumChannels() > 1;
+    auto* rightChannel = hasRightChannel ? buffer.getWritePointer(1) : monoRightBuffer.data();
+
+    if (! hasRightChannel)
+        std::copy(leftChannel, leftChannel + numSamples, rightChannel);
 
     std::copy(leftChannel, leftChannel + numSamples, dryLeftBuffer.begin());
     std::copy(rightChannel, rightChannel + numSamples, dryRightBuffer.begin());
@@ -870,7 +875,6 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         }
     }
 
-    const bool hasRightChannel = buffer.getNumChannels() > 1;
     for (int i = 0; i < segmentCount; ++i)
     {
         const auto& segment = segments[i];
@@ -1093,17 +1097,25 @@ void PluginProcessor::processSegment(float* leftChannel,
 
     for (int i = 0; i < numSamples; ++i)
     {
-        leftChannel[i] = blendGlobalMixSample(dryLeft[static_cast<size_t>(i)],
-                                              wetLeft[i],
-                                              globalMixMode,
-                                              globalDryWet) * outputGain;
+        const auto index = static_cast<size_t>(i);
+        const float outLeft = blendGlobalMixSample(dryLeft[index],
+                                                   wetLeft[i],
+                                                   globalMixMode,
+                                                   globalDryWet) * outputGain;
+
+        const float outRight = blendGlobalMixSample(dryRight[index],
+                                                    wetRight[i],
+                                                    globalMixMode,
+                                                    globalDryWet) * outputGain;
 
         if (hasRightChannel)
         {
-            rightChannel[i] = blendGlobalMixSample(dryRight[static_cast<size_t>(i)],
-                                                   wetRight[i],
-                                                   globalMixMode,
-                                                   globalDryWet) * outputGain;
+            leftChannel[i] = outLeft;
+            rightChannel[i] = outRight;
+        }
+        else
+        {
+            leftChannel[i] = 0.5f * (outLeft + outRight);
         }
     }
 }

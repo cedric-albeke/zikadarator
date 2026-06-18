@@ -127,6 +127,7 @@ private:
     double ppqPerStep{0.5};
     std::vector<float> dryLeftBuffer;
     std::vector<float> dryRightBuffer;
+    std::vector<float> monoRightBuffer;
     std::vector<float> wetLeftBuffer;
     std::vector<float> wetRightBuffer;
     std::vector<float> sliceLeftBuffer;

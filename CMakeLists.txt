@@ -151,6 +151,66 @@ target_link_libraries(ZikadaEngineTests
 
 add_test(NAME ZikadaEngineTests COMMAND ZikadaEngineTests)
 
+add_executable(ZikadaProcessorTests
+    tests/processor/ProcessorTestMain.cpp
+    src/PluginProcessor.cpp
+    src/PluginEditor.cpp
+    src/ui/ZikadaLookAndFeel.cpp
+    src/ui/components/VcrLabel.cpp
+    src/ui/components/StepCell.cpp
+    src/ui/components/StepGrid.cpp
+    src/ui/components/Knob.cpp
+    src/ui/components/WaveformDisplay.cpp
+    src/ui/panels/HeaderPanel.cpp
+    src/ui/panels/SequencerPanel.cpp
+    src/ui/panels/FooterPanel.cpp
+    src/ui/panels/SidebarPanel.cpp
+    src/ui/panels/WorkspacePanel.cpp
+    src/state/PluginState.cpp
+    src/state/PresetManager.cpp
+    src/engine/SequencerEngine.cpp
+    src/engine/CircularAudioBuffer.cpp
+    src/engine/LoopEngine.cpp
+    src/engine/SliceEngine.cpp
+    src/engine/FilterEngine.cpp
+    src/engine/DelayEngine.cpp
+    src/engine/ReverbEngine.cpp
+    src/engine/BitcrushEngine.cpp
+    src/engine/PitchEngine.cpp
+    src/engine/MotionEngine.cpp
+    src/engine/EnvFollowerEngine.cpp
+    src/engine/RandomEngine.cpp
+    src/engine/ModulationEngine.cpp
+    src/engine/GainPanEngine.cpp
+)
+
+target_include_directories(ZikadaProcessorTests
+    PRIVATE
+        src
+        src/ui
+        src/ui/components
+        src/ui/panels
+        src/state
+        src/engine
+)
+
+target_compile_definitions(ZikadaProcessorTests
+    PRIVATE
+        JucePlugin_Name="ZIKADARATOR"
+        JucePlugin_Build_Standalone=0
+)
+
+target_link_libraries(ZikadaProcessorTests
+    PRIVATE
+        ZikadaFXAssets
+        juce::juce_audio_utils
+        juce::juce_dsp
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+)
+
+add_test(NAME ZikadaProcessorTests COMMAND ZikadaProcessorTests)
+
 # Linux: Add GTK3, WebKit includes and link libraries
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(PkgConfig REQUIRED)
