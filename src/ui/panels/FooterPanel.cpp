@@ -40,10 +40,10 @@ namespace {
 
     void debugFooterLog(const juce::String& message)
     {
-        juce::Logger::writeToLog("[ZIKADARATOR] FooterPanel " + message);
-
 #if JUCE_DEBUG
         DBG("[ZIKADARATOR] FooterPanel " + message);
+#else
+        juce::ignoreUnused(message);
 #endif
     }
 }

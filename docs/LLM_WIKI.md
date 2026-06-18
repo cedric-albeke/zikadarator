@@ -106,4 +106,4 @@ Windows log scanner:
 powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1
 ```
 
-It locates the newest Ableton Live 12 log under `%APPDATA%\Ableton`, scans `%APPDATA%\ZIKADARATOR\UI-Debug.log`, and lists recent Ableton usage logs. Treat crash/fatal/exception/restore-failure lines as blockers before sharing tester builds.
+It locates the newest Ableton Live 12 log under `%APPDATA%\Ableton`, scans `%APPDATA%\ZIKADARATOR\UI-Debug.log` when diagnostic logging is explicitly enabled with `ZIKADARATOR_DEBUG_LOG=1`, and lists recent Ableton usage logs. Treat crash/fatal/exception/restore-failure lines as blockers before sharing tester builds.

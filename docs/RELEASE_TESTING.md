@@ -53,7 +53,7 @@ Expected:
 Relevant Windows log locations:
 
 - Ableton: `%APPDATA%\Ableton\Live 12.3.7\Preferences\Log.txt`
-- ZIKADARATOR UI debug: `%APPDATA%\ZIKADARATOR\UI-Debug.log`
+- ZIKADARATOR UI debug: `%APPDATA%\ZIKADARATOR\UI-Debug.log` when `ZIKADARATOR_DEBUG_LOG=1` is set, or in debug builds.
 
 After the manual pass, run:
 
@@ -61,13 +61,13 @@ After the manual pass, run:
 powershell -ExecutionPolicy Bypass -File scripts\ableton-log-scan.ps1
 ```
 
-For a clean read, delete or archive `%APPDATA%\ZIKADARATOR\UI-Debug.log` immediately before the manual test. Otherwise the scanner may still show historical hot debug lines from earlier builds.
+For a clean diagnostic read, set `ZIKADARATOR_DEBUG_LOG=1` and delete or archive `%APPDATA%\ZIKADARATOR\UI-Debug.log` immediately before the manual test. Normal release builds should not create or grow this file unless that opt-in flag is present.
 
 Expected scanner result:
 
 - No ZIKADARATOR crash/fatal/exception lines.
 - No restore failures.
-- No sustained `processBlock` or `setSelectedSlot` debug-log growth.
+- No sustained `processBlock` or `setSelectedSlot` debug-log growth when diagnostic logging is explicitly enabled.
 - Ableton usage logs exist for the test window when Live report logging is enabled.
 
 ### macOS

@@ -8,9 +8,10 @@ namespace {
 
 void debugWorkspaceLog(const juce::String& message)
 {
-    juce::Logger::writeToLog("[ZIKADARATOR] WorkspacePanel " + message);
 #if JUCE_DEBUG
     DBG("[ZIKADARATOR] WorkspacePanel " + message);
+#else
+    juce::ignoreUnused(message);
 #endif
 }
 

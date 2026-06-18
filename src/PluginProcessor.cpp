@@ -14,9 +14,29 @@ namespace {
 
 std::unique_ptr<juce::FileLogger> processorLogFile;
 
+bool isDebugFileLoggingEnabled()
+{
+#if JUCE_DEBUG
+    return true;
+#else
+    static const bool enabled = []()
+    {
+        const auto flag = juce::SystemStats::getEnvironmentVariable("ZIKADARATOR_DEBUG_LOG", {})
+                              .trim()
+                              .toLowerCase();
+        return flag == "1" || flag == "true" || flag == "yes";
+    }();
+
+    return enabled;
+#endif
+}
+
 void ensureProcessorLogger()
 {
     static bool initialised = false;
+
+    if (! isDebugFileLoggingEnabled())
+        return;
 
     if (initialised)
         return;
@@ -39,8 +59,12 @@ void ensureProcessorLogger()
 
 void debugProcessorLog(const juce::String& message)
 {
-    ensureProcessorLogger();
-    juce::Logger::writeToLog("[ZIKADARATOR] PluginProcessor " + message);
+    if (isDebugFileLoggingEnabled())
+    {
+        ensureProcessorLogger();
+        if (juce::Logger::getCurrentLogger() != nullptr)
+            juce::Logger::writeToLog("[ZIKADARATOR] PluginProcessor " + message);
+    }
 
 #if JUCE_DEBUG
     DBG("[ZIKADARATOR] PluginProcessor " + message);

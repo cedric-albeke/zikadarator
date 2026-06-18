@@ -40,6 +40,7 @@ const processorHeader = read("src/PluginProcessor.h");
 const editor = read("src/PluginEditor.cpp");
 const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const footer = read("src/ui/panels/FooterPanel.cpp");
+const workspace = read("src/ui/panels/WorkspacePanel.cpp");
 const stepGridHeader = read("src/ui/components/StepGrid.h");
 const stepGrid = read("src/ui/components/StepGrid.cpp");
 const stepCell = read("src/ui/components/StepCell.cpp");
@@ -119,6 +120,18 @@ if (processBlock.includes("getActiveEditor(")) {
 
 if (processBlock.includes("Logger::writeToLog")) {
   fail("processBlock must not write logs from the audio thread");
+}
+assertContains(editor, "ZIKADARATOR_DEBUG_LOG", "editor file logging must be opt-in for release builds");
+assertContains(processor, "ZIKADARATOR_DEBUG_LOG", "processor file logging must be opt-in for release builds");
+assertContains(editor, "getEnvironmentVariable(\"ZIKADARATOR_DEBUG_LOG\"", "editor debug logging must read an explicit opt-in environment variable");
+assertContains(processor, "getEnvironmentVariable(\"ZIKADARATOR_DEBUG_LOG\"", "processor debug logging must read an explicit opt-in environment variable");
+assertContains(editor, "if (! isDebugFileLoggingEnabled())", "editor debug logging must skip file writes unless enabled");
+assertContains(processor, "if (! isDebugFileLoggingEnabled())", "processor debug logging must skip file writes unless enabled");
+if (footer.includes("Logger::writeToLog")) {
+  fail("FooterPanel interaction helpers must not write release debug logs");
+}
+if (workspace.includes("Logger::writeToLog")) {
+  fail("WorkspacePanel interaction helpers must not write release debug logs");
 }
 
 assertContains(processorHeader, "dryLeftBuffer", "processor must own reusable dry scratch buffers");

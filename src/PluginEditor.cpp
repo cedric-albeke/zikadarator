@@ -22,9 +22,29 @@ constexpr double kEditorAspectRatio = static_cast<double>(kDefaultEditorWidth) /
 constexpr int kHeaderPresetMenuOpenBrowserId = 1;
 constexpr int kHeaderPresetMenuPresetIdBase = 1000;
 
+bool isDebugFileLoggingEnabled()
+{
+#if JUCE_DEBUG
+    return true;
+#else
+    static const bool enabled = []()
+    {
+        const auto flag = juce::SystemStats::getEnvironmentVariable("ZIKADARATOR_DEBUG_LOG", {})
+                              .trim()
+                              .toLowerCase();
+        return flag == "1" || flag == "true" || flag == "yes";
+    }();
+
+    return enabled;
+#endif
+}
+
 void ensureUiLogger()
 {
     static bool initialised = false;
+
+    if (! isDebugFileLoggingEnabled())
+        return;
 
     if (initialised)
         return;
@@ -44,8 +64,12 @@ void ensureUiLogger()
 
 void debugUiLog(const juce::String& message)
 {
-    ensureUiLogger();
-    juce::Logger::writeToLog("[ZIKADARATOR] " + message);
+    if (isDebugFileLoggingEnabled())
+    {
+        ensureUiLogger();
+        if (juce::Logger::getCurrentLogger() != nullptr)
+            juce::Logger::writeToLog("[ZIKADARATOR] " + message);
+    }
 
 #if JUCE_DEBUG
     DBG("[ZIKADARATOR] " + message);
