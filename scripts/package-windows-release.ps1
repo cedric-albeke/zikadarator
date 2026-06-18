@@ -76,6 +76,42 @@ function Write-PackageChecksums {
     $lines | Set-Content -LiteralPath (Join-Path $PackagePath "SHA256SUMS.txt") -Encoding ASCII
 }
 
+function Test-PackageChecksums {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $PackagePath
+    )
+
+    $checksumPath = Join-Path $PackagePath "SHA256SUMS.txt"
+    Assert-FileExists -Path $checksumPath -Label "Package checksum manifest"
+
+    $entries = Get-Content -LiteralPath $checksumPath | Where-Object {
+        $_ -match '^[0-9a-f]{64}\s{2}.+'
+    }
+
+    if ($entries.Count -eq 0) {
+        throw "No checksum entries found in $checksumPath"
+    }
+
+    foreach ($entry in $entries) {
+        $parts = $entry -split '\s{2}', 2
+        if ($parts.Count -ne 2) {
+            throw "Invalid checksum line: $entry"
+        }
+
+        $expectedHash = $parts[0]
+        $relativePath = $parts[1] -replace '/', [System.IO.Path]::DirectorySeparatorChar
+        $artifactPath = Join-Path $PackagePath $relativePath
+
+        Assert-FileExists -Path $artifactPath -Label "Checksummed package artifact"
+
+        $actualHash = (Get-FileHash -LiteralPath $artifactPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actualHash -ne $expectedHash) {
+            throw "Checksum mismatch for $($parts[1]): expected $expectedHash, got $actualHash"
+        }
+    }
+}
+
 $script:RepoRoot = [System.IO.Path]::GetFullPath((Resolve-Path (Join-Path $PSScriptRoot "..")).Path)
 Set-Location $script:RepoRoot
 
@@ -152,6 +188,7 @@ helper, and this README so tester downloads can be verified after transfer.
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "README.txt") -Encoding ASCII
 
 Write-PackageChecksums -PackagePath $packagePath
+Test-PackageChecksums -PackagePath $packagePath
 
 if (Test-Path -LiteralPath $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force

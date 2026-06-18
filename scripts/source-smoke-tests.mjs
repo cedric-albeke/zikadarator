@@ -156,6 +156,8 @@ assertContains(windowsPackageScript, "Length -eq 0", "Windows package script mus
 assertContains(windowsPackageScript, "Compress-Archive", "Windows package script must create a tester-facing ZIP package");
 assertContains(windowsPackageScript, "SHA256SUMS.txt", "Windows package script must include tester-facing SHA-256 checksums");
 assertContains(windowsPackageScript, "Get-FileHash", "Windows package script must compute package checksums with SHA-256");
+assertContains(windowsPackageScript, "Test-PackageChecksums", "Windows package script must verify checksums before compressing the ZIP");
+assertContains(windowsPackageScript, "Checksum mismatch", "Windows package checksum verification must fail on stale or corrupt artifacts");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }
