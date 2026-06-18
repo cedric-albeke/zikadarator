@@ -349,7 +349,7 @@ void StepGrid::drawPlayheadRail(juce::Graphics& g)
     g.fillRect(x - static_cast<float>(stepWidth) * 0.5f, y1, static_cast<float>(stepWidth), y2 - y1);
 }
 
-void StepGrid::drawKeyboardFocusRing(juce::Graphics& g)
+void StepGrid::resized()
 {
     auto bounds = getLocalBounds();
 
@@ -795,21 +795,15 @@ void StepGrid::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelD
 
 bool StepGrid::keyPressed(const juce::KeyPress& key)
 {
-    switch (key.getKeyCode())
-    {
-        case juce::KeyPress::leftKey:   return moveSelectionBy(0, -1);
-        case juce::KeyPress::rightKey:  return moveSelectionBy(0, 1);
-        case juce::KeyPress::upKey:     return moveSelectionBy(-1, 0);
-        case juce::KeyPress::downKey:   return moveSelectionBy(1, 0);
-        case juce::KeyPress::homeKey:   return moveSelectionBy(0, -(selectedStep >= 0 ? selectedStep : 0));
-        case juce::KeyPress::endKey:    return moveSelectionBy(0, numSteps - 1 - (selectedStep >= 0 ? selectedStep : 0));
-        case juce::KeyPress::spaceKey:
-        case juce::KeyPress::returnKey:
-            return toggleSelectedStep();
-        default:
-            break;
-    }
-
+    const int code = key.getKeyCode();
+    if (code == juce::KeyPress::leftKey)   return moveSelectionBy(0, -1);
+    if (code == juce::KeyPress::rightKey)  return moveSelectionBy(0, 1);
+    if (code == juce::KeyPress::upKey)     return moveSelectionBy(-1, 0);
+    if (code == juce::KeyPress::downKey)   return moveSelectionBy(1, 0);
+    if (code == juce::KeyPress::homeKey)   return moveSelectionBy(0, -(selectedStep >= 0 ? selectedStep : 0));
+    if (code == juce::KeyPress::endKey)    return moveSelectionBy(0, numSteps - 1 - (selectedStep >= 0 ? selectedStep : 0));
+    if (code == juce::KeyPress::spaceKey || code == juce::KeyPress::returnKey)
+        return toggleSelectedStep();
     return false;
 }
 

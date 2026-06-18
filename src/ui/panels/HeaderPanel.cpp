@@ -16,7 +16,6 @@ namespace HeaderLayout {
     constexpr int kNavW          = 26;
     constexpr int kActionW       = 32;
     constexpr int kActionGap     = 2;
-    constexpr float kTabCorner   = 3.0f;
 }
 
 static const juce::String kUndoSvg(
