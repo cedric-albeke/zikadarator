@@ -39,6 +39,7 @@ private:
     int currentStep{-1};
     bool hasSelection{false};
     int hoveredPresetIndex{-1};
+    int selectedPresetIndex{-1};
 
     juce::Label infoLabel;
     std::vector<std::unique_ptr<juce::TextButton>> presetButtons;
@@ -47,6 +48,7 @@ private:
     void buildPresetGrid();
     void highlightPresetButton(int presetIndex);
     void notifyPresetAssigned(int presetIndex);
+    void updateInfoForSelection();
     void updateInfoForHover(int presetIndex);
 };
 

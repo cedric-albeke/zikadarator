@@ -115,6 +115,11 @@ assertContains(editor, "Open browser...", "header preset quick menu must offer f
 if (editor.includes("redirecting to preset browser")) {
   fail("header preset menu must not redirect straight to the full preset browser");
 }
+assertContains(sidebar, "selectedPresetIndex", "sidebar must track selected preset details separately from hover");
+assertContains(sidebar, "updateInfoForSelection", "sidebar must restore selected preset details when hover leaves");
+if (sidebar.includes("Hover a preset to see details...")) {
+  fail("sidebar detail panel must not depend on hover-only copy");
+}
 assertContains(parameterIDs, 'juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1', "step resolution choices must include 1/16 while defaulting to 1/8");
 assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must map step resolution index 0 to 1/16");
 assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");

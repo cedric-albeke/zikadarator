@@ -19,19 +19,19 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Mono processing now renders with an independent right-side scratch channel and folds stereo wet/dry output back to mono, covered by a processor regression test.
 - The editor now lays out the authored 1200x800 Zikada interface on a logical canvas and scales it to supported host sizes, preventing the compact view from crushing fixed panels.
 - The header preset control now opens an anchored quick menu with favorites, recents, the full preset list, and a direct browser command instead of forcing a page switch.
+- Sidebar preset details now persist from the selected step/preset and temporarily preview hover targets, so the detail area stays useful after the pointer leaves the grid.
 
 ## V1 Blockers
 
 1. Finish the AAA interaction polish pass.
-   The compact canvas protects proportions and the header quick menu is in place, but sidebar detail persistence, keyboard/wheel control, unit-aware knobs, playhead rail, and waveform framing still need dedicated passes.
+   The compact canvas, header quick menu, and persistent sidebar details are in place, but keyboard/wheel control, unit-aware knobs, playhead rail, and waveform framing still need dedicated passes.
 
 ## Next AAA UI/UX Polish
 
 1. Add mouse wheel preset cycling on hovered/selected step cells.
 2. Add keyboard focus, arrow navigation, and visible focus rings for custom-painted controls.
-3. Persist sidebar preset details on selection instead of requiring hover.
-4. Add unit-aware knob display and mappings: Hz as log scale, resonance as decimal, mix as percent, pan as L/C/R.
-5. Add a column-wide playhead rail in the step grid and remove double framing around the waveform.
+3. Add unit-aware knob display and mappings: Hz as log scale, resonance as decimal, mix as percent, pan as L/C/R.
+4. Add a column-wide playhead rail in the step grid and remove double framing around the waveform.
 
 ## Release Hardening
 

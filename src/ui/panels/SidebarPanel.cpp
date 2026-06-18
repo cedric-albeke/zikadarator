@@ -28,6 +28,7 @@ SidebarPanel::SidebarPanel()
     infoLabel.setFont(juce::Font(juce::FontOptions().withHeight(16.0f)));
     infoLabel.setColour(juce::Label::textColourId, Colours::white85);
     infoLabel.setMinimumHorizontalScale(1.0f);
+    infoLabel.setText("Select a step to inspect presets.", juce::dontSendNotification);
     addAndMakeVisible(infoLabel);
 }
 
@@ -190,7 +191,9 @@ void SidebarPanel::buildPresetGrid()
         btn->onClick = [this, pidx]
         {
             notifyPresetAssigned(pidx);
+            selectedPresetIndex = pidx;
             highlightPresetButton(pidx);
+            updateInfoForSelection();
         };
         btn->setClickingTogglesState(true);
         btn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
@@ -208,7 +211,7 @@ void SidebarPanel::buildPresetGrid()
     }
 
     hoveredPresetIndex = -1;
-    updateInfoForHover(-1);
+    updateInfoForSelection();
     rebuildSidebarLayoutAsync(juce::Component::SafePointer<SidebarPanel>(this));
 }
 
@@ -227,8 +230,7 @@ void SidebarPanel::updateInfoForHover(int presetIndex)
 {
     if (presetIndex < 0)
     {
-        infoLabel.setText("Hover a preset to see details...", juce::dontSendNotification);
-        infoLabel.setColour(juce::Label::textColourId, Colours::white50);
+        updateInfoForSelection();
         return;
     }
 
@@ -242,6 +244,37 @@ void SidebarPanel::updateInfoForHover(int presetIndex)
             return;
         }
     }
+}
+
+void SidebarPanel::updateInfoForSelection()
+{
+    if (currentLane < 0 || !hasSelection)
+    {
+        infoLabel.setText("Select a step to inspect presets.", juce::dontSendNotification);
+        infoLabel.setColour(juce::Label::textColourId, Colours::white50);
+        return;
+    }
+
+    if (selectedPresetIndex <= 0)
+    {
+        infoLabel.setText("Selected step has no preset. Choose an icon to arm this lane.", juce::dontSendNotification);
+        infoLabel.setColour(juce::Label::textColourId, Colours::white50);
+        return;
+    }
+
+    auto presets = getPresetsForLane(currentLane);
+    for (const auto& p : presets)
+    {
+        if (p.presetIndex == selectedPresetIndex)
+        {
+            infoLabel.setText("Selected: " + p.tooltip + " - " + p.infoText, juce::dontSendNotification);
+            infoLabel.setColour(juce::Label::textColourId, Colours::white);
+            return;
+        }
+    }
+
+    infoLabel.setText("Selected preset is unavailable for this lane.", juce::dontSendNotification);
+    infoLabel.setColour(juce::Label::textColourId, Colours::white50);
 }
 
 void SidebarPanel::paint(juce::Graphics& g)
@@ -370,7 +403,7 @@ void SidebarPanel::mouseExit(const juce::MouseEvent& e)
     if (hoveredPresetIndex != -1)
     {
         hoveredPresetIndex = -1;
-        updateInfoForHover(-1);
+        updateInfoForSelection();
         repaint();
     }
 }
@@ -381,9 +414,12 @@ void SidebarPanel::setSelectedStep(int lane, int step, const StepData& stepData)
     currentLane = lane;
     currentStep = step;
     hasSelection = true;
+    selectedPresetIndex = stepData.active ? stepData.presetIndex : -1;
 
     if (laneChanged)
         buildPresetGrid();
+    else
+        updateInfoForSelection();
 
     highlightPresetButton(stepData.presetIndex);
 }
