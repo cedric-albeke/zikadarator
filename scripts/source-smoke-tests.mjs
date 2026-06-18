@@ -55,6 +55,7 @@ const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
 const waveformDisplay = read("src/ui/components/WaveformDisplay.cpp");
 const headerPanelHeader = read("src/ui/panels/HeaderPanel.h");
 const headerPanel = read("src/ui/panels/HeaderPanel.cpp");
+const windowsPackageScript = read("scripts/package-windows-release.ps1");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
@@ -126,6 +127,10 @@ assertContains(processBlock, "sequencerState.getSnapshot()", "processBlock must 
 assertContains(processSegment, "SequencerState::Snapshot", "processSegment must render from an immutable sequencer snapshot");
 assertContains(processSegment, "sequencerSnapshot.getStepData", "processSegment must read step data from the captured snapshot");
 assertContains(processSegment, "sequencerSnapshot.getUserSlot", "processSegment must read user slots from the captured snapshot");
+assertContains(windowsPackageScript, "moduleinfo.json", "Windows package script must validate VST3 moduleinfo metadata");
+assertContains(windowsPackageScript, "packaging/windows/moduleinfo.json", "Windows package script must use tracked moduleinfo fallback when JUCE helper is blocked");
+assertContains(windowsPackageScript, "Length -eq 0", "Windows package script must repair zero-byte moduleinfo outputs");
+assertContains(windowsPackageScript, "Compress-Archive", "Windows package script must create a tester-facing ZIP package");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }

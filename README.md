@@ -113,6 +113,14 @@ GitHub Actions is set up to produce tester-facing artifacts for both platforms:
 - **Windows:** VST3 artifact, ZIP package, and Inno Setup installer
 - **macOS:** VST3 artifact, AU artifact, ZIP package, and unsigned PKG installer
 
+For a local Windows test ZIP after a Release build:
+
+```powershell
+.\scripts\package-windows-release.ps1 -BuildDir build\aaa-release -Configuration Release
+```
+
+The script refreshes `ZIKADARATOR-v1-AAA-Release.zip` and repairs a blocked or zero-byte VST3 `moduleinfo.json` from the tracked fallback at `packaging/windows/moduleinfo.json`.
+
 Tester docs:
 
 - [`docs/INSTALL.md`](docs/INSTALL.md)
