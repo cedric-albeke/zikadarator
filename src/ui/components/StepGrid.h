@@ -95,6 +95,7 @@ private:
     bool moveSelectionBy(int laneDelta, int stepDelta);
     bool toggleSelectedStep();
     void drawKeyboardFocusRing(juce::Graphics& g);
+    void drawPlayheadRail(juce::Graphics& g);
     int findChainRoot(int lane, int step) const;
 };
 

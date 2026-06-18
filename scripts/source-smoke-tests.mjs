@@ -165,6 +165,7 @@ assertContains(stepGridHeader, "keyPressed", "step grid must handle keyboard nav
 assertContains(stepGrid, "moveSelectionBy", "step grid must expose arrow-key selection movement");
 assertContains(stepGrid, "toggleSelectedStep", "step grid must expose keyboard activation for the selected step");
 assertContains(stepGrid, "drawKeyboardFocusRing", "step grid must draw a visible keyboard focus ring");
+assertContains(stepGrid, "drawPlayheadRail", "step grid must draw a column-wide playhead rail");
 assertContains(stepGrid, "juce::KeyPress::leftKey", "step grid must handle left/right arrow keys");
 assertContains(stepGrid, "juce::KeyPress::spaceKey", "step grid must handle space/return activation");
 assertContains(stepGrid, "e.mods.isShiftDown()", "off-cell wheel preset cycling must require an explicit Shift gesture");

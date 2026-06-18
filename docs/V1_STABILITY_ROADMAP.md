@@ -24,15 +24,12 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Footer knobs now render real units and move through the right scale: cutoff uses Hz/kHz with logarithmic travel, resonance uses decimals, timing uses milliseconds/seconds, mix-style controls use percentages, volume/rate controls use multipliers, and pan uses L/C/R readouts.
 - Processor rendering now captures one immutable `SequencerState::Snapshot` per block and renders segments from that snapshot instead of reading mutable UI-owned sequencer state directly on the audio thread.
 - Keyboard focus, arrow navigation, visible focus rings, and space/return activation are now implemented on the StepGrid. Off-cell wheel preset cycling requires an explicit Shift gesture.
+- A column-wide playhead rail is now drawn in the step grid at the current playing step, spanning all lanes with a subtle neon glow.
+- Waveform display double framing is removed: the SequencerPanel already draws the device bezel, so WaveformDisplay no longer draws its own redundant bezel.
 
 ## V1 Blockers
 
-1. Finish the AAA interaction polish pass.
-1. The compact canvas, header quick menu, persistent sidebar details, wheel preset cycling, unit-aware knobs, and keyboard focus/navigation are in place, but the playhead rail and waveform framing still need dedicated passes.
-
-## Next AAA UI/UX Polish
-
-1. Add a column-wide playhead rail in the step grid and remove double framing around the waveform.
+1. The compact canvas, header quick menu, persistent sidebar details, wheel preset cycling, unit-aware knobs, keyboard focus/navigation, playhead rail, and waveform framing are all in place. V1 is now feature-complete for the AAA interaction polish pass.
 
 ## Release Hardening
 

@@ -318,9 +318,38 @@ void StepGrid::paintOverChildren(juce::Graphics& g)
     }
 
     drawKeyboardFocusRing(g);
+    drawPlayheadRail(g);
 }
 
-void StepGrid::resized()
+void StepGrid::drawPlayheadRail(juce::Graphics& g)
+{
+    if (lastPlayingStep < 0 || lastPlayingStep >= numSteps)
+        return;
+
+    const auto bounds = getLocalBounds();
+    const int labelWidth = 110;
+    const int labelGap = 8;
+    const int knobStripW = 56;
+    const int rulerHeight = 14;
+    const int cellAreaW = bounds.getWidth() - labelWidth - labelGap - knobStripW;
+    const int stepWidth = cellAreaW / numSteps;
+    const int cellAreaX = bounds.getX() + labelWidth + labelGap;
+
+    const float x = static_cast<float>(cellAreaX + lastPlayingStep * stepWidth + stepWidth / 2);
+    const float y1 = static_cast<float>(bounds.getY() + rulerHeight);
+    const float y2 = static_cast<float>(bounds.getBottom());
+
+    g.setColour(Colours::neonGreen.withAlpha(0.22f));
+    g.drawLine(x, y1, x, y2, 3.0f);
+
+    g.setColour(Colours::neonGreen.withAlpha(0.55f));
+    g.drawLine(x, y1, x, y2, 1.0f);
+
+    g.setColour(Colours::neonGreen.withAlpha(0.12f));
+    g.fillRect(x - static_cast<float>(stepWidth) * 0.5f, y1, static_cast<float>(stepWidth), y2 - y1);
+}
+
+void StepGrid::drawKeyboardFocusRing(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 

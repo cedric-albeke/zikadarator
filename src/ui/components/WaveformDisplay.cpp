@@ -19,8 +19,6 @@ void WaveformDisplay::paint(juce::Graphics& g)
     g.fillAll(Colours::bgPrimary);
 
     auto fullBounds = getLocalBounds();
-    ZikadaLookAndFeel::drawDeviceDisplay(g, fullBounds);
-
     auto bounds = fullBounds.toFloat().reduced(7.0f);
     const auto laneGap = juce::jmax(3.0f, bounds.getHeight() * 0.055f);
     auto inputBounds = bounds.removeFromTop((bounds.getHeight() - laneGap) * 0.5f);
