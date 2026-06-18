@@ -135,6 +135,14 @@ assertContains(sliceEngine, "playbackBufferLeft.assign", "SliceEngine must preal
 if (triggerSlice.includes(".resize(") || triggerSlice.includes(".assign(")) {
   fail("SliceEngine triggerSlice must not allocate on the audio thread");
 }
+assertContains(read("src/engine/SliceEngine.h"), "enum class PlaybackMode", "SliceEngine must expose real playback modes for slice presets");
+assertContains(processor, "getSliceConfigForPreset", "processor must map slice presets to playback configs, not only slice indexes");
+assertContains(processor, "SliceEngine::PlaybackMode::Reverse", "slice preset mapping must back the Reverse preset with DSP");
+assertContains(processor, "SliceEngine::PlaybackMode::Repeat", "slice preset mapping must back the Repeat preset with DSP");
+assertContains(processor, "SliceEngine::PlaybackMode::Stutter", "slice preset mapping must back the Stutter preset with DSP");
+if (processor.includes("getSliceIndexForPreset")) {
+  fail("slice preset mapping must not collapse back to index-only configuration");
+}
 assertContains(loopEngine, "loopBufferL.assign", "LoopEngine must preallocate snapshot buffers during prepare");
 if ([setLoopParameters, ensureLoopBufferSize, refreshLoopSnapshot].some((body) => body.includes(".resize(") || body.includes(".assign("))) {
   fail("LoopEngine render-called loop setup/snapshot paths must not allocate on the audio thread");

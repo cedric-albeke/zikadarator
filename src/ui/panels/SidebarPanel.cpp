@@ -53,7 +53,7 @@ std::vector<LanePresetDef> SidebarPanel::getPresetsForLane(int lane) const
                 {"16",  "16 slices",        "Slice the audio into 16 equal parts", 15},
                 {"FWD", "Forward",          "Play slices in forward order", 16},
                 {"REV", "Reverse",          "Play slices in reverse order", 17},
-                {"SC",  "Scatter",          "Randomize slice playback order", 18},
+                {"SC",  "Scatter",          "Scatter slice playback order", 18},
                 {"RP",  "Repeat",           "Repeat selected slice pattern", 19},
                 {"ST",  "Stutter",          "Rapid-fire slice repeats", 20},
             };

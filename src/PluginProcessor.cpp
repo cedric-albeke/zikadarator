@@ -172,9 +172,17 @@ float blendGlobalMixSample(float dry, float wet, int mixMode, float wetAmount)
     return dry * (1.0f - wetAmount) + modeSignal * wetAmount;
 }
 
-int getSliceIndexForPreset(int presetIndex, int currentStep)
+struct SlicePresetConfig
+{
+    int sliceIndex{0};
+    SliceEngine::PlaybackMode mode{SliceEngine::PlaybackMode::Forward};
+    int repeats{1};
+};
+
+SlicePresetConfig getSliceConfigForPreset(int presetIndex, int currentStep)
 {
     int divisions = 16;
+    SlicePresetConfig config;
 
     switch (presetIndex)
     {
@@ -182,16 +190,27 @@ int getSliceIndexForPreset(int presetIndex, int currentStep)
         case 6: divisions = 2; break;
         case 7: divisions = 3; break;
         case 8: divisions = 4; break;
-        case 9: divisions = 6; break;
-        case 10: divisions = 8; break;
-        case 11: divisions = 12; break;
-        case 12: divisions = 16; break;
+        case 9: divisions = 5; break;
+        case 10: divisions = 6; break;
+        case 11: divisions = 8; break;
+        case 12: divisions = 10; break;
+        case 13: divisions = 12; break;
+        case 14: divisions = 14; break;
+        case 15: divisions = 16; break;
+        case 16: divisions = 16; break;
+        case 17: divisions = 16; config.mode = SliceEngine::PlaybackMode::Reverse; break;
+        case 18:
+            config.sliceIndex = juce::jlimit(0, 15, (currentStep * 5 + 3) % 16);
+            return config;
+        case 19: divisions = 16; config.mode = SliceEngine::PlaybackMode::Repeat; config.repeats = 2; break;
+        case 20: divisions = 16; config.mode = SliceEngine::PlaybackMode::Stutter; config.repeats = 4; break;
         default: break;
     }
 
     const int divisionStep = currentStep % juce::jmax(1, divisions);
-    return juce::jlimit(0, 15,
-                        static_cast<int>(std::floor(static_cast<double>(divisionStep) * 16.0 / static_cast<double>(divisions))));
+    config.sliceIndex = juce::jlimit(0, 15,
+                                     static_cast<int>(std::floor(static_cast<double>(divisionStep) * 16.0 / static_cast<double>(divisions))));
+    return config;
 }
 
 void applyGainPan(float* left, float* right, int numSamples, float volume, float pan)
@@ -969,7 +988,11 @@ void PluginProcessor::processSegment(float* leftChannel,
     {
         lastEffectiveSteps[kSliceLane] = effSliceStep;
         if (sliceStep.active && sliceStep.presetIndex > 0)
-            sliceEngine.triggerSlice(getSliceIndexForPreset(sliceStep.presetIndex, effSliceStep));
+        {
+            const auto sliceConfig = getSliceConfigForPreset(sliceStep.presetIndex, effSliceStep);
+            sliceEngine.setPlaybackMode(sliceConfig.mode, sliceConfig.repeats);
+            sliceEngine.triggerSlice(sliceConfig.sliceIndex);
+        }
     }
 
     if (effLoopStep != lastEffectiveSteps[kLoopLane])

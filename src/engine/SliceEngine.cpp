@@ -51,6 +51,12 @@ void SliceEngine::setTempo(double bpm)
         maxSliceSamples = juce::jmin(maxSliceSamples, static_cast<int>(playbackBufferLeft.size()));
 }
 
+void SliceEngine::setPlaybackMode(PlaybackMode mode, int repeatCount)
+{
+    playbackMode = mode;
+    playbackRepeatCount = juce::jlimit(1, 16, repeatCount);
+}
+
 void SliceEngine::writeToBuffer(const float* inputLeft, const float* inputRight, int numSamples)
 {
     leftBuffer.write(inputLeft, numSamples);
@@ -70,8 +76,9 @@ void SliceEngine::triggerSlice(int sliceIndex)
     
     for (int i = 0; i < playbackLength; ++i)
     {
-        playbackBufferLeft[i] = leftBuffer.getSampleAgo(sliceStartSamples + (playbackLength - 1 - i));
-        playbackBufferRight[i] = rightBuffer.getSampleAgo(sliceStartSamples + (playbackLength - 1 - i));
+        const int sampleAge = getPlaybackSampleAge(sliceStartSamples, i);
+        playbackBufferLeft[i] = leftBuffer.getSampleAgo(sampleAge);
+        playbackBufferRight[i] = rightBuffer.getSampleAgo(sampleAge);
     }
     
     playbackPosition = 0;
@@ -107,6 +114,30 @@ void SliceEngine::process(float* outputLeft, float* outputRight, int numSamples)
     playbackPosition += samplesToPlay;
     if (playbackPosition >= playbackLength)
         isPlayingSlice = false;
+}
+
+int SliceEngine::getPlaybackSampleAge(int sliceStartSamples, int position) const
+{
+    if (playbackLength <= 0)
+        return sliceStartSamples;
+
+    switch (playbackMode)
+    {
+        case PlaybackMode::Reverse:
+            return sliceStartSamples + juce::jlimit(0, playbackLength - 1, position);
+
+        case PlaybackMode::Repeat:
+        case PlaybackMode::Stutter:
+        {
+            const int grainLength = juce::jmax(1, playbackLength / playbackRepeatCount);
+            const int grainPosition = position % grainLength;
+            return sliceStartSamples + (playbackLength - 1 - grainPosition);
+        }
+
+        case PlaybackMode::Forward:
+        default:
+            return sliceStartSamples + (playbackLength - 1 - position);
+    }
 }
 
 }

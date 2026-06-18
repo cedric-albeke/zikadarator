@@ -122,6 +122,7 @@ enable_testing()
 add_executable(ZikadaEngineTests
     tests/engine/EngineTestMain.cpp
     tests/engine/RealtimeRingBufferTests.cpp
+    tests/engine/SliceEngineTests.cpp
     tests/engine/StepSchedulerTests.cpp
     tests/engine/LaneTransitionTests.cpp
     tests/engine/SequencerStateTests.cpp
@@ -138,6 +139,7 @@ target_sources(ZikadaEngineTests
         src/engine/DelayEngine.cpp
         src/engine/FilterEngine.cpp
         src/engine/LoopEngine.cpp
+        src/engine/SliceEngine.cpp
 )
 
 target_link_libraries(ZikadaEngineTests
