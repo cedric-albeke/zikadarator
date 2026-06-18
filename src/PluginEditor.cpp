@@ -374,7 +374,7 @@ void PluginEditor::layoutEditorCanvas(juce::Rectangle<int> logicalBounds)
     namespace PM = PanelMetrics;
     auto bounds = logicalBounds.reduced(PM::kShellInset);
 
-    headerPanel.setBounds(bounds.removeFromTop(80));
+    headerPanel.setBounds(bounds.removeFromTop(60));
     bounds.removeFromTop(PM::kModuleGap);
 
     workspacePanel.setBounds(bounds);

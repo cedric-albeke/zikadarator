@@ -5,18 +5,18 @@ namespace zikada {
 
 namespace HeaderLayout {
     constexpr int kPadX          = 10;
-    constexpr int kLogoSize      = 60;
-    constexpr int kLogoGap       = 8;
-    constexpr int kWordmarkW     = 190;
-    constexpr int kSectionGap    = 14;
-    constexpr int kTabW          = 110;
-    constexpr int kTabGap        = 3;
+    constexpr int kLogoSize      = 40;
+    constexpr int kLogoGap       = 6;
+    constexpr int kWordmarkW     = 150;
+    constexpr int kSectionGap    = 10;
+    constexpr int kTabW          = 90;
+    constexpr int kTabGap        = 2;
     constexpr float kTabCorner   = 3.0f;
-    constexpr int kPresetStripW  = 380;
-    constexpr int kNavW          = 30;
-    constexpr int kActionW       = 38;
-    constexpr int kActionGap     = 4;
-    constexpr float kDotRadius   = 3.0f;
+    constexpr int kPresetStripW  = 320;
+    constexpr int kNavW          = 26;
+    constexpr int kActionW       = 32;
+    constexpr int kActionGap     = 2;
+    constexpr float kTabCorner   = 3.0f;
 }
 
 static const juce::String kUndoSvg(
@@ -172,12 +172,12 @@ void HeaderPanel::paint(juce::Graphics& g)
     g.drawLine(0.0f, bounds.getBottom() - 1.5f,
                bounds.getRight(), bounds.getBottom() - 1.5f, 2.0f);
 
-    auto wordmarkFont = laf ? laf->getAntaFont(30.0f)
-                            : juce::Font(juce::FontOptions().withHeight(30.0f));
-    auto versionFont  = laf ? laf->getAntaFont(17.0f)
-                            : juce::Font(juce::FontOptions().withHeight(17.0f));
-    auto sublineFont  = laf ? laf->getSpaceMonoFont(15.0f, false)
-                            : juce::Font(juce::FontOptions().withHeight(12.0f));
+    auto wordmarkFont = laf ? laf->getAntaFont(22.0f)
+                            : juce::Font(juce::FontOptions().withHeight(22.0f));
+    auto versionFont  = laf ? laf->getAntaFont(14.0f)
+                            : juce::Font(juce::FontOptions().withHeight(14.0f));
+    auto sublineFont  = laf ? laf->getSpaceMonoFont(11.0f, false)
+                            : juce::Font(juce::FontOptions().withHeight(11.0f));
 
     // ── Logo (128px pre-scaled asset) ───────────────────────────────
     const float logoSz = static_cast<float>(HL::kLogoSize);
@@ -209,31 +209,31 @@ void HeaderPanel::paint(juce::Graphics& g)
     const float wZikada = gaZikada.getBoundingBox(0, gaZikada.getNumGlyphs(), true).getWidth();
     const float wRator  = gaRator.getBoundingBox(0, gaRator.getNumGlyphs(), true).getWidth();
     const float wV1     = gaV1.getBoundingBox(0, gaV1.getNumGlyphs(), true).getWidth();
-    const float totalWmW = wZikada + wRator + wV1 + 6.0f;
+    const float totalWmW = wZikada + wRator + wV1 + 4.0f;
 
-    const float wmY = bounds.getCentreY() - 14.0f;
+    const float wmY = bounds.getCentreY() - 11.0f;
 
     g.setFont(wordmarkFont);
     g.setColour(Colours::white);
     g.drawText("ZIKADA",
-               juce::Rectangle<float>(wmX, wmY, wZikada + 2.0f, 26.0f),
+               juce::Rectangle<float>(wmX, wmY, wZikada + 2.0f, 20.0f),
                juce::Justification::centredLeft, false);
 
     g.setColour(Colours::neonGreen);
     g.drawText("RATOR",
-               juce::Rectangle<float>(wmX + wZikada, wmY, wRator + 2.0f, 26.0f),
+               juce::Rectangle<float>(wmX + wZikada, wmY, wRator + 2.0f, 20.0f),
                juce::Justification::centredLeft, false);
 
     g.setFont(versionFont);
     g.setColour(Colours::neonGreen.withAlpha(0.65f));
     g.drawText("V1",
-               juce::Rectangle<float>(wmX + wZikada + wRator + 3.0f, wmY + 2.0f, wV1 + 2.0f, 22.0f),
+               juce::Rectangle<float>(wmX + wZikada + wRator + 2.0f, wmY + 2.0f, wV1 + 2.0f, 16.0f),
                juce::Justification::centredLeft, false);
 
     g.setFont(sublineFont);
     g.setColour(Colours::white50);
     g.drawText("SEQUENCE THE SIGNAL",
-               juce::Rectangle<float>(wmX, wmY + 26.0f, totalWmW, 14.0f),
+               juce::Rectangle<float>(wmX, wmY + 18.0f, totalWmW, 12.0f),
                juce::Justification::centredLeft, false);
 }
 
@@ -244,12 +244,12 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
     const auto bounds = getLocalBounds().toFloat();
     const auto* laf   = dynamic_cast<const ZikadaLookAndFeel*>(&getLookAndFeel());
 
-    auto tabFont    = laf ? laf->getSpaceMonoFont(15.0f, true)
-                          : juce::Font(juce::FontOptions().withHeight(15.0f).withStyle("Bold"));
+    auto tabFont    = laf ? laf->getSpaceMonoFont(14.0f, true)
+                          : juce::Font(juce::FontOptions().withHeight(14.0f).withStyle("Bold"));
     auto presetFont = laf ? laf->getSpaceMonoFont(14.0f, false)
                           : juce::Font(juce::FontOptions().withHeight(14.0f));
 
-    // ── Tab cells ───────────────────────────────────────────────────
+    // ── Tab cells (underline indicator, no dots) ────────────────────
     auto drawTab = [&](const juce::TextButton& tab, const juce::String& label, bool active)
     {
         auto r = tab.getBounds().toFloat();
@@ -263,25 +263,23 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
         g.setColour(Colours::white.withAlpha(active ? 0.10f : 0.06f));
         g.drawRoundedRectangle(r.reduced(0.5f), HL::kTabCorner, 1.0f);
 
+        // Underline indicator at bottom: 2.5px line, 8px wide, 3px from bottom
         if (active)
         {
+            const float uLineW = 8.0f;
+            const float uLineH = 2.5f;
+            const float uLineY = r.getBottom() - 3.0f;
+            const float uLineX = r.getCentreX() - uLineW * 0.5f;
             g.setColour(Colours::neonGreen);
-            g.fillEllipse(r.getCentreX() - HL::kDotRadius,
-                          r.getY() + 6.0f,
-                          HL::kDotRadius * 2.0f,
-                          HL::kDotRadius * 2.0f);
-        }
-        else
-        {
-            g.setColour(Colours::white.withAlpha(0.18f));
-            g.fillEllipse(r.getCentreX() - 2.0f,
-                          r.getY() + 7.0f,
-                          4.0f, 4.0f);
+            g.fillRoundedRectangle(uLineX, uLineY, uLineW, uLineH, 1.25f);
+            // Glow under the line
+            g.setColour(Colours::neonGreen.withAlpha(0.25f));
+            g.fillRoundedRectangle(uLineX - 2.0f, uLineY + 1.0f, uLineW + 4.0f, uLineH + 2.0f, 2.0f);
         }
 
         g.setFont(tabFont);
         g.setColour(active ? Colours::white : Colours::white50);
-        g.drawText(label, r.withTrimmedTop(6.0f), juce::Justification::centred, false);
+        g.drawText(label, r, juce::Justification::centred, false);
     };
 
     drawTab(sequencerTab, "SEQUENCER", selectedPage == Page::Sequencer);
@@ -335,9 +333,9 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
 
         g.setColour(Colours::white.withAlpha(0.06f));
         g.drawLine(stripRect.getX() - 7.0f,
-                   bounds.getY() + 12.0f,
+                   bounds.getY() + 10.0f,
                    stripRect.getX() - 7.0f,
-                   bounds.getBottom() - 12.0f,
+                   bounds.getBottom() - 10.0f,
                    1.0f);
     }
 
@@ -368,11 +366,11 @@ void HeaderPanel::paintOverChildren(juce::Graphics& g)
     drawChevron(presetPrevButton.getBounds().toFloat(), true,  presetPrevButton.isEnabled());
     drawChevron(presetNextButton.getBounds().toFloat(), false, presetNextButton.isEnabled());
 
-    // ── Undo/redo icons ─────────────────────────────────────────────
+    // ── Undo/redo icons (compact 60px header, tighter inset) ─────────
     auto drawActionIcon = [&g](juce::Drawable* icon, juce::Rectangle<float> area, bool enabled)
     {
         if (icon == nullptr) return;
-        const float inset = 8.0f;
+        const float inset = 7.0f;
         g.setOpacity(enabled ? 0.85f : 0.30f);
         icon->drawWithin(g, area.reduced(inset), juce::RectanglePlacement::centred, 1.0f);
         g.setOpacity(1.0f);
