@@ -19,6 +19,8 @@ constexpr int kMinEditorHeight = 600;
 constexpr int kMaxEditorWidth = 2400;
 constexpr int kMaxEditorHeight = 1600;
 constexpr double kEditorAspectRatio = static_cast<double>(kDefaultEditorWidth) / static_cast<double>(kDefaultEditorHeight);
+constexpr int kHeaderPresetMenuOpenBrowserId = 1;
+constexpr int kHeaderPresetMenuPresetIdBase = 1000;
 
 void ensureUiLogger()
 {
@@ -440,10 +442,97 @@ void PluginEditor::showHeaderPresetMenu()
     if (items.empty())
         return;
 
-    debugUiLog("PluginEditor#" + juce::String(instanceId) + " showHeaderPresetMenu: redirecting to preset browser instead of spawning PopupMenu, itemCount="
-               + juce::String(static_cast<int>(items.size())));
-    headerPanel.setSelectedPage(HeaderPanel::Page::Presets);
-    setPage(Page::Presets);
+    auto makePresetMenuLabel = [&items](int index)
+    {
+        const auto& item = items[static_cast<size_t>(index)];
+        juce::String label;
+        if (item.isFavorite)
+            label << "* ";
+        label << item.name << "  /  " << item.category.toUpperCase();
+        return label;
+    };
+
+    auto addPresetItem = [&](juce::PopupMenu& menu, int index)
+    {
+        menu.addItem(kHeaderPresetMenuPresetIdBase + index,
+                     makePresetMenuLabel(index),
+                     true,
+                     index == currentPresetIndex);
+    };
+
+    auto addEmptyItem = [](juce::PopupMenu& menu, const juce::String& label)
+    {
+        menu.addItem(0, label, false, false);
+    };
+
+    juce::PopupMenu presetMenu;
+
+    presetMenu.addSectionHeader("FAVORITES");
+    bool addedFavorite = false;
+    for (int i = 0; i < static_cast<int>(items.size()); ++i)
+    {
+        if (!items[static_cast<size_t>(i)].isFavorite)
+            continue;
+
+        addPresetItem(presetMenu, i);
+        addedFavorite = true;
+    }
+    if (!addedFavorite)
+        addEmptyItem(presetMenu, "No favorites yet");
+
+    presetMenu.addSeparator();
+    presetMenu.addSectionHeader("RECENTS");
+    bool addedRecent = false;
+    for (int rank = 0; rank < 12; ++rank)
+    {
+        for (int i = 0; i < static_cast<int>(items.size()); ++i)
+        {
+            if (items[static_cast<size_t>(i)].recentRank != rank)
+                continue;
+
+            addPresetItem(presetMenu, i);
+            addedRecent = true;
+        }
+    }
+    if (!addedRecent)
+        addEmptyItem(presetMenu, "No recent presets");
+
+    juce::PopupMenu allPresetsMenu;
+    allPresetsMenu.addSectionHeader("ALL PRESETS");
+    for (int i = 0; i < static_cast<int>(items.size()); ++i)
+        addPresetItem(allPresetsMenu, i);
+
+    presetMenu.addSeparator();
+    presetMenu.addSubMenu("ALL PRESETS", allPresetsMenu);
+    presetMenu.addSeparator();
+    presetMenu.addItem(kHeaderPresetMenuOpenBrowserId, "Open browser...");
+
+    auto options = juce::PopupMenu::Options()
+        .withTargetComponent(headerPanel.getPresetMenuTarget())
+        .withMinimumWidth(360)
+        .withMaximumNumColumns(2)
+        .withStandardItemHeight(24)
+        .withDeletionCheck(*this);
+
+    juce::Component::SafePointer<PluginEditor> safeThis(this);
+    presetMenu.showMenuAsync(options, [safeThis](int result)
+    {
+        if (safeThis == nullptr)
+            return;
+
+        if (result == 0)
+            return;
+
+        if (result == kHeaderPresetMenuOpenBrowserId)
+        {
+            safeThis->headerPanel.setSelectedPage(HeaderPanel::Page::Presets);
+            safeThis->setPage(Page::Presets);
+            return;
+        }
+
+        const int presetIndex = result - kHeaderPresetMenuPresetIdBase;
+        safeThis->loadPresetByIndex(presetIndex, true);
+    });
 }
 
 void PluginEditor::loadPresetByIndex(int index, bool pushToHistory)

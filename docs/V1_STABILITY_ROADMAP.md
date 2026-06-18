@@ -18,20 +18,20 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - The branch is rebased onto the newer `codex/windows-engine-rebuild` line, preserving the rebuilt engine core and newer FX preset/icon work.
 - Mono processing now renders with an independent right-side scratch channel and folds stereo wet/dry output back to mono, covered by a processor regression test.
 - The editor now lays out the authored 1200x800 Zikada interface on a logical canvas and scales it to supported host sizes, preventing the compact view from crushing fixed panels.
+- The header preset control now opens an anchored quick menu with favorites, recents, the full preset list, and a direct browser command instead of forcing a page switch.
 
 ## V1 Blockers
 
 1. Finish the AAA interaction polish pass.
-   The compact canvas protects proportions, but the header preset menu, sidebar detail persistence, keyboard/wheel control, unit-aware knobs, playhead rail, and waveform framing still need dedicated passes.
+   The compact canvas protects proportions and the header quick menu is in place, but sidebar detail persistence, keyboard/wheel control, unit-aware knobs, playhead rail, and waveform framing still need dedicated passes.
 
 ## Next AAA UI/UX Polish
 
-1. Replace the header preset "dropdown opens browser" behavior with an anchored quick menu: favorites, recents, full list, and "Open browser...".
-2. Add mouse wheel preset cycling on hovered/selected step cells.
-3. Add keyboard focus, arrow navigation, and visible focus rings for custom-painted controls.
-4. Persist sidebar preset details on selection instead of requiring hover.
-5. Add unit-aware knob display and mappings: Hz as log scale, resonance as decimal, mix as percent, pan as L/C/R.
-6. Add a column-wide playhead rail in the step grid and remove double framing around the waveform.
+1. Add mouse wheel preset cycling on hovered/selected step cells.
+2. Add keyboard focus, arrow navigation, and visible focus rings for custom-painted controls.
+3. Persist sidebar preset details on selection instead of requiring hover.
+4. Add unit-aware knob display and mappings: Hz as log scale, resonance as decimal, mix as percent, pan as L/C/R.
+5. Add a column-wide playhead rail in the step grid and remove double framing around the waveform.
 
 ## Release Hardening
 

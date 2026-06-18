@@ -107,6 +107,14 @@ assertContains(editor, "setFixedAspectRatio", "plugin editor must constrain resi
 assertContains(editor, "layoutEditorCanvas", "plugin editor must lay out panels on a logical canvas");
 assertContains(editor, "editorCanvas.setTransform(juce::AffineTransform::scale", "plugin editor must scale the logical canvas for compact sizes");
 assertContains(read("src/PluginEditor.h"), "editorCanvas", "plugin editor must own a logical canvas component");
+assertContains(editor, "juce::PopupMenu presetMenu", "header preset control must open an anchored quick menu");
+assertContains(editor, "FAVORITES", "header preset quick menu must expose favorite presets");
+assertContains(editor, "RECENTS", "header preset quick menu must expose recent presets");
+assertContains(editor, "ALL PRESETS", "header preset quick menu must expose the full preset list");
+assertContains(editor, "Open browser...", "header preset quick menu must offer full browser access");
+if (editor.includes("redirecting to preset browser")) {
+  fail("header preset menu must not redirect straight to the full preset browser");
+}
 assertContains(parameterIDs, 'juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1', "step resolution choices must include 1/16 while defaulting to 1/8");
 assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must map step resolution index 0 to 1/16");
 assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");
