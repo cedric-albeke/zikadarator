@@ -124,6 +124,7 @@ add_executable(ZikadaEngineTests
     tests/engine/RealtimeRingBufferTests.cpp
     tests/engine/StepSchedulerTests.cpp
     tests/engine/LaneTransitionTests.cpp
+    tests/engine/SequencerStateTests.cpp
 )
 
 target_include_directories(ZikadaEngineTests
@@ -142,6 +143,7 @@ target_sources(ZikadaEngineTests
 target_link_libraries(ZikadaEngineTests
     PRIVATE
         juce::juce_audio_basics
+        juce::juce_data_structures
         juce::juce_dsp
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags

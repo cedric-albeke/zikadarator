@@ -24,18 +24,14 @@ Use this checklist before sharing a build with external testers.
 Run these before sharing a tester build:
 
 ```powershell
-node scripts\source-smoke-tests.mjs
-& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Debug --target ZikadaEngineTests
-& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\ctest.exe' --test-dir build -C Debug --output-on-failure
-& 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Release --target ZikadaFX_VST3
-.tools\pluginval\pluginval.exe --validate-in-process --strictness-level 5 --validate "C:\Development\zikadarator\build\ZikadaFX_artefacts\Release\VST3\ZIKADARATOR.vst3"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-windows.ps1 -BuildDir build\verify -Configuration Debug -Generator "Visual Studio 17 2022" -Architecture x64
 ```
 
 Expected:
 
 - Source smoke passes.
 - Engine tests pass through CTest.
-- Release VST3 builds.
+- VST3 builds.
 - pluginval exits with code 0 at strictness level 5.
 
 ### Windows

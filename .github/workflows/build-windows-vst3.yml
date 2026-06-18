@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-windows-packages:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     env:
       PRODUCT_NAME: ZIKADARATOR
@@ -28,11 +28,27 @@ jobs:
         with:
           arch: x64
 
-      - name: Configure CMake
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      - name: Validate Windows plugin gate
+        shell: pwsh
+        run: |
+          .\scripts\validate-windows.ps1 `
+            -BuildDir build `
+            -Configuration Release `
+            -Generator "Visual Studio 17 2022" `
+            -Architecture x64
 
       - name: Build plugin targets
         run: cmake --build build --config Release --target ZikadaFX_All
+
+      - name: Upload Windows validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-windows-validation-logs
+          path: |
+            build/pluginval-results
+            build/Testing/Temporary
+          if-no-files-found: ignore
 
       - name: Build Windows ZIP package
         shell: pwsh
@@ -51,9 +67,27 @@ jobs:
 
           Compress-Archive -Path "$packageRoot\*" -DestinationPath "$artifactRoot\$env:PRODUCT_NAME-windows.zip" -Force
 
-      - name: Build Windows installer
+      - name: Install Inno Setup
+        shell: pwsh
         run: |
-          iscc /DMyAppName="${{ env.PRODUCT_NAME }}" /DMyAppVersion="${{ env.PRODUCT_VERSION }}" /DMySourceDir="$PWD\\packaging\\windows\\package-root" /DMyOutputDir="$PWD\\packaging\\windows\\artifacts" "packaging\\windows\\ZIKADARATOR.iss"
+          $innoDir = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6"
+          $innoExe = Join-Path $innoDir "ISCC.exe"
+
+          if (-not (Get-Command iscc.exe -ErrorAction SilentlyContinue) -and -not (Test-Path -LiteralPath $innoExe)) {
+            choco install innosetup -y --no-progress
+          }
+
+          if (Test-Path -LiteralPath $innoExe) {
+            Add-Content -Path $env:GITHUB_PATH -Value $innoDir
+            & $innoExe /?
+          } else {
+            iscc.exe /?
+          }
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          iscc.exe /DMyAppName="${{ env.PRODUCT_NAME }}" /DMyAppVersion="${{ env.PRODUCT_VERSION }}" /DMySourceDir="$PWD\\packaging\\windows\\package-root" /DMyOutputDir="$PWD\\packaging\\windows\\artifacts" "packaging\\windows\\ZIKADARATOR.iss"
 
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4

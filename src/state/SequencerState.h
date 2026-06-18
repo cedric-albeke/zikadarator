@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include "StepData.h"
 #include "UserSlotData.h"
 
@@ -13,6 +14,30 @@ public:
     static constexpr int NumSteps    = 16;
     static constexpr int NumUserSlots = 4;
 
+    using StepGrid = std::array<std::array<StepData, NumSteps>, NumLanes>;
+    using UserSlotGrid = std::array<std::array<UserSlotData, NumUserSlots>, NumLanes>;
+
+    struct Snapshot
+    {
+        StepGrid grid{};
+        UserSlotGrid userSlots{};
+
+        const StepData& getStepData (int lane, int step) const
+        {
+            return grid[static_cast<size_t> (lane)][static_cast<size_t> (step)];
+        }
+
+        const UserSlotData& getUserSlot (int lane, int slot) const
+        {
+            return userSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)];
+        }
+    };
+
+    SequencerState()
+    {
+        publishSnapshot();
+    }
+
     const StepData& getStepData (int lane, int step) const
     {
         return grid[static_cast<size_t> (lane)][static_cast<size_t> (step)];
@@ -21,6 +46,7 @@ public:
     void setStepData (int lane, int step, const StepData& data)
     {
         grid[static_cast<size_t> (lane)][static_cast<size_t> (step)] = data;
+        publishSnapshot();
     }
 
     const UserSlotData& getUserSlot (int lane, int slot) const
@@ -31,6 +57,25 @@ public:
     void setUserSlot (int lane, int slot, const UserSlotData& data)
     {
         userSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)] = data;
+        publishSnapshot();
+    }
+
+    [[nodiscard]] Snapshot getSnapshot() const
+    {
+        for (;;)
+        {
+            const int index = publishedSnapshotIndex.load (std::memory_order_acquire);
+            snapshotReaders[static_cast<size_t> (index)].fetch_add (1, std::memory_order_acq_rel);
+
+            if (publishedSnapshotIndex.load (std::memory_order_acquire) == index)
+            {
+                auto snapshotCopy = snapshots[static_cast<size_t> (index)];
+                snapshotReaders[static_cast<size_t> (index)].fetch_sub (1, std::memory_order_release);
+                return snapshotCopy;
+            }
+
+            snapshotReaders[static_cast<size_t> (index)].fetch_sub (1, std::memory_order_release);
+        }
     }
 
     [[nodiscard]] juce::ValueTree toValueTree() const
@@ -70,6 +115,9 @@ public:
     {
         if (! root.hasType ("SequencerState"))
             return;
+
+        grid = {};
+        userSlots = {};
 
         for (int li = 0; li < root.getNumChildren(); ++li)
         {
@@ -118,11 +166,41 @@ public:
                 }
             }
         }
+
+        publishSnapshot();
     }
 
 private:
-    std::array<std::array<StepData, NumSteps>, NumLanes> grid{};
-    std::array<std::array<UserSlotData, NumUserSlots>, NumLanes> userSlots{};
+    static constexpr int NumSnapshotBuffers = 3;
+
+    StepGrid grid{};
+    UserSlotGrid userSlots{};
+    std::array<Snapshot, NumSnapshotBuffers> snapshots{};
+    mutable std::array<std::atomic<int>, NumSnapshotBuffers> snapshotReaders{};
+    std::atomic<int> publishedSnapshotIndex{0};
+
+    void publishSnapshot()
+    {
+        Snapshot nextSnapshot;
+        nextSnapshot.grid = grid;
+        nextSnapshot.userSlots = userSlots;
+
+        const int currentIndex = publishedSnapshotIndex.load (std::memory_order_acquire);
+
+        for (;;)
+        {
+            for (int offset = 1; offset < NumSnapshotBuffers; ++offset)
+            {
+                const int candidate = (currentIndex + offset) % NumSnapshotBuffers;
+                if (snapshotReaders[static_cast<size_t> (candidate)].load (std::memory_order_acquire) != 0)
+                    continue;
+
+                snapshots[static_cast<size_t> (candidate)] = nextSnapshot;
+                publishedSnapshotIndex.store (candidate, std::memory_order_release);
+                return;
+            }
+        }
+    }
 };
 
 } // namespace zikada

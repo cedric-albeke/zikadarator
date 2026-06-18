@@ -9,6 +9,7 @@ namespace zikada::tests {
 void addRealtimeRingBufferTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 void addStepSchedulerTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
+void addSequencerStateTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 }
 
 int main()
@@ -17,6 +18,7 @@ int main()
     zikada::tests::addRealtimeRingBufferTests(tests);
     zikada::tests::addStepSchedulerTests(tests);
     zikada::tests::addLaneTransitionTests(tests);
+    zikada::tests::addSequencerStateTests(tests);
 
     int failures = 0;
     for (const auto& [name, test] : tests)

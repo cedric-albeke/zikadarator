@@ -29,6 +29,8 @@ CMakeSettings.json
 # Windows
 Thumbs.db
 *.pdb
+/packaging/windows/artifacts/
+/packaging/windows/package-root/
 
 # Generated
 src/BinaryData.h

@@ -23,15 +23,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure CMake
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+      - name: Validate macOS plugin gate
+        run: |
+          BUILD_DIR=build \
+          CONFIGURATION=Release \
+          OSX_ARCHITECTURES="x86_64;arm64" \
+          OSX_DEPLOYMENT_TARGET=11.0 \
+          ./scripts/validate-macos.sh
 
-      - name: Build plugin targets
-        run: cmake --build build --config Release --target ZikadaFX_All
+      - name: Upload macOS validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZIKADARATOR-macos-validation-logs
+          path: |
+            build/pluginval-results
+            build/Testing/Temporary
+          if-no-files-found: ignore
 
       - name: Stage macOS package contents
         run: |
-          rm -rf packaging/macos/stage packaging/macos/artifacts
+          rm -rf packaging/macos/stage packaging/macos/artifacts "packaging/macos/${PRODUCT_NAME}-macos"
           mkdir -p packaging/macos/stage/Library/Audio/Plug-Ins/VST3
           mkdir -p packaging/macos/stage/Library/Audio/Plug-Ins/Components
           mkdir -p packaging/macos/stage/Applications
@@ -43,7 +55,8 @@ jobs:
 
       - name: Build macOS ZIP package
         run: |
-          ditto -c -k --sequesterRsrc --keepParent packaging/macos/stage packaging/macos/artifacts/${PRODUCT_NAME}-macos.zip
+          cp -R packaging/macos/stage "packaging/macos/${PRODUCT_NAME}-macos"
+          ditto -c -k --sequesterRsrc --keepParent "packaging/macos/${PRODUCT_NAME}-macos" packaging/macos/artifacts/${PRODUCT_NAME}-macos.zip
 
       - name: Build unsigned macOS installer package
         run: |
