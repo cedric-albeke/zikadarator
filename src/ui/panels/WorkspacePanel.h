@@ -105,6 +105,7 @@ private:
     juce::TextButton clockSourceButton{"HOST"};
     juce::TextButton stepResolutionButton{"1/8"};
     std::unique_ptr<juce::AudioDeviceSelectorComponent> standaloneDeviceSelector;
+    juce::Viewport standaloneDeviceViewport;
     juce::Value muteInputValue;
 
     std::unique_ptr<SliderAttachment> dryWetAttachment;

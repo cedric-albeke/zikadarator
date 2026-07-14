@@ -441,7 +441,6 @@ void FooterPanel::drawSignalModule(juce::Graphics& g) const
     g.setColour(Colours::white50);
     g.drawText("MIX MODE",  mixModeHeaderRect.toFloat(),    juce::Justification::centredLeft, false);
     g.drawText("OUTPUT",    outputGainHeaderRect.toFloat(),  juce::Justification::centredLeft, false);
-    g.drawText("STEP RES",  stepResHeaderRect.toFloat(),    juce::Justification::centredLeft, false);
 
     if (mixModeHeaderRect.getRight() > 0 && outputGainHeaderRect.getX() > 0)
     {

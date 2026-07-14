@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "state/ParameterIDs.h"
+#include "ui/components/StepCell.h"
+#include "ui/panels/WorkspacePanel.h"
 
 #include <cmath>
 #include <cstdio>
@@ -55,12 +57,76 @@ void fillBuffer(juce::AudioBuffer<float>& buffer, float sampleValue)
             buffer.setSample(channel, i, sampleValue);
 }
 
+bool isInteractiveWorkspaceControl(const juce::Component& component)
+{
+    return dynamic_cast<const juce::Button*>(&component) != nullptr
+        || dynamic_cast<const juce::Slider*>(&component) != nullptr
+        || dynamic_cast<const juce::TextEditor*>(&component) != nullptr
+        || dynamic_cast<const juce::ListBox*>(&component) != nullptr;
+}
+
+void requireVisibleWorkspaceControlsContained(const zikada::WorkspacePanel& panel,
+                                              const char* modeName,
+                                              int width,
+                                              int height)
+{
+    const auto panelBounds = panel.getLocalBounds();
+
+    for (int index = 0; index < panel.getNumChildComponents(); ++index)
+    {
+        const auto* child = panel.getChildComponent(index);
+        if (child == nullptr || !child->isVisible() || !isInteractiveWorkspaceControl(*child))
+            continue;
+
+        const auto childBounds = child->getBounds();
+        if (childBounds.isEmpty())
+            throw std::runtime_error(std::string(modeName) + " control " + std::to_string(index)
+                                     + " has empty bounds at " + std::to_string(width) + "x"
+                                     + std::to_string(height));
+
+        if (!panelBounds.contains(childBounds))
+            throw std::runtime_error(std::string(modeName) + " control " + std::to_string(index)
+                                     + " escapes panel bounds at " + std::to_string(width) + "x"
+                                     + std::to_string(height));
+    }
+}
+
 } // namespace
 
 namespace zikada::tests {
 
 void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>>& tests)
 {
+    tests.push_back({"workspace controls stay visible and contained at supported logical sizes", []
+    {
+        WorkspacePanel panel;
+
+        for (const auto [width, height] : {std::pair{1184, 718}, std::pair{900, 600}})
+        {
+            panel.setSize(width, height);
+
+            panel.setMode(WorkspacePanel::Mode::Presets);
+            requireVisibleWorkspaceControlsContained(panel, "presets", width, height);
+
+            panel.setMode(WorkspacePanel::Mode::Settings);
+            requireVisibleWorkspaceControlsContained(panel, "settings", width, height);
+        }
+    }});
+
+    tests.push_back({"step chain badge stays inside the painted cell", []
+    {
+        StepCell cell(0, 0);
+        cell.setSize(48, 52);
+
+        const auto badge = cell.getChainBadgeBounds();
+        if (badge.isEmpty())
+            throw std::runtime_error("chain badge bounds are empty");
+        if (!cell.getLocalBounds().toFloat().contains(badge))
+            throw std::runtime_error("chain badge escapes the step cell");
+        if (badge.getCentreX() >= cell.getWidth() * 0.5f)
+            throw std::runtime_error("chain badge is not aligned with the painted upper-left affordance");
+    }});
+
     tests.push_back({"host-state roundtrip preserves parameters and sequencer state", []
     {
         PluginProcessor processor;
@@ -201,6 +267,7 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
 
 int main()
 {
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
     std::vector<std::pair<std::string, std::function<void()>>> tests;
     zikada::tests::addProcessorTests(tests);
 

@@ -49,6 +49,7 @@ const footer = read("src/ui/panels/FooterPanel.cpp");
 const workspace = read("src/ui/panels/WorkspacePanel.cpp");
 const stepGridHeader = read("src/ui/components/StepGrid.h");
 const stepGrid = read("src/ui/components/StepGrid.cpp");
+const stepCellHeader = read("src/ui/components/StepCell.h");
 const stepCell = read("src/ui/components/StepCell.cpp");
 const knobHeader = read("src/ui/components/Knob.h");
 const knob = read("src/ui/components/Knob.cpp");
@@ -372,6 +373,12 @@ assertContains(footer, "if (!hasSelection || !hasSupportedModTargetsForLane(sele
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Hertz)", "filter cutoff knobs must display Hz/kHz");
 assertContains(footer, "setScaleMode(KnobScaleMode::Logarithmic)", "filter cutoff knobs must use logarithmic movement");
 assertContains(footer, "setDisplayMode(KnobDisplayMode::Pan)", "pan knobs must display L/C/R position");
+assertContains(workspace, "auto searchRow = browserInner.removeFromTop(30);", "preset search and category controls must have a dedicated row");
+assertContains(workspace, "auto sourceRow = browserInner.removeFromTop(28);", "preset source filters must have a separate row instead of overflowing search controls");
+assertContains(workspace, "const int productHeight = 170;", "settings product controls must reserve a stable compact panel height");
+assertContains(workspace, "layoutSettingsControl", "settings controls must use the shared two-column layout helper");
+assertContains(workspace, "standaloneDeviceViewport.setViewedComponent(standaloneDeviceSelector.get(), false);", "standalone device selector must be hosted in a clipping viewport");
+assertContains(workspace, "standaloneDeviceViewport.setBounds(deviceInner);", "standalone device viewport must stay inside the device panel");
 assertContains(parameterIDs, 'juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1', "step resolution choices must include 1/16 while defaulting to 1/8");
 assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must map step resolution index 0 to 1/16");
 assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");
@@ -410,6 +417,9 @@ assertContains(stepCell, "if (chained == c)", "StepCell chained setter must skip
 assertContains(stepCell, "if (chainable == c)", "StepCell chainable setter must skip no-op repaints");
 assertContains(stepCell, "if (playing == p)", "StepCell playing setter must skip no-op repaints");
 assertContains(stepCell, "if (selected == s)", "StepCell selected setter must skip no-op repaints");
+assertContains(stepCellHeader, "getChainBadgeBounds", "StepCell must expose the chain badge geometry used for hit testing");
+assertContains(stepCell, "const auto plusBounds = getChainBadgeBounds();", "StepCell must paint the shared chain badge bounds");
+assertContains(stepGrid, "getChainBadgeBounds()", "StepGrid chain extension hit testing must use StepCell badge geometry");
 
 [
   ["Grain", "sidebar must not advertise granular DSP until it exists"],
@@ -425,6 +435,10 @@ assertContains(stepCell, "if (selected == s)", "StepCell selected setter must sk
 
 if (footer.includes("setSelectedSlot lane=")) {
   fail("footer must not log setSelectedSlot on hot UI selection paths");
+}
+
+if (footer.includes('g.drawText("STEP RES"')) {
+  fail("footer must not paint STEP RES behind the existing stepResLabel");
 }
 
 if (sidebar.includes("Loop Alt")) {

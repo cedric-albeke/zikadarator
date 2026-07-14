@@ -46,10 +46,14 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Processor regression tests now also cover invalid ValueTree state and malformed binary state restore attempts, ensuring DAW restore failures do not wipe current parameters or sequencer data.
 - Windows and macOS CI workflows now include optional code signing and notarization steps that run only when signing secrets are present, producing unsigned tester builds otherwise.
 - Windows CI now signs the actual VST3 and standalone binaries before invoking the same release packager used locally. The generated ZIP is extracted and checksum-verified before upload, and the installer consumes that canonical package tree.
+- Presets now separate search/category controls from source filters, and Settings uses a stable two-column product-control grid instead of overlapping fixed stacks.
+- The standalone JUCE audio/MIDI selector is constrained to a scrolling viewport, so its self-sized child controls cannot paint across product settings at compact editor heights.
+- Step chain-badge painting and hit testing now use the same bounds, and the duplicate painted `STEP RES` footer label is removed.
+- JUCE geometry regressions cover visible Presets/Settings controls at 1184x718 and 900x600; standalone desktop checks also cover the default and compact window layouts.
 
 ## Open V1 Gates
 
-1. Fix the confirmed UI correctness issues in Presets/Settings reflow, chain-badge hit testing, lane-mix automation sync, keyboard/accessibility coverage, and stale waveform/CRT animation behavior.
+1. Fix the remaining UI correctness issues in lane-mix automation sync, drag-to-paint behavior, keyboard/accessibility coverage, and stale waveform/CRT animation behavior.
 2. Fix confirmed DSP/state defects: SLICE tempo synchronization, APVTS/sequencer divergence, malformed structured-state validation, possible audio-thread scratch growth, and same-step seek/loop retriggering.
 3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.

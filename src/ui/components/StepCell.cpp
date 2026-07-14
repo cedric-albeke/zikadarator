@@ -17,6 +17,13 @@ StepCell::StepCell(int lane, int step)
     onClick = [this]() { if (onSelected) onSelected(); };
 }
 
+juce::Rectangle<float> StepCell::getChainBadgeBounds() const
+{
+    constexpr float plusSize = 16.0f;
+    const auto bounds = getLocalBounds().toFloat().reduced(1.5f);
+    return {bounds.getX() + 3.0f, bounds.getY() + 3.0f, plusSize, plusSize};
+}
+
 void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 {
     juce::ignoreUnused(highlighted);
@@ -188,10 +195,7 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
     // ── Chainable indicator (+ badge) ─────────────────────────────
     if (hovered && chainable)
     {
-        const float plusSize = 16.0f;
-        const float plusX = bounds.getX() + 3.0f;
-        const float plusY = bounds.getY() + 3.0f;
-        juce::Rectangle<float> plusBounds(plusX, plusY, plusSize, plusSize);
+        const auto plusBounds = getChainBadgeBounds();
 
         g.setColour(Colours::neonGreen.withAlpha(0.30f));
         g.fillEllipse(plusBounds.expanded(2.0f));
@@ -203,7 +207,7 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
         const float stroke = 2.0f;
         const float cx = plusBounds.getCentreX();
         const float cy = plusBounds.getCentreY();
-        const float half = plusSize * 0.22f;
+        const float half = plusBounds.getWidth() * 0.22f;
         g.drawLine(cx - half, cy, cx + half, cy, stroke);
         g.drawLine(cx, cy - half, cx, cy + half, stroke);
     }

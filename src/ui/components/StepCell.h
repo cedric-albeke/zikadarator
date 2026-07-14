@@ -10,6 +10,7 @@ public:
     StepCell(int laneIndex, int stepIndex);
 
     void paintButton(juce::Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+    juce::Rectangle<float> getChainBadgeBounds() const;
 
     int getLaneIndex() const { return laneIndex; }
     int getStepIndex() const { return stepIndex; }

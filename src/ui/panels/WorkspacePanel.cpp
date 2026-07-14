@@ -436,8 +436,7 @@ void WorkspacePanel::applyVisibility()
     mixModeButton.setVisible(!showPresets);
     clockSourceButton.setVisible(!showPresets);
     stepResolutionButton.setVisible(!showPresets);
-    if (standaloneDeviceSelector != nullptr)
-        standaloneDeviceSelector->setVisible(!showPresets);
+    standaloneDeviceViewport.setVisible(!showPresets && standaloneDeviceSelector != nullptr);
 }
 
 void WorkspacePanel::cyclePresetCategory()
@@ -472,9 +471,7 @@ void WorkspacePanel::syncInlineChoiceButtons()
 
 void WorkspacePanel::rebuildStandaloneSettingsComponent()
 {
-    if (standaloneDeviceSelector != nullptr)
-        removeChildComponent(standaloneDeviceSelector.get());
-
+    standaloneDeviceViewport.setViewedComponent(nullptr, false);
     standaloneDeviceSelector.reset();
 
    #if JucePlugin_Build_Standalone
@@ -503,7 +500,10 @@ void WorkspacePanel::rebuildStandaloneSettingsComponent()
                                                                                          holder->processor != nullptr && holder->processor->producesMidi(),
                                                                                          true,
                                                                                          false);
-        addAndMakeVisible(*standaloneDeviceSelector);
+        standaloneDeviceViewport.setScrollBarsShown(true, false);
+        standaloneDeviceViewport.setScrollBarThickness(10);
+        standaloneDeviceViewport.setViewedComponent(standaloneDeviceSelector.get(), false);
+        addAndMakeVisible(standaloneDeviceViewport);
         styleStandaloneSettingsComponent();
         muteInputValue.referTo(holder->getMuteInputValue());
         standaloneMuteButton.getToggleStateValue().referTo(muteInputValue);
@@ -710,18 +710,24 @@ void WorkspacePanel::resized()
         presetHintLabel.setBounds(browserInner.removeFromTop(18));
         browserInner.removeFromTop(10);
 
-        auto filterRow = browserInner.removeFromTop(30);
-        presetSearchEditor.setBounds(filterRow.removeFromLeft(162));
-        filterRow.removeFromLeft(8);
-        presetCategoryButton.setBounds(filterRow.removeFromLeft(132));
-        filterRow.removeFromLeft(8);
-        allFilterButton.setBounds(filterRow.removeFromLeft(46));
-        filterRow.removeFromLeft(6);
-        factoryFilterButton.setBounds(filterRow.removeFromLeft(72));
-        filterRow.removeFromLeft(6);
-        userFilterButton.setBounds(filterRow.removeFromLeft(58));
-        filterRow.removeFromLeft(6);
-        favoriteFilterButton.setBounds(filterRow.removeFromLeft(48));
+        auto searchRow = browserInner.removeFromTop(30);
+        const int searchGap = 8;
+        const int searchWidth = (searchRow.getWidth() - searchGap) / 2;
+        presetSearchEditor.setBounds(searchRow.removeFromLeft(searchWidth));
+        searchRow.removeFromLeft(searchGap);
+        presetCategoryButton.setBounds(searchRow);
+
+        browserInner.removeFromTop(8);
+        auto sourceRow = browserInner.removeFromTop(28);
+        const int sourceGap = 6;
+        const int sourceWidth = (sourceRow.getWidth() - sourceGap * 3) / 4;
+        allFilterButton.setBounds(sourceRow.removeFromLeft(sourceWidth));
+        sourceRow.removeFromLeft(sourceGap);
+        factoryFilterButton.setBounds(sourceRow.removeFromLeft(sourceWidth));
+        sourceRow.removeFromLeft(sourceGap);
+        userFilterButton.setBounds(sourceRow.removeFromLeft(sourceWidth));
+        sourceRow.removeFromLeft(sourceGap);
+        favoriteFilterButton.setBounds(sourceRow);
 
         browserInner.removeFromTop(10);
         auto saveArea = browserInner.removeFromBottom(74);
@@ -758,82 +764,89 @@ void WorkspacePanel::resized()
     else
     {
         const bool hasStandaloneSelector = standaloneDeviceSelector != nullptr;
+        constexpr int zoneGap = 14;
+        const int productHeight = 170;
 
         if (hasStandaloneSelector)
         {
-            const int topHeight = juce::jlimit(320, 520, bounds.getHeight() * 2 / 3);
-            settingsDeviceZone = bounds.removeFromTop(topHeight);
-            bounds.removeFromTop(14);
-            settingsProductZone = bounds.removeFromTop(190);
-            bounds.removeFromTop(14);
+            constexpr int minimumNotesHeight = 64;
+            const int availableDeviceHeight = bounds.getHeight() - productHeight - zoneGap * 2 - minimumNotesHeight;
+            const int deviceHeight = juce::jlimit(170, 360, availableDeviceHeight);
+            settingsDeviceZone = bounds.removeFromTop(deviceHeight);
+            bounds.removeFromTop(zoneGap);
+            settingsProductZone = bounds.removeFromTop(productHeight);
+            bounds.removeFromTop(zoneGap);
             settingsNotesZone = bounds;
         }
         else
         {
             settingsDeviceZone = {};
-            settingsProductZone = bounds.removeFromTop(230);
-            bounds.removeFromTop(14);
+            settingsProductZone = bounds.removeFromTop(productHeight);
+            bounds.removeFromTop(zoneGap);
             settingsNotesZone = bounds;
         }
 
-        auto deviceInner = settingsDeviceZone.reduced(18, 16);
-        settingsDeviceTitle.setBounds(deviceInner.removeFromTop(20));
-        deviceInner.removeFromTop(10);
-        settingsLeadLabel.setBounds(deviceInner.removeFromTop(38));
-        deviceInner.removeFromTop(10);
+        auto deviceInner = settingsDeviceZone.reduced(18, 12);
+        settingsDeviceTitle.setBounds(deviceInner.removeFromTop(18));
+        deviceInner.removeFromTop(6);
+        settingsLeadLabel.setBounds(deviceInner.removeFromTop(34));
+        deviceInner.removeFromTop(6);
 
         if (standaloneDeviceSelector != nullptr)
         {
-            auto muteRow = deviceInner.removeFromTop(28);
+            auto muteRow = deviceInner.removeFromTop(26);
             standaloneMuteLabel.setBounds(muteRow.removeFromLeft(130));
             standaloneMuteButton.setBounds(muteRow.removeFromLeft(220));
-            deviceInner.removeFromTop(10);
-            standaloneDeviceSelector->setBounds(deviceInner);
+            deviceInner.removeFromTop(6);
+            standaloneDeviceViewport.setBounds(deviceInner);
+
+            const int selectorWidth = juce::jmax(1, deviceInner.getWidth() - standaloneDeviceViewport.getScrollBarThickness());
+            standaloneDeviceSelector->setSize(selectorWidth, standaloneDeviceSelector->getHeight());
         }
 
-        auto productInner = settingsProductZone.reduced(18, 16);
-        settingsProductTitle.setBounds(productInner.removeFromTop(20));
-        productInner.removeFromTop(10);
+        auto productInner = settingsProductZone.reduced(18, 12);
+        auto productTitleRow = productInner.removeFromTop(20);
+        bypassToggle.setBounds(productTitleRow.removeFromRight(122));
+        settingsProductTitle.setBounds(productTitleRow);
+        productInner.removeFromTop(8);
 
-        auto row1 = productInner.removeFromTop(28);
-        clockSourceLabel.setBounds(row1.removeFromLeft(130));
-        clockSourceButton.setBounds(row1);
-        productInner.removeFromTop(10);
+        const int columnGap = 16;
+        auto leftColumn = productInner.removeFromLeft((productInner.getWidth() - columnGap) / 2);
+        productInner.removeFromLeft(columnGap);
+        auto rightColumn = productInner;
 
-        auto row2 = productInner.removeFromTop(28);
-        stepResolutionLabel.setBounds(row2.removeFromLeft(130));
-        stepResolutionButton.setBounds(row2);
-        productInner.removeFromTop(10);
+        auto takeSettingsRow = [](juce::Rectangle<int>& column)
+        {
+            auto row = column.removeFromTop(28);
+            column.removeFromTop(6);
+            return row;
+        };
 
-        auto row3 = productInner.removeFromTop(28);
-        tempoLabel.setBounds(row3.removeFromLeft(130));
-        tempoSlider.setBounds(row3);
-        productInner.removeFromTop(10);
+        auto layoutSettingsControl = [](juce::Rectangle<int> row,
+                                        juce::Label& label,
+                                        juce::Component& control)
+        {
+            const int labelWidth = juce::jlimit(96, 130, row.getWidth() * 2 / 5);
+            label.setBounds(row.removeFromLeft(labelWidth));
+            row.removeFromLeft(8);
+            control.setBounds(row);
+        };
 
-        auto row4 = productInner.removeFromTop(28);
-        dryWetLabel.setBounds(row4.removeFromLeft(130));
-        dryWetSlider.setBounds(row4);
-        productInner.removeFromTop(10);
-
-        auto row5 = productInner.removeFromTop(28);
-        outputGainLabel.setBounds(row5.removeFromLeft(130));
-        outputGainSlider.setBounds(row5);
-        productInner.removeFromTop(10);
-
-        auto row6 = productInner.removeFromTop(28);
-        mixModeLabel.setBounds(row6.removeFromLeft(130));
-        mixModeButton.setBounds(row6);
-        productInner.removeFromTop(12);
-        bypassToggle.setBounds(productInner.removeFromTop(24));
+        layoutSettingsControl(takeSettingsRow(leftColumn), clockSourceLabel, clockSourceButton);
+        layoutSettingsControl(takeSettingsRow(rightColumn), stepResolutionLabel, stepResolutionButton);
+        layoutSettingsControl(takeSettingsRow(leftColumn), tempoLabel, tempoSlider);
+        layoutSettingsControl(takeSettingsRow(rightColumn), dryWetLabel, dryWetSlider);
+        layoutSettingsControl(takeSettingsRow(leftColumn), outputGainLabel, outputGainSlider);
+        layoutSettingsControl(takeSettingsRow(rightColumn), mixModeLabel, mixModeButton);
 
         presetCategoryBox.setBounds(0, 0, 0, 0);
         mixModeBox.setBounds(0, 0, 0, 0);
         clockSourceBox.setBounds(0, 0, 0, 0);
         stepResolutionBox.setBounds(0, 0, 0, 0);
 
-        auto notesInner = settingsNotesZone.reduced(18, 16);
-        settingsNotesTitle.setBounds(notesInner.removeFromTop(20));
-        notesInner.removeFromTop(8);
+        auto notesInner = settingsNotesZone.reduced(18, 10);
+        settingsNotesTitle.setBounds(notesInner.removeFromTop(18));
+        notesInner.removeFromTop(4);
         settingsNotesBody.setBounds(notesInner);
     }
 }

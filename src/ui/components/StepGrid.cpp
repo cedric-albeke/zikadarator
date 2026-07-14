@@ -744,9 +744,12 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
             if (!cells[l][s]->isChainable())
                 continue;
 
-            auto cellBounds = cells[l][s]->getBounds();
-            juce::Rectangle<int> plusBounds(cellBounds.getRight() - 21, cellBounds.getCentreY() - 9, 18, 18);
-            if (plusBounds.contains(e.getPosition()))
+            const auto cellBounds = cells[l][s]->getBounds();
+            const auto plusBounds = cells[l][s]->getChainBadgeBounds()
+                                        .translated(static_cast<float>(cellBounds.getX()),
+                                                    static_cast<float>(cellBounds.getY()))
+                                        .expanded(2.0f);
+            if (plusBounds.contains(e.position))
             {
                 auto data = sequencerState.getStepData(l, s);
                 data.chainLength++;
