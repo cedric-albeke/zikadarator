@@ -18,6 +18,8 @@ jobs:
     env:
       PRODUCT_NAME: ZIKADARATOR
       PRODUCT_VERSION: 0.1.0
+      SIGNING_STATUS: UNSIGNED - tester build only
+      WINDOWS_SIGNING_ENABLED: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
 
     steps:
       - name: Checkout repository
@@ -54,23 +56,6 @@ jobs:
             build/Testing/Temporary
           if-no-files-found: ignore
 
-      - name: Build Windows ZIP package
-        shell: pwsh
-        run: |
-          $packageRoot = "packaging\windows\package-root"
-          $artifactRoot = "packaging\windows\artifacts"
-          Remove-Item $packageRoot -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item $artifactRoot -Recurse -Force -ErrorAction SilentlyContinue
-
-          New-Item -ItemType Directory -Force -Path "$packageRoot\VST3" | Out-Null
-          New-Item -ItemType Directory -Force -Path "$packageRoot\Standalone" | Out-Null
-          New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
-
-          Copy-Item "build\ZikadaFX_artefacts\Release\VST3\$env:PRODUCT_NAME.vst3" "$packageRoot\VST3\" -Recurse -Force
-          Copy-Item "build\ZikadaFX_artefacts\Release\Standalone\$env:PRODUCT_NAME.exe" "$packageRoot\Standalone\" -Force
-
-          Compress-Archive -Path "$packageRoot\*" -DestinationPath "$artifactRoot\$env:PRODUCT_NAME-windows.zip" -Force
-
       - name: Install Inno Setup
         shell: pwsh
         run: |
@@ -88,33 +73,84 @@ jobs:
             iscc.exe /?
           }
 
-      - name: Build Windows installer
-        shell: pwsh
-        run: |
-          iscc.exe /DMyAppName="${{ env.PRODUCT_NAME }}" /DMyAppVersion="${{ env.PRODUCT_VERSION }}" /DMySourceDir="$PWD\\packaging\\windows\\package-root" /DMyOutputDir="$PWD\\packaging\\windows\\artifacts" "packaging\\windows\\ZIKADARATOR.iss"
-
-      - name: Sign Windows artifacts (if certificate available)
-        if: env.WINDOWS_CERTIFICATE != ''
+      - name: Sign Windows plugin binaries (if certificate available)
+        if: env.WINDOWS_SIGNING_ENABLED == 'true'
         shell: pwsh
         run: |
           $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
           $certPath = "$env:RUNNER_TEMP\\zikada-cert.pfx"
           [IO.File]::WriteAllBytes($certPath, $certBytes)
-          $exePath = "packaging\\windows\\artifacts\\ZIKADARATOR-Setup.exe"
-          $vst3Path = "build\\ZikadaFX_artefacts\\Release\\VST3\\ZIKADARATOR.vst3"
+          $vst3Binary = "build\\ZikadaFX_artefacts\\Release\\VST3\\ZIKADARATOR.vst3\\Contents\\x86_64-win\\ZIKADARATOR.vst3"
+          $standaloneExe = "build\\ZikadaFX_artefacts\\Release\\Standalone\\ZIKADARATOR.exe"
           $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22000.0\x64\signtool.exe"
           if (-not (Test-Path $signtool)) {
             $signtool = (Get-Command signtool.exe -ErrorAction SilentlyContinue).Source
           }
-          if ($signtool) {
-            & $signtool sign /f $certPath /p "$env:WINDOWS_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $exePath
-            & $signtool sign /f $certPath /p "$env:WINDOWS_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $vst3Path
-          } else {
-            Write-Host "signtool not found; skipping Windows code signing"
+          if (-not $signtool) {
+            throw "A Windows signing certificate was supplied, but signtool.exe was not found"
           }
+
+          & $signtool sign /f $certPath /p "$env:WINDOWS_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $vst3Binary
+          if ($LASTEXITCODE -ne 0) { throw "VST3 binary signing failed" }
+          & $signtool sign /f $certPath /p "$env:WINDOWS_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $standaloneExe
+          if ($LASTEXITCODE -ne 0) { throw "Standalone signing failed" }
+
+          "SIGNING_STATUS=SIGNED with code signing certificate" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
+      - name: Build Windows tester package
+        shell: pwsh
+        run: |
+          .\scripts\package-windows-release.ps1 `
+            -BuildDir build `
+            -Configuration Release `
+            -PackageName "packaging/windows/artifacts/ZIKADARATOR-windows" `
+            -SigningStatus "$env:SIGNING_STATUS"
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          iscc.exe /DMyAppName="${{ env.PRODUCT_NAME }}" /DMyAppVersion="${{ env.PRODUCT_VERSION }}" /DMySourceDir="$PWD\\packaging\\windows\\artifacts\\ZIKADARATOR-windows" /DMyOutputDir="$PWD\\packaging\\windows\\artifacts" "packaging\\windows\\ZIKADARATOR.iss"
+
+      - name: Sign Windows installer (if certificate available)
+        if: env.WINDOWS_SIGNING_ENABLED == 'true'
+        shell: pwsh
+        run: |
+          $certPath = "$env:RUNNER_TEMP\\zikada-cert.pfx"
+          $installerExe = "packaging\\windows\\artifacts\\ZIKADARATOR-Setup.exe"
+          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22000.0\x64\signtool.exe"
+          if (-not (Test-Path $signtool)) {
+            $signtool = (Get-Command signtool.exe -ErrorAction SilentlyContinue).Source
+          }
+          if (-not $signtool) {
+            throw "A Windows signing certificate was supplied, but signtool.exe was not found"
+          }
+
+          & $signtool sign /f $certPath /p "$env:WINDOWS_CERTIFICATE_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a $installerExe
+          if ($LASTEXITCODE -ne 0) { throw "Installer signing failed" }
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
+      - name: Verify packaged Windows ZIP
+        shell: pwsh
+        run: |
+          $verifyRoot = Join-Path $env:RUNNER_TEMP "zikada-package-verify"
+          Remove-Item $verifyRoot -Recurse -Force -ErrorAction SilentlyContinue
+          Expand-Archive "packaging\\windows\\artifacts\\ZIKADARATOR-windows.zip" $verifyRoot -Force
+          & "$verifyRoot\\verify-checksums.ps1"
+
+      - name: Create Windows build manifest
+        shell: pwsh
+        run: |
+          $manifestPath = "packaging\\windows\\artifacts\\BUILD-INFO.txt"
+          "Build: $env:SIGNING_STATUS" | Out-File $manifestPath
+          "Product: ZIKADARATOR" | Add-Content $manifestPath
+          "Version: $env:PRODUCT_VERSION" | Add-Content $manifestPath
+          "Commit: $env:GITHUB_SHA" | Add-Content $manifestPath
+          "Date: $(Get-Date -Format u)" | Add-Content $manifestPath
 
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4
@@ -134,19 +170,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ZIKADARATOR-windows-installer
-          path: packaging/windows/artifacts/ZIKADARATOR-Setup.exe
+          path: |
+            packaging/windows/artifacts/ZIKADARATOR-Setup.exe
+            packaging/windows/artifacts/BUILD-INFO.txt
           if-no-files-found: error
-
-      - name: Create signed/unsigned manifest note
-        shell: pwsh
-        run: |
-          $manifestPath = "packaging\windows\artifacts\BUILD-INFO.txt"
-          if ($env:WINDOWS_CERTIFICATE -ne '') {
-            "Build: SIGNED with code signing certificate" | Out-File $manifestPath
-          } else {
-            "Build: UNSIGNED - tester build only" | Out-File $manifestPath
-          }
-          "Product: ZIKADARATOR" | Add-Content $manifestPath
-          "Version: $env:PRODUCT_VERSION" | Add-Content $manifestPath
-          "Commit: $env:GITHUB_SHA" | Add-Content $manifestPath
-          "Date: $(Get-Date -Format u)" | Add-Content $manifestPath

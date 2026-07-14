@@ -39,8 +39,8 @@ Name: "vst3"; Description: "VST3 plugin"; Types: full pluginonly; Flags: fixed
 Name: "standalone"; Description: "Standalone app"; Types: full
 
 [Files]
-Source: "{#MySourceDir}\VST3\ZIKADARATOR.vst3\*"; DestDir: "{commoncf}\VST3\ZIKADARATOR.vst3"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: vst3
-Source: "{#MySourceDir}\Standalone\ZIKADARATOR.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: standalone
+Source: "{#MySourceDir}\ZIKADARATOR.vst3\*"; DestDir: "{commoncf}\VST3\ZIKADARATOR.vst3"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: vst3
+Source: "{#MySourceDir}\ZIKADARATOR.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: standalone
 
 [Icons]
 Name: "{autoprograms}\ZIKADARATOR"; Filename: "{app}\ZIKADARATOR.exe"; Components: standalone

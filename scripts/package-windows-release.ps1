@@ -2,7 +2,8 @@ param(
     [string] $BuildDir = "build/aaa-release",
     [string] $Configuration = "Release",
     [string] $PackageName = "ZIKADARATOR-v1-AAA-Release",
-    [string] $ModuleInfoFallback = "packaging/windows/moduleinfo.json"
+    [string] $ModuleInfoFallback = "packaging/windows/moduleinfo.json",
+    [string] $SigningStatus = "UNSIGNED - tester build only"
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,6 +62,7 @@ function Write-PackageChecksums {
         @{ Label = "install.bat"; Path = Join-Path $PackagePath "install.bat" },
         @{ Label = "verify-checksums.bat"; Path = Join-Path $PackagePath "verify-checksums.bat" },
         @{ Label = "verify-checksums.ps1"; Path = Join-Path $PackagePath "verify-checksums.ps1" },
+        @{ Label = "installer/ZIKADARATOR-Setup.iss"; Path = Join-Path $PackagePath "installer/ZIKADARATOR-Setup.iss" },
         @{ Label = "README.txt"; Path = Join-Path $PackagePath "README.txt" }
     )
 
@@ -141,7 +143,9 @@ function Write-BuildInfo {
         [Parameter(Mandatory = $true)]
         [string] $BuildDir,
         [Parameter(Mandatory = $true)]
-        [string] $Configuration
+        [string] $Configuration,
+        [Parameter(Mandatory = $true)]
+        [string] $SigningStatus
     )
 
     $commit = Get-GitValue -Arguments @("rev-parse", "HEAD") -Fallback "unknown"
@@ -157,6 +161,7 @@ Git branch: $branch
 Tracked tree: $trackedTreeState
 Build dir: $BuildDir
 Configuration: $Configuration
+Signing status: $SigningStatus
 
 Generated package files and release ZIP directories are intentionally not tracked.
 "@ | Set-Content -LiteralPath (Join-Path $PackagePath "BUILD_INFO.txt") -Encoding ASCII
@@ -304,7 +309,7 @@ SHA256SUMS.txt lists checksums for the standalone, VST3 binary, moduleinfo, inst
 helper, verifier scripts, build info, and this README so tester downloads can be verified after transfer.
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "README.txt") -Encoding ASCII
 
-Write-BuildInfo -PackagePath $packagePath -BuildDir $BuildDir -Configuration $Configuration
+Write-BuildInfo -PackagePath $packagePath -BuildDir $BuildDir -Configuration $Configuration -SigningStatus $SigningStatus
 Write-PackageChecksums -PackagePath $packagePath
 Test-PackageChecksums -PackagePath $packagePath
 

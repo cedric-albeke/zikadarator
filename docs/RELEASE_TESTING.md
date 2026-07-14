@@ -37,6 +37,17 @@ Expected:
 - VST3 builds.
 - pluginval exits with code 0 at strictness level 5.
 
+### Windows package integrity
+
+Local and CI tester packages must be created through `scripts/package-windows-release.ps1`. When signing credentials are present, sign the VST3 binary and standalone executable before invoking the packager so the ZIP and installer receive those exact signed files.
+
+Expected:
+
+- `BUILD_INFO.txt` identifies the commit, tracked-tree state, build configuration, and signing status.
+- `SHA256SUMS.txt` covers the standalone, VST3 binary, module metadata, installer source, package helpers, and documentation.
+- The final ZIP can be extracted and its root-level `verify-checksums.ps1` passes.
+- The Inno installer is built from the same extracted root-level `ZIKADARATOR.vst3` and `ZIKADARATOR.exe` layout.
+
 ### Windows
 
 - Installer runs successfully

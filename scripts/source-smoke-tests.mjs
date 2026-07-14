@@ -16,6 +16,12 @@ function assertContains(source, needle, message) {
   if (!source.includes(needle)) fail(message);
 }
 
+function assertBefore(source, firstNeedle, secondNeedle, message) {
+  const firstIndex = source.indexOf(firstNeedle);
+  const secondIndex = source.indexOf(secondNeedle);
+  if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) fail(message);
+}
+
 function extractFunction(source, signature) {
   const start = source.indexOf(signature);
   if (start < 0) {
@@ -59,6 +65,8 @@ const waveformDisplay = read("src/ui/components/WaveformDisplay.cpp");
 const headerPanelHeader = read("src/ui/panels/HeaderPanel.h");
 const headerPanel = read("src/ui/panels/HeaderPanel.cpp");
 const windowsPackageScript = read("scripts/package-windows-release.ps1");
+const windowsWorkflow = read(".github/workflows/build-windows-vst3.yml");
+const windowsInstallerScript = read("packaging/windows/ZIKADARATOR.iss");
 const abletonLogScanScript = read("scripts/ableton-log-scan.ps1");
 const processBlock = extractFunction(
   processor,
@@ -164,6 +172,31 @@ assertContains(windowsPackageScript, "BUILD_INFO.txt", "Windows package script m
 assertContains(windowsPackageScript, "rev-parse", "Windows package build metadata must include the git commit");
 assertContains(windowsPackageScript, "verify-checksums.ps1", "Windows package must include an extracted-package checksum verifier");
 assertContains(windowsPackageScript, "All ZIKADARATOR package checksums verified.", "Windows package checksum verifier must report success clearly");
+assertContains(windowsPackageScript, "installer/ZIKADARATOR-Setup.iss", "Windows package checksums must cover the included installer source");
+assertContains(windowsPackageScript, "Signing status:", "Windows package build metadata must identify signed versus unsigned tester artifacts");
+assertContains(windowsWorkflow, ".\\scripts\\package-windows-release.ps1", "Windows CI must use the same tested package builder as local releases");
+assertContains(windowsWorkflow, "$vst3Binary", "Windows CI signing must target the VST3 binary inside the bundle");
+assertContains(windowsWorkflow, "$standaloneExe", "Windows CI signing must cover the standalone binary before packaging");
+assertContains(windowsWorkflow, "WINDOWS_SIGNING_ENABLED: ${{ secrets.WINDOWS_CERTIFICATE != '' }}", "Windows CI must derive a non-secret job-level signing condition");
+assertContains(windowsWorkflow, "if: env.WINDOWS_SIGNING_ENABLED == 'true'", "Windows signing steps must use the non-secret job-level condition");
+if (windowsWorkflow.includes("if: env.WINDOWS_CERTIFICATE != ''")) {
+  fail("Windows CI must not condition signing directly on a step-local secret environment variable");
+}
+assertContains(windowsWorkflow, "Verify packaged Windows ZIP", "Windows CI must verify the final extracted tester ZIP");
+assertBefore(
+  windowsWorkflow,
+  "name: Sign Windows plugin binaries",
+  "name: Build Windows tester package",
+  "Windows plugin binaries must be signed before the ZIP and installer payload are staged",
+);
+assertBefore(
+  windowsWorkflow,
+  "name: Create Windows build manifest",
+  "name: Upload Windows VST3 artifact",
+  "Windows build metadata must exist before release artifacts are uploaded",
+);
+assertContains(windowsInstallerScript, 'Source: "{#MySourceDir}\\ZIKADARATOR.vst3\\*"', "Windows installer must consume the canonical root-level VST3 package layout");
+assertContains(windowsInstallerScript, 'Source: "{#MySourceDir}\\ZIKADARATOR.exe"', "Windows installer must consume the canonical root-level standalone package layout");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }

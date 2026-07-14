@@ -45,14 +45,20 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Processor regression tests now cover host-state roundtrip (`exportFullState` / `applyFullState`) and host-layout changes (mono → stereo → mono).
 - Processor regression tests now also cover invalid ValueTree state and malformed binary state restore attempts, ensuring DAW restore failures do not wipe current parameters or sequencer data.
 - Windows and macOS CI workflows now include optional code signing and notarization steps that run only when signing secrets are present, producing unsigned tester builds otherwise.
+- Windows CI now signs the actual VST3 and standalone binaries before invoking the same release packager used locally. The generated ZIP is extracted and checksum-verified before upload, and the installer consumes that canonical package tree.
 
-## V1 Blockers
+## Open V1 Gates
 
-1. The compact canvas, header quick menu, persistent sidebar details, wheel preset cycling, unit-aware knobs, keyboard focus/navigation, playhead rail, and waveform framing are all in place. V1 is now feature-complete for the AAA interaction polish pass.
+1. Fix the confirmed UI correctness issues in Presets/Settings reflow, chain-badge hit testing, lane-mix automation sync, keyboard/accessibility coverage, and stale waveform/CRT animation behavior.
+2. Fix confirmed DSP/state defects: SLICE tempo synchronization, APVTS/sequencer divergence, malformed structured-state validation, possible audio-thread scratch growth, and same-step seek/loop retriggering.
+3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
+4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.
+5. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.
+6. Move product/plugin/package metadata from `0.1.0` to `1.0.0` only after the gates above pass, then publish signed artifacts where credentials are available.
 
 ## Release Hardening
 
-1. Run the macOS validation workflow on a real macOS runner; Windows can only syntax-check the script.
-2. Add Steinberg VST3 validator paths to CI runners where available.
-3. Add host-state roundtrip and additional host-layout processor regression tests.
-4. Add signing/notarization paths for public V1 artifacts; keep unsigned packages labeled as tester builds.
+1. Make Steinberg VST3 validator availability mandatory for public-release jobs while retaining optional discovery for local tester builds.
+2. Complete the macOS sign-before-stage/package ordering and notarize the final installer payload, not an earlier unsigned staging tree.
+3. Add a tag-driven GitHub Release workflow with one authoritative version source and explicit signed/unsigned artifact labels.
+4. Keep unsigned outputs labeled as tester builds until signing credentials and public-release gates are present.
