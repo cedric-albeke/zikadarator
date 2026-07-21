@@ -264,12 +264,13 @@ animation: pulse 2s ease-in-out infinite;
 - Works on: step cells (cycle presets), knobs (fine adjust), faders
 
 ### Drag to Paint
-- Drag horizontally across step cells to copy values
-- Visual feedback: trail effect, cursor change
+- Drag horizontally from an active step to copy its preset through every crossed cell
+- Drag horizontally from an inactive step to erase every crossed cell
+- Painting stays within the source lane and follows the selected cell
 
-### Keyboard Shortcuts
-- **Shift + Click**: Create tie step
-- **Right-click**: Delete step / context menu
+### Gestures and Keyboard Shortcuts
+- **Shift + Drag**: Create or resize a tie chain
+- **Right-click**: Delete a step or trim a tie chain
 - **Space**: Play/Pause transport
 - **Undo/Redo**: Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z
 

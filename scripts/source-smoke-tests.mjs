@@ -111,6 +111,8 @@ const stepGridConstructor = extractFunction(
   stepGrid,
   "StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& seqState)",
 );
+const stepGridMouseDown = extractFunction(stepGrid, "void StepGrid::mouseDown(const juce::MouseEvent& e)");
+const stepGridMouseDrag = extractFunction(stepGrid, "void StepGrid::mouseDrag(const juce::MouseEvent& e)");
 
 [
   ["ParameterIDs::dryWet", "processBlock must read/apply global Dry/Wet"],
@@ -327,6 +329,18 @@ assertContains(stepGrid, "moveSelectionBy", "step grid must expose arrow-key sel
 assertContains(stepGrid, "toggleSelectedStep", "step grid must expose keyboard activation for the selected step");
 assertContains(stepGrid, "drawKeyboardFocusRing", "step grid must draw a visible keyboard focus ring");
 assertContains(stepGrid, "drawPlayheadRail", "step grid must draw a column-wide playhead rail");
+assertContains(stepGridHeader, "paintSourceData", "step grid must retain a complete source step for drag-copy painting");
+assertContains(stepGrid, "applyPaintSourceToCell", "step grid must copy sequencer and APVTS state through a dedicated paint path");
+assertContains(stepGrid, "setStepActiveAsCompleteGesture", "painted step gates must use complete host automation gestures");
+assertContains(stepGrid, "param->beginChangeGesture()", "painted step gates must begin host automation gestures");
+assertContains(stepGrid, "param->endChangeGesture()", "painted step gates must end host automation gestures");
+assertContains(stepGridMouseDrag, "paintedStep = lastPaintedStep + direction", "step drag must interpolate across skipped mouse cells");
+assertContains(stepGridMouseDrag, "applyPaintSourceToCell(lane, paintedStep)", "step drag must apply the source to every interpolated cell");
+assertContains(stepGridMouseDown, "if (e.mods.isShiftDown())", "tie drawing must require an explicit Shift gesture");
+assertContains(stepGridMouseDown, "isPainting = true", "normal step drag must enter paint mode");
+if (stepGridHeader.includes("paintMode")) {
+  fail("StepGrid must not retain the obsolete boolean-only paint mode");
+}
 assertContains(stepGridHeader, "staticGridLayer", "step grid must cache its static background chrome");
 assertContains(stepGrid, "renderStaticGridLayer", "step grid must render static chrome through a dedicated cache painter");
 assertContains(stepGrid, "invalidateStaticGridLayer", "step grid must expose a cheap cache invalidation path");
@@ -372,6 +386,12 @@ assertContains(processorTests, "lane mix knob follows automation and preset rest
 assertContains(processorTests, "lane mix knob sends one bounded host gesture per drag", "processor tests must cover lane-mix host gesture boundaries");
 assertContains(processorTests, "lane mix double-click reset uses a complete host gesture", "processor tests must cover attached knob default-reset gestures");
 assertContains(processorTests, "lane mix attachment closes an active gesture during destruction", "processor tests must cover editor destruction during a lane-mix drag");
+assertContains(processorTests, "step drag copies a preset through every crossed cell with one undo boundary", "processor tests must cover interpolated preset painting and undo boundaries");
+assertContains(processorTests, "inactive step drag erases every crossed cell", "processor tests must cover erase painting from inactive steps");
+assertContains(processorTests, "shift drag creates a tie without painting the consumed cells", "processor tests must keep tie drawing separate from normal painting");
+assertContains(processorTests, "shift-click without dragging resized the tie chain", "processor tests must prevent Shift-click from resizing a tie without a drag");
+assertContains(processorTests, "host-enabled blank step paints the default preset", "processor tests must normalize host-enabled blank paint sources");
+assertContains(processorTests, "step click only selects without editing data", "processor tests must keep click-only selection non-destructive");
 assertContains(knob, "outerRing", "knobs must have an outer ring stroke");
 assertContains(knob, "backgroundArc", "knobs must have a background arc track");
 assertContains(knob, "valueArc", "knobs must have a colored value arc indicator");

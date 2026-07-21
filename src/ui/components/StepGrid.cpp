@@ -577,14 +577,38 @@ std::pair<int, int> StepGrid::hitTestCell(juce::Point<int> pos) const
     return { lane, step };
 }
 
-void StepGrid::applyPaintToCell(int lane, int step)
+void StepGrid::applyPaintSourceToCell(int lane, int step)
 {
     if (lane < 0 || lane >= numLanes || step < 0 || step >= numSteps)
         return;
 
-    auto* cell = cells[lane][step].get();
-    if (cell->getToggleState() != paintMode)
-        cell->setToggleState(paintMode, juce::sendNotification);
+    removeChainAt(lane, step);
+
+    auto paintedData = paintSourceData;
+    paintedData.chainLength = 1;
+    if (!paintedData.active)
+        paintedData.presetIndex = 0;
+
+    sequencerState.setStepData(lane, step, paintedData);
+    setStepActiveAsCompleteGesture(lane, step, paintedData.active);
+
+    if (auto* cell = getCell(lane, step))
+    {
+        cell->setToggleState(paintedData.active, juce::dontSendNotification);
+        cell->setActive(paintedData.active);
+        cell->setPresetIndex(paintedData.active ? paintedData.presetIndex : 0);
+    }
+
+    if (onStepPresetChanged)
+        onStepPresetChanged(lane, step, paintedData.presetIndex);
+}
+
+void StepGrid::resetPaintGesture()
+{
+    isPainting = false;
+    paintEditStarted = false;
+    lastPaintedLane = -1;
+    lastPaintedStep = -1;
 }
 
 void StepGrid::cyclePresetAt(int lane, int step, int direction)
@@ -729,6 +753,7 @@ void StepGrid::drawKeyboardFocusRing(juce::Graphics& g)
 void StepGrid::mouseDown(const juce::MouseEvent& e)
 {
     grabKeyboardFocus();
+    resetPaintGesture();
 
     for (int l = 0; l < numLanes; ++l)
     {
@@ -745,6 +770,8 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
             if (plusBounds.contains(e.position))
             {
                 auto data = sequencerState.getStepData(l, s);
+                if (onStepPresetEditStarting)
+                    onStepPresetEditStarting();
                 data.chainLength++;
                 sequencerState.setStepData(l, s, data);
                 refreshChainVisuals(l);
@@ -776,38 +803,57 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
             auto data = sequencerState.getStepData(lane, step);
             if (data.active)
             {
+                if (onStepPresetEditStarting)
+                    onStepPresetEditStarting();
                 data.active = false;
                 data.presetIndex = 0;
                 data.chainLength = 1;
                 sequencerState.setStepData(lane, step, data);
-                applyPaintToCell(lane, step);
+                setStepActive(lane, step, false);
+                if (auto* cell = getCell(lane, step))
+                {
+                    cell->setToggleState(false, juce::dontSendNotification);
+                    cell->setActive(false);
+                    cell->setPresetIndex(0);
+                }
                 refreshChainVisuals(lane);
-                if (onChainChanged)
-                    onChainChanged(lane, step, 1);
+                refreshLane(lane);
+                if (onStepPresetChanged)
+                    onStepPresetChanged(lane, step, 0);
             }
         }
         return;
     }
 
-    const auto& s = sequencerState.getStepData(lane, step);
-    if (s.active && s.presetIndex > 0)
+    if (e.mods.isShiftDown())
     {
-        if (isStepConsumedByChain(lane, step))
-        {
-            chainEraseMode = true;
-            chainEraseLane = lane;
-            chainEraseRoot = findChainRoot(lane, step);
-            chainEraseStartStep = step;
-            chainEraseCurrentStep = step;
-            chainEraseOriginalLength = getStepChainLength(chainEraseLane, chainEraseRoot);
-        }
-        else
+        const int root = findChainRoot(lane, step);
+        const auto& rootData = sequencerState.getStepData(lane, root);
+        if (rootData.active && rootData.presetIndex > 0)
         {
             chainDrawMode = true;
+            chainDrawDragged = false;
             chainDrawLane = lane;
-            chainDrawStartStep = step;
-            chainDrawCurrentStep = step;
+            chainDrawStartStep = root;
+            chainDrawCurrentStep = root;
         }
+    }
+    else
+    {
+        const int sourceStep = findChainRoot(lane, step);
+        paintSourceData = sequencerState.getStepData(lane, sourceStep);
+        if (const auto* activeGate = apvts.getRawParameterValue(getStepActiveID(lane, sourceStep)))
+            paintSourceData.active = activeGate->load() >= 0.5f;
+        paintSourceData.chainLength = 1;
+        if (!paintSourceData.active)
+            paintSourceData.presetIndex = 0;
+        else if (paintSourceData.presetIndex <= 0)
+            paintSourceData.presetIndex = 1;
+
+        isPainting = true;
+        paintEditStarted = false;
+        lastPaintedLane = lane;
+        lastPaintedStep = step;
     }
 
     selectStepAndNotify(lane, step);
@@ -829,6 +875,7 @@ void StepGrid::mouseDrag(const juce::MouseEvent& e)
             if (valid)
             {
                 chainDrawCurrentStep = step;
+                chainDrawDragged = true;
                 repaint();
             }
         }
@@ -845,23 +892,57 @@ void StepGrid::mouseDrag(const juce::MouseEvent& e)
         }
         return;
     }
+
+    if (isPainting)
+    {
+        auto [lane, step] = hitTestCell(e.getPosition());
+        if (lane != lastPaintedLane || step < 0 || step == lastPaintedStep)
+            return;
+
+        if (!paintEditStarted)
+        {
+            if (onStepPresetEditStarting)
+                onStepPresetEditStarting();
+            paintEditStarted = true;
+        }
+
+        const int direction = step > lastPaintedStep ? 1 : -1;
+        for (int paintedStep = lastPaintedStep + direction;
+             paintedStep != step + direction;
+             paintedStep += direction)
+        {
+            applyPaintSourceToCell(lane, paintedStep);
+        }
+
+        lastPaintedStep = step;
+        setSelectedStep(lane, step);
+        refreshChainVisuals(lane);
+        refreshLane(lane);
+        return;
+    }
 }
 
 void StepGrid::mouseUp(const juce::MouseEvent&)
 {
     if (chainDrawMode)
     {
-        if (chainDrawCurrentStep > chainDrawStartStep)
+        if (chainDrawDragged && chainDrawCurrentStep > chainDrawStartStep)
         {
             int length = chainDrawCurrentStep - chainDrawStartStep + 1;
             auto data = sequencerState.getStepData(chainDrawLane, chainDrawStartStep);
-            data.chainLength = length;
-            sequencerState.setStepData(chainDrawLane, chainDrawStartStep, data);
-            refreshChainVisuals(chainDrawLane);
-            if (onChainChanged)
-                onChainChanged(chainDrawLane, chainDrawStartStep, length);
+            if (data.chainLength != length)
+            {
+                if (onStepPresetEditStarting)
+                    onStepPresetEditStarting();
+                data.chainLength = length;
+                sequencerState.setStepData(chainDrawLane, chainDrawStartStep, data);
+                refreshChainVisuals(chainDrawLane);
+                if (onChainChanged)
+                    onChainChanged(chainDrawLane, chainDrawStartStep, length);
+            }
         }
         chainDrawMode = false;
+        chainDrawDragged = false;
         chainDrawLane = -1;
         chainDrawStartStep = -1;
         chainDrawCurrentStep = -1;
@@ -874,6 +955,8 @@ void StepGrid::mouseUp(const juce::MouseEvent&)
         int newLength = juce::jmax(1, chainEraseCurrentStep - chainEraseRoot + 1);
         if (newLength != chainEraseOriginalLength)
         {
+            if (onStepPresetEditStarting)
+                onStepPresetEditStarting();
             auto data = sequencerState.getStepData(chainEraseLane, chainEraseRoot);
             data.chainLength = newLength;
             sequencerState.setStepData(chainEraseLane, chainEraseRoot, data);
@@ -889,6 +972,12 @@ void StepGrid::mouseUp(const juce::MouseEvent&)
         chainEraseOriginalLength = 1;
         repaint();
         return;
+    }
+
+    if (isPainting)
+    {
+        resetPaintGesture();
+        repaint();
     }
 }
 
@@ -1084,6 +1173,19 @@ void StepGrid::setStepActive(int lane, int step, bool active)
     auto* param = apvts.getParameter(paramID);
     if (param != nullptr)
         param->setValueNotifyingHost(active ? 1.0f : 0.0f);
+}
+
+void StepGrid::setStepActiveAsCompleteGesture(int lane, int step, bool active)
+{
+    if (lane < 0 || lane >= numLanes || step < 0 || step >= numSteps)
+        return;
+
+    if (auto* param = apvts.getParameter(getStepActiveID(lane, step)))
+    {
+        param->beginChangeGesture();
+        param->setValueNotifyingHost(active ? 1.0f : 0.0f);
+        param->endChangeGesture();
+    }
 }
 
 StepCell* StepGrid::getCell(int lane, int step)

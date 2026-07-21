@@ -69,12 +69,14 @@ private:
     int hoverLane{-1};
     int hoverStep{-1};
 
-    bool paintMode{false};
     bool isPainting{false};
+    bool paintEditStarted{false};
+    StepData paintSourceData{};
     int lastPaintedLane{-1};
     int lastPaintedStep{-1};
 
     bool chainDrawMode{false};
+    bool chainDrawDragged{false};
     int  chainDrawLane{-1};
     int  chainDrawStartStep{-1};
     int  chainDrawCurrentStep{-1};
@@ -98,7 +100,9 @@ private:
     bool hasAnimatedChains() const;
     void updateChainAnimationTimer();
     std::pair<int, int> hitTestCell(juce::Point<int> pos) const;
-    void applyPaintToCell(int lane, int step);
+    void applyPaintSourceToCell(int lane, int step);
+    void resetPaintGesture();
+    void setStepActiveAsCompleteGesture(int lane, int step, bool active);
     void cyclePresetAt(int lane, int step, int direction);
     void selectStepAndNotify(int lane, int step);
     bool moveSelectionBy(int laneDelta, int stepDelta);

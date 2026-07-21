@@ -58,10 +58,11 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Automated step Off-to-On transitions inside the current step have direct behavioral coverage for SLICE retriggering, LOOP history playback, and FILTER reconfiguration.
 - EnvFollowerEngine now applies its bipolar flag correctly and has direct engine regression coverage.
 - Lane mix knobs now use a bidirectional JUCE parameter attachment, follow synchronous/asynchronous automation and preset restore, and keep host gestures balanced across drag, click, double-click reset, and destruction during an active drag.
+- StepGrid drag-to-paint now interpolates across skipped mouse events, copies active presets, erases from inactive sources, synchronizes APVTS gates with complete host gestures, clears overwritten chains, and creates one undo boundary per gesture. Host-enabled blank sources normalize to preset 1, Shift+Drag is reserved for tie drawing, and click-only selection remains non-destructive.
 
 ## Open V1 Gates
 
-1. Fix the remaining UI correctness issues in drag-to-paint behavior, keyboard/accessibility coverage, and stale waveform/CRT animation behavior.
+1. Fix the remaining UI correctness issues in keyboard/accessibility coverage and stale waveform/CRT animation behavior.
 2. Fix the remaining DSP/state defects: possible audio-thread scratch growth, absolute host loop/seek retrigger identity, loop-history limits, and any DSP labels that still overstate implemented behavior.
 3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.

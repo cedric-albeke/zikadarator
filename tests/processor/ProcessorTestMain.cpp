@@ -116,6 +116,14 @@ juce::MouseEvent makeMouseEvent(juce::Component& component,
             wasDragged};
 }
 
+juce::Point<float> stepGridCellCentre(zikada::StepGrid& grid, int lane, int step)
+{
+    auto* cell = grid.getCell(lane, step);
+    if (cell == nullptr)
+        throw std::runtime_error("step-grid test could not resolve its target cell");
+    return cell->getBounds().getCentre().toFloat();
+}
+
 class ParameterGestureProbe final : public juce::AudioProcessorParameter::Listener
 {
 public:
@@ -671,6 +679,248 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
 
         if (cell.isActive())
             throw std::runtime_error("step cell remained active after its APVTS toggle was disabled");
+    }});
+
+    tests.push_back({"step drag copies a preset through every crossed cell with one undo boundary", []
+    {
+        PluginProcessor processor;
+        auto& state = processor.getSequencerState();
+
+        StepData source;
+        source.presetIndex = 13;
+        state.setStepData(3, 2, source);
+        setParameter(processor, getStepActiveID(3, 2), 1.0f);
+
+        StepData existingChain;
+        existingChain.active = true;
+        existingChain.presetIndex = 4;
+        existingChain.chainLength = 3;
+        state.setStepData(3, 5, existingChain);
+        setParameter(processor, getStepActiveID(3, 5), 1.0f);
+
+        StepGrid grid(processor.getPluginState().getValueTreeState(), state);
+        grid.setSize(960, 480);
+
+        int undoBoundaries = 0;
+        juce::ValueTree undoSnapshot;
+        grid.onStepPresetEditStarting = [&]
+        {
+            ++undoBoundaries;
+            undoSnapshot = processor.exportFullState();
+        };
+
+        auto* firstPaintedParameter = processor.getPluginState().getValueTreeState()
+                                          .getParameter(getStepActiveID(3, 3));
+        if (firstPaintedParameter == nullptr)
+            throw std::runtime_error("step paint gesture test could not resolve its target parameter");
+        ParameterGestureProbe gestureProbe;
+        firstPaintedParameter->addListener(&gestureProbe);
+
+        const auto start = stepGridCellCentre(grid, 3, 2);
+        const auto finish = stepGridCellCentre(grid, 3, 6);
+        grid.mouseDown(makeMouseEvent(grid, start, start,
+                                      juce::ModifierKeys::leftButtonModifier, false));
+        grid.mouseDrag(makeMouseEvent(grid, finish, start,
+                                      juce::ModifierKeys::leftButtonModifier, true));
+        grid.mouseUp(makeMouseEvent(grid, finish, start, juce::ModifierKeys{}, true));
+        firstPaintedParameter->removeListener(&gestureProbe);
+
+        if (undoBoundaries != 1)
+            throw std::runtime_error("step paint gesture did not create exactly one undo boundary");
+        if (gestureProbe.beginCount != 1 || gestureProbe.endCount != 1)
+            throw std::runtime_error("painted step did not emit one complete host gesture");
+
+        for (int step = 3; step <= 6; ++step)
+        {
+            const auto painted = state.getStepData(3, step);
+            if (!painted.active || painted.presetIndex != 13 || painted.chainLength != 1)
+                throw std::runtime_error("step paint skipped or corrupted crossed step " + std::to_string(step));
+
+            const auto* parameter = processor.getPluginState().getValueTreeState()
+                                        .getRawParameterValue(getStepActiveID(3, step));
+            if (parameter == nullptr || parameter->load() < 0.5f)
+                throw std::runtime_error("step paint did not synchronize active automation for step "
+                                         + std::to_string(step));
+        }
+
+        if (state.getStepData(3, 2).chainLength != 1)
+            throw std::runtime_error("normal step drag created a tie chain instead of copying the preset");
+        if (grid.isStepConsumedByChain(3, 7))
+            throw std::runtime_error("step paint left a stale chain spanning beyond an overwritten root");
+
+        if (!undoSnapshot.isValid())
+            throw std::runtime_error("step paint did not capture a restorable pre-edit snapshot");
+        processor.applyFullState(undoSnapshot);
+
+        const auto restoredTarget = state.getStepData(3, 3);
+        const auto restoredChain = state.getStepData(3, 5);
+        if (restoredTarget.active || restoredTarget.presetIndex != 0 || restoredTarget.chainLength != 1)
+            throw std::runtime_error("step paint undo snapshot did not restore overwritten step metadata");
+        if (!restoredChain.active || restoredChain.presetIndex != 4 || restoredChain.chainLength != 3)
+            throw std::runtime_error("step paint undo snapshot did not restore overwritten chain metadata");
+
+        const auto* restoredTargetGate = processor.getPluginState().getValueTreeState()
+                                             .getRawParameterValue(getStepActiveID(3, 3));
+        const auto* restoredChainGate = processor.getPluginState().getValueTreeState()
+                                            .getRawParameterValue(getStepActiveID(3, 5));
+        if (restoredTargetGate == nullptr || restoredTargetGate->load() >= 0.5f
+            || restoredChainGate == nullptr || restoredChainGate->load() < 0.5f)
+            throw std::runtime_error("step paint undo snapshot did not restore APVTS step gates");
+    }});
+
+    tests.push_back({"inactive step drag erases every crossed cell", []
+    {
+        PluginProcessor processor;
+        auto& state = processor.getSequencerState();
+
+        StepData staleSourceMetadata;
+        staleSourceMetadata.active = true;
+        staleSourceMetadata.presetIndex = 11;
+        state.setStepData(4, 1, staleSourceMetadata);
+
+        for (int step = 2; step <= 5; ++step)
+        {
+            StepData active;
+            active.active = true;
+            active.presetIndex = 7;
+            state.setStepData(4, step, active);
+            setParameter(processor, getStepActiveID(4, step), 1.0f);
+        }
+
+        StepGrid grid(processor.getPluginState().getValueTreeState(), state);
+        grid.setSize(960, 480);
+
+        int undoBoundaries = 0;
+        grid.onStepPresetEditStarting = [&undoBoundaries] { ++undoBoundaries; };
+
+        const auto start = stepGridCellCentre(grid, 4, 1);
+        const auto finish = stepGridCellCentre(grid, 4, 5);
+        grid.mouseDown(makeMouseEvent(grid, start, start,
+                                      juce::ModifierKeys::leftButtonModifier, false));
+        grid.mouseDrag(makeMouseEvent(grid, finish, start,
+                                      juce::ModifierKeys::leftButtonModifier, true));
+        grid.mouseUp(makeMouseEvent(grid, finish, start, juce::ModifierKeys{}, true));
+
+        if (undoBoundaries != 1)
+            throw std::runtime_error("inactive paint did not create exactly one undo boundary");
+
+        for (int step = 2; step <= 5; ++step)
+        {
+            const auto erased = state.getStepData(4, step);
+            if (erased.active || erased.presetIndex != 0 || erased.chainLength != 1)
+                throw std::runtime_error("inactive paint did not erase crossed step " + std::to_string(step));
+
+            const auto* parameter = processor.getPluginState().getValueTreeState()
+                                        .getRawParameterValue(getStepActiveID(4, step));
+            if (parameter == nullptr || parameter->load() >= 0.5f)
+                throw std::runtime_error("inactive paint did not clear active automation for step "
+                                         + std::to_string(step));
+        }
+    }});
+
+    tests.push_back({"shift drag creates a tie without painting the consumed cells", []
+    {
+        PluginProcessor processor;
+        auto& state = processor.getSequencerState();
+
+        StepData source;
+        source.active = true;
+        source.presetIndex = 5;
+        state.setStepData(1, 4, source);
+        setParameter(processor, getStepActiveID(1, 4), 1.0f);
+
+        StepGrid grid(processor.getPluginState().getValueTreeState(), state);
+        grid.setSize(960, 480);
+
+        int undoBoundaries = 0;
+        grid.onStepPresetEditStarting = [&undoBoundaries] { ++undoBoundaries; };
+
+        const auto shiftLeft = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier
+                                                   | juce::ModifierKeys::shiftModifier);
+        const auto start = stepGridCellCentre(grid, 1, 4);
+        const auto finish = stepGridCellCentre(grid, 1, 7);
+        grid.mouseDown(makeMouseEvent(grid, start, start, shiftLeft, false));
+        grid.mouseDrag(makeMouseEvent(grid, finish, start, shiftLeft, true));
+        grid.mouseUp(makeMouseEvent(grid, finish, start, juce::ModifierKeys{}, true));
+
+        if (state.getStepData(1, 4).chainLength != 4)
+            throw std::runtime_error("shift drag did not create the expected four-step tie");
+        if (undoBoundaries != 1)
+            throw std::runtime_error("shift drag did not create exactly one undo boundary");
+
+        for (int step = 5; step <= 7; ++step)
+        {
+            const auto consumed = state.getStepData(1, step);
+            if (consumed.active || consumed.presetIndex != 0)
+                throw std::runtime_error("shift drag painted a consumed tie cell");
+        }
+
+        const auto consumedPosition = stepGridCellCentre(grid, 1, 6);
+        grid.mouseDown(makeMouseEvent(grid, consumedPosition, consumedPosition, shiftLeft, false));
+        grid.mouseUp(makeMouseEvent(grid, consumedPosition, consumedPosition,
+                                    juce::ModifierKeys{}, false));
+        if (state.getStepData(1, 4).chainLength != 4 || undoBoundaries != 1)
+            throw std::runtime_error("shift-click without dragging resized the tie chain");
+    }});
+
+    tests.push_back({"host-enabled blank step paints the default preset", []
+    {
+        PluginProcessor processor;
+        auto& state = processor.getSequencerState();
+        setParameter(processor, getStepActiveID(0, 0), 1.0f);
+
+        StepGrid grid(processor.getPluginState().getValueTreeState(), state);
+        grid.setSize(960, 480);
+
+        const auto start = stepGridCellCentre(grid, 0, 0);
+        const auto finish = stepGridCellCentre(grid, 0, 1);
+        grid.mouseDown(makeMouseEvent(grid, start, start,
+                                      juce::ModifierKeys::leftButtonModifier, false));
+        grid.mouseDrag(makeMouseEvent(grid, finish, start,
+                                      juce::ModifierKeys::leftButtonModifier, true));
+        grid.mouseUp(makeMouseEvent(grid, finish, start, juce::ModifierKeys{}, true));
+
+        const auto painted = state.getStepData(0, 1);
+        if (!painted.active || painted.presetIndex != 1 || painted.chainLength != 1)
+            throw std::runtime_error("host-enabled blank source produced an invalid active preset-zero step");
+    }});
+
+    tests.push_back({"step click only selects without editing data", []
+    {
+        PluginProcessor processor;
+        auto& state = processor.getSequencerState();
+
+        StepData source;
+        source.active = true;
+        source.presetIndex = 9;
+        state.setStepData(2, 8, source);
+        setParameter(processor, getStepActiveID(2, 8), 1.0f);
+
+        StepGrid grid(processor.getPluginState().getValueTreeState(), state);
+        grid.setSize(960, 480);
+
+        int selectedLane = -1;
+        int selectedStep = -1;
+        int undoBoundaries = 0;
+        grid.onStepSelected = [&selectedLane, &selectedStep](int lane, int step)
+        {
+            selectedLane = lane;
+            selectedStep = step;
+        };
+        grid.onStepPresetEditStarting = [&undoBoundaries] { ++undoBoundaries; };
+
+        const auto position = stepGridCellCentre(grid, 2, 8);
+        grid.mouseDown(makeMouseEvent(grid, position, position,
+                                      juce::ModifierKeys::leftButtonModifier, false));
+        grid.mouseUp(makeMouseEvent(grid, position, position, juce::ModifierKeys{}, false));
+
+        const auto unchanged = state.getStepData(2, 8);
+        if (!unchanged.active || unchanged.presetIndex != 9 || unchanged.chainLength != 1)
+            throw std::runtime_error("click-only step selection edited its source data");
+        if (selectedLane != 2 || selectedStep != 8)
+            throw std::runtime_error("click-only step selection did not notify the selected cell");
+        if (undoBoundaries != 0)
+            throw std::runtime_error("click-only step selection created an unnecessary undo boundary");
     }});
 
     tests.push_back({"lane mix knob follows automation and preset restore", []

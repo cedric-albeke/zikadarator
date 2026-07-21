@@ -257,9 +257,10 @@ Six modes that intelligently fill the entire grid:
 - **Single-row header** with tabs (Sequencer / Presets / Settings), preset strip, and undo/redo icons
 - **Header preset dropdown** opens favorites, recents, full preset list, and direct browser access
 - **Scroll wheel** over step cells cycles presets without opening popup
-- **Drag horizontally** across cells to paint/copy
-- **Shift+Click** creates Tie steps
-- **Right-click** deletes steps or opens context menu
+- **Drag horizontally** from an active cell to copy its preset through every crossed step
+- **Drag horizontally** from an inactive cell to erase every crossed step
+- **Shift+Drag** from an active cell creates Tie steps
+- **Right-click** deletes steps or trims an existing Tie chain
 
 ### Visual Feedback
 - Real-time INPUT waveform with slice markers (98 px tall strip)
