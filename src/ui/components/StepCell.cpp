@@ -30,7 +30,7 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 
     const auto bounds       = getLocalBounds().toFloat().reduced(1.5f);
     const auto corner       = 4.0f;
-    const bool isCellActive = active || getToggleState();
+    const bool isCellActive = getToggleState();
     const int  groupIndex   = stepIndex / 4;
     const bool isGroupStart = (stepIndex % 4 == 0);
     const auto laneColour   = laneInfos[laneIndex].colour;
@@ -215,10 +215,10 @@ void StepCell::paintButton(juce::Graphics& g, bool highlighted, bool down)
 
 void StepCell::setActive(bool a)
 {
-    if (active == a)
+    if (getToggleState() == a)
         return;
 
-    active = a;
+    setToggleState(a, juce::dontSendNotification);
     repaint();
 }
 

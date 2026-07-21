@@ -31,6 +31,39 @@ public:
         {
             return userSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)];
         }
+
+        [[nodiscard]] juce::ValueTree toValueTree() const
+        {
+            juce::ValueTree root ("SequencerState");
+
+            for (int lane = 0; lane < NumLanes; ++lane)
+            {
+                juce::ValueTree laneTree ("Lane");
+                laneTree.setProperty ("index", lane, nullptr);
+
+                juce::ValueTree stepsTree ("Steps");
+                for (int step = 0; step < NumSteps; ++step)
+                {
+                    auto stepTree = getStepData (lane, step).toValueTree();
+                    stepTree.setProperty ("index", step, nullptr);
+                    stepsTree.addChild (stepTree, -1, nullptr);
+                }
+                laneTree.addChild (stepsTree, -1, nullptr);
+
+                juce::ValueTree slotsTree ("UserSlots");
+                for (int slot = 0; slot < NumUserSlots; ++slot)
+                {
+                    auto slotTree = getUserSlot (lane, slot).toValueTree();
+                    slotTree.setProperty ("index", slot, nullptr);
+                    slotsTree.addChild (slotTree, -1, nullptr);
+                }
+                laneTree.addChild (slotsTree, -1, nullptr);
+
+                root.addChild (laneTree, -1, nullptr);
+            }
+
+            return root;
+        }
     };
 
     SequencerState()
@@ -80,35 +113,7 @@ public:
 
     [[nodiscard]] juce::ValueTree toValueTree() const
     {
-        juce::ValueTree root ("SequencerState");
-
-        for (int lane = 0; lane < NumLanes; ++lane)
-        {
-            juce::ValueTree laneTree ("Lane");
-            laneTree.setProperty ("index", lane, nullptr);
-
-            juce::ValueTree stepsTree ("Steps");
-            for (int step = 0; step < NumSteps; ++step)
-            {
-                auto stepTree = grid[static_cast<size_t> (lane)][static_cast<size_t> (step)].toValueTree();
-                stepTree.setProperty ("index", step, nullptr);
-                stepsTree.addChild (stepTree, -1, nullptr);
-            }
-            laneTree.addChild (stepsTree, -1, nullptr);
-
-            juce::ValueTree slotsTree ("UserSlots");
-            for (int slot = 0; slot < NumUserSlots; ++slot)
-            {
-                auto slotTree = userSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)].toValueTree();
-                slotTree.setProperty ("index", slot, nullptr);
-                slotsTree.addChild (slotTree, -1, nullptr);
-            }
-            laneTree.addChild (slotsTree, -1, nullptr);
-
-            root.addChild (laneTree, -1, nullptr);
-        }
-
-        return root;
+        return getSnapshot().toValueTree();
     }
 
     void fromValueTree (const juce::ValueTree& root)

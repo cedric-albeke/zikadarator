@@ -292,6 +292,16 @@ void PluginEditor::timerCallback()
     applyWineSafeRenderingIfNeeded();
     footerPanel.refreshGlobalControlLabels();
 
+    const bool sequencerActiveStateChanged = processorRef.synchronizeSequencerActiveStateFromParameters();
+    if (sequencerActiveStateChanged)
+    {
+        for (int lane = 0; lane < StepGrid::numLanes; ++lane)
+        {
+            sequencerPanel.getStepGrid().refreshChainVisuals(lane);
+            sequencerPanel.getStepGrid().refreshLane(lane);
+        }
+    }
+
     if (currentPage != Page::Sequencer)
         return;
 
@@ -331,7 +341,7 @@ void PluginEditor::timerCallback()
         return;
     }
 
-    if (step != lastPlayingStep)
+    if (step != lastPlayingStep || sequencerActiveStateChanged)
     {
         sequencerPanel.getStepGrid().setPlayingStep(step);
         int activeLaneMask = 0;

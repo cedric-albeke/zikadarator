@@ -55,10 +55,12 @@ const knobHeader = read("src/ui/components/Knob.h");
 const knob = read("src/ui/components/Knob.cpp");
 const presetManager = read("src/state/PresetManager.cpp");
 const parameterIDs = read("src/state/ParameterIDs.h");
+const sequencerState = read("src/state/SequencerState.h");
 const processorTests = read("tests/processor/ProcessorTestMain.cpp");
 const sequencerEngine = read("src/engine/SequencerEngine.cpp");
 const sliceEngine = read("src/engine/SliceEngine.cpp");
 const envelopeShape = read("src/engine/EnvelopeShape.cpp");
+const envFollower = read("src/engine/EnvFollowerEngine.cpp");
 const loopEngine = read("src/engine/LoopEngine.cpp");
 const loopEngineHeader = read("src/engine/LoopEngine.h");
 const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
@@ -80,6 +82,10 @@ const processSegment = extractFunction(
 const loopPresetMapping = extractFunction(
   processor,
   "void configureLoopEngineForPreset(LoopEngine& loopEngine, int presetIndex, const UserSlotData& slotData,",
+);
+const exportFullState = extractFunction(
+  processor,
+  "juce::ValueTree PluginProcessor::exportFullState()",
 );
 const triggerSlice = extractFunction(
   sliceEngine,
@@ -156,6 +162,23 @@ assertContains(processorHeader, "ensureScratchBuffers", "processor must expose s
 assertContains(processBlock, "monoRightBuffer.data()", "mono processing must avoid aliasing left/right pointers");
 assertContains(processSegment, "0.5f * (outLeft + outRight)", "mono processing must fold rendered stereo output to mono");
 assertContains(processBlock, "sequencerState.getSnapshot()", "processBlock must capture a sequencer snapshot for audio rendering");
+assertContains(processBlock, "sliceEngine.setTempo(bpm)", "processBlock must synchronize SliceEngine with resolved host/free tempo");
+assertContains(processorHeader, "stepActiveParameters", "processor must cache realtime-safe step-active parameter pointers");
+assertContains(processBlock, "activeParameter->load() > 0.5f", "audio snapshots must use host-automatable step-active gates");
+assertContains(processor, "synchronizeSequencerActiveStateFromParameters", "processor must synchronize automated step gates back into sequencer metadata");
+assertContains(exportFullState, "sequencerState.getSnapshot()", "state export must serialize an immutable sequencer snapshot");
+if (exportFullState.includes("synchronizeSequencerActiveStateFromParameters")) {
+  fail("state export must not mutate the live sequencer");
+}
+assertContains(sequencerState, "return getSnapshot().toValueTree()", "sequencer serialization must read from a published snapshot");
+assertContains(parameterIDs, "setParameterStateValue", "preset state helpers must write JUCE APVTS PARAM child trees");
+assertContains(presetManager, "appendSequencerState", "factory presets must mirror sequencer gates into APVTS state");
+assertContains(presetManager, "setParameterStateValue(state, getLaneMuteID(lane), 0.0f)", "factory presets must reset lane mute state");
+assertContains(presetManager, "setParameterStateValue(state, getLaneSoloID(lane), 0.0f)", "factory presets must reset lane solo state");
+assertContains(processor, "schemaVersion < currentStateSchemaVersion", "legacy state restore must migrate sequencer gates into APVTS");
+assertContains(editor, "step != lastPlayingStep || sequencerActiveStateChanged", "CRT active-lane state must refresh during same-step automation");
+assertContains(processor, "!stateTree.hasType(state.getValueTreeState().state.getType())", "full-state restore must reject a wrong root before loading sequencer data");
+assertContains(envFollower, "isBipolar    = bipolar;", "envelope follower must apply its bipolar parameter instead of self-assigning");
 assertContains(processSegment, "SequencerState::Snapshot", "processSegment must render from an immutable sequencer snapshot");
 assertContains(processSegment, "sequencerSnapshot.getStepData", "processSegment must read step data from the captured snapshot");
 assertContains(processSegment, "sequencerSnapshot.getUserSlot", "processSegment must read user slots from the captured snapshot");

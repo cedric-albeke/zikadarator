@@ -16,7 +16,7 @@ public:
     int getStepIndex() const { return stepIndex; }
 
     void setActive(bool isActive);
-    bool isActive() const { return active; }
+    bool isActive() const { return getToggleState(); }
 
     void setTied(bool isTied);
     bool isTied() const { return tied; }
@@ -46,7 +46,6 @@ public:
 private:
     int laneIndex{0};
     int stepIndex{0};
-    bool active{false};
     bool tied{false};
     bool chained{false};
     bool chainable{false};

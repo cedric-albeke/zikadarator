@@ -57,6 +57,44 @@ void fillBuffer(juce::AudioBuffer<float>& buffer, float sampleValue)
             buffer.setSample(channel, i, sampleValue);
 }
 
+int countRenderedSliceSamples(float tempo, bool automatedStepActive = true)
+{
+    constexpr double sampleRate = 64.0;
+    constexpr int blockSize = 4;
+    constexpr int blocksToRender = 16;
+
+    zikada::PluginProcessor processor;
+    processor.prepareToPlay(sampleRate, blockSize);
+    setParameter(processor, zikada::ParameterIDs::clockSource, 1.0f);
+    setParameter(processor, zikada::ParameterIDs::tempo, tempo);
+    setParameter(processor, zikada::ParameterIDs::stepResolution, 0.0f);
+    setParameter(processor, zikada::ParameterIDs::dryWet, 100.0f);
+
+    zikada::StepData sliceStep;
+    sliceStep.active = true;
+    sliceStep.presetIndex = 5;
+    processor.getSequencerState().setStepData(0, 1, sliceStep);
+    setParameter(processor, zikada::getStepActiveID(0, 1), automatedStepActive ? 1.0f : 0.0f);
+
+    juce::MidiBuffer midi;
+    int renderedSamples = 0;
+    const int samplesPerStep = static_cast<int>(std::round(sampleRate * 60.0 / tempo * 0.25));
+    for (int block = 0; block < blocksToRender; ++block)
+    {
+        juce::AudioBuffer<float> buffer(2, blockSize);
+        const bool feedingHistory = block * blockSize < samplesPerStep;
+        fillBuffer(buffer, feedingHistory ? 1.0f : 0.0f);
+        processor.processBlock(buffer, midi);
+
+        if (!feedingHistory)
+            for (int sample = 0; sample < blockSize; ++sample)
+                if (std::abs(buffer.getSample(0, sample)) > 0.01f)
+                    ++renderedSamples;
+    }
+
+    return renderedSamples;
+}
+
 bool isInteractiveWorkspaceControl(const juce::Component& component)
 {
     return dynamic_cast<const juce::Button*>(&component) != nullptr
@@ -97,6 +135,238 @@ namespace zikada::tests {
 
 void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>>& tests)
 {
+    tests.push_back({"slice duration follows resolved free-clock tempo", []
+    {
+        const int samplesAt60Bpm = countRenderedSliceSamples(60.0f);
+        const int samplesAt120Bpm = countRenderedSliceSamples(120.0f);
+
+        if (samplesAt120Bpm < 4)
+            throw std::runtime_error("tempo test did not render the reference slice: "
+                                     + std::to_string(samplesAt60Bpm) + " vs "
+                                     + std::to_string(samplesAt120Bpm));
+
+        if (samplesAt60Bpm <= samplesAt120Bpm + 4)
+            throw std::runtime_error("60 BPM slice was not materially longer than 120 BPM after edge fades: "
+                                     + std::to_string(samplesAt60Bpm) + " vs "
+                                     + std::to_string(samplesAt120Bpm));
+    }});
+
+    tests.push_back({"step-active host automation gates sequencer rendering", []
+    {
+        const int automatedOffSamples = countRenderedSliceSamples(120.0f, false);
+        if (automatedOffSamples != 0)
+            throw std::runtime_error("host automation disabled the step but audio still rendered "
+                                     + std::to_string(automatedOffSamples) + " slice samples");
+    }});
+
+    tests.push_back({"exported sequencer active state follows host automation", []
+    {
+        PluginProcessor processor;
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 5;
+        step.chainLength = 3;
+        processor.getSequencerState().setStepData(0, 1, step);
+        setParameter(processor, getStepActiveID(0, 1), 0.0f);
+
+        const auto exported = processor.exportFullState();
+        const auto sequencer = exported.getChildWithName("SequencerState");
+        const auto lane = sequencer.getChild(0);
+        const auto exportedStep = lane.getChildWithName("Steps").getChild(1);
+
+        if (static_cast<bool>(exportedStep.getProperty("active", true)))
+            throw std::runtime_error("exported sequencer active flag ignored host automation");
+        if (static_cast<int>(exportedStep.getProperty("presetIndex", 0)) != 5)
+            throw std::runtime_error("export lost sequencer preset metadata");
+        if (static_cast<int>(exportedStep.getProperty("chainLength", 1)) != 3)
+            throw std::runtime_error("export lost sequencer chain metadata");
+
+        const auto liveStep = processor.getSequencerState().getStepData(0, 1);
+        if (!liveStep.active)
+            throw std::runtime_error("export mutated the live sequencer active state");
+    }});
+
+    tests.push_back({"factory preset APVTS gates match their sequencer patterns", []
+    {
+        PluginProcessor processor;
+        const auto& presets = processor.getPresetManager().getItems();
+        int patternedFactoryPresets = 0;
+
+        for (int presetIndex = 0; presetIndex < static_cast<int>(presets.size()); ++presetIndex)
+        {
+            const auto& preset = presets[static_cast<size_t>(presetIndex)];
+            if (!preset.isFactory)
+                continue;
+
+            juce::ValueTree loadedState;
+            if (!processor.getPresetManager().loadPreset(presetIndex, loadedState))
+                throw std::runtime_error("factory preset could not be loaded: " + preset.name.toStdString());
+
+            const auto sequencer = loadedState.getChildWithName("SequencerState");
+            if (!sequencer.isValid())
+                throw std::runtime_error("factory preset has no sequencer state: " + preset.name.toStdString());
+
+            for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+            {
+                const auto muteState = findParameterState(loadedState, getLaneMuteID(lane));
+                const auto soloState = findParameterState(loadedState, getLaneSoloID(lane));
+                if (!muteState.isValid() || getParameterStateValue(loadedState, getLaneMuteID(lane), 1.0f) > 0.5f)
+                    throw std::runtime_error("factory preset does not reset lane mute: "
+                                             + preset.name.toStdString() + " lane " + std::to_string(lane));
+                if (!soloState.isValid() || getParameterStateValue(loadedState, getLaneSoloID(lane), 1.0f) > 0.5f)
+                    throw std::runtime_error("factory preset does not reset lane solo: "
+                                             + preset.name.toStdString() + " lane " + std::to_string(lane));
+
+                setParameter(processor, getLaneMuteID(lane), 1.0f);
+                setParameter(processor, getLaneSoloID(lane), 1.0f);
+            }
+
+            bool hasActiveStep = false;
+            for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+            {
+                const auto steps = sequencer.getChild(lane).getChildWithName("Steps");
+                for (int step = 0; step < SequencerState::NumSteps; ++step)
+                {
+                    const bool sequencerActive = static_cast<bool>(steps.getChild(step).getProperty("active", false));
+                    const bool parameterActive = getParameterStateValue(loadedState, getStepActiveID(lane, step)) > 0.5f;
+                    if (sequencerActive != parameterActive)
+                        throw std::runtime_error("factory preset has divergent step state: "
+                                                 + preset.name.toStdString() + " lane "
+                                                 + std::to_string(lane) + " step " + std::to_string(step));
+                    hasActiveStep = hasActiveStep || sequencerActive;
+                }
+            }
+
+            if (hasActiveStep)
+                ++patternedFactoryPresets;
+
+            processor.applyFullState(loadedState);
+            for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+            {
+                const auto steps = sequencer.getChild(lane).getChildWithName("Steps");
+                for (int step = 0; step < SequencerState::NumSteps; ++step)
+                {
+                    const bool expectedActive = static_cast<bool>(steps.getChild(step).getProperty("active", false));
+                    const auto restoredStep = processor.getSequencerState().getStepData(lane, step);
+                    const auto* activeParameter = processor.getPluginState().getValueTreeState()
+                                                      .getRawParameterValue(getStepActiveID(lane, step));
+                    if (restoredStep.active != expectedActive
+                        || activeParameter == nullptr
+                        || (activeParameter->load() > 0.5f) != expectedActive)
+                        throw std::runtime_error("factory preset changed while applying: "
+                                                 + preset.name.toStdString() + " lane "
+                                                 + std::to_string(lane) + " step " + std::to_string(step));
+                }
+
+                const auto& apvts = processor.getPluginState().getValueTreeState();
+                const auto* muteParameter = apvts.getRawParameterValue(getLaneMuteID(lane));
+                const auto* soloParameter = apvts.getRawParameterValue(getLaneSoloID(lane));
+                if (muteParameter == nullptr || muteParameter->load() > 0.5f)
+                    throw std::runtime_error("factory preset retained lane mute: "
+                                             + preset.name.toStdString() + " lane " + std::to_string(lane));
+                if (soloParameter == nullptr || soloParameter->load() > 0.5f)
+                    throw std::runtime_error("factory preset retained lane solo: "
+                                             + preset.name.toStdString() + " lane " + std::to_string(lane));
+            }
+        }
+
+        if (patternedFactoryPresets == 0)
+            throw std::runtime_error("factory preset test found no patterned presets");
+    }});
+
+    tests.push_back({"legacy sequencer patterns survive APVTS state migration", []
+    {
+        PluginProcessor processor;
+        auto legacyState = processor.getPluginState().getValueTreeState().copyState();
+
+        SequencerState legacySequencer;
+        StepData step;
+        step.active = true;
+        step.presetIndex = 11;
+        step.chainLength = 2;
+        legacySequencer.setStepData(5, 12, step);
+        setParameterStateValue(legacyState, getStepActiveID(5, 12), 0.0f);
+        legacyState.addChild(legacySequencer.toValueTree(), -1, nullptr);
+
+        processor.applyFullState(legacyState);
+
+        const auto restored = processor.getSequencerState().getStepData(5, 12);
+        const auto& apvts = processor.getPluginState().getValueTreeState();
+        const auto* activeParameter = apvts.getRawParameterValue(getStepActiveID(5, 12));
+        if (!restored.active || restored.presetIndex != 11 || restored.chainLength != 2)
+            throw std::runtime_error("legacy sequencer pattern was discarded during state migration: active="
+                                     + std::to_string(restored.active) + " preset="
+                                     + std::to_string(restored.presetIndex) + " chain="
+                                     + std::to_string(restored.chainLength) + " tree="
+                                     + std::to_string(getParameterStateValue(apvts.state, getStepActiveID(5, 12)))
+                                     + " raw=" + std::to_string(activeParameter == nullptr ? -1.0f : activeParameter->load()));
+
+        if (activeParameter == nullptr || activeParameter->load() <= 0.5f)
+            throw std::runtime_error("legacy sequencer pattern was not migrated into APVTS");
+    }});
+
+    tests.push_back({"host automation synchronizes sequencer metadata without losing preset data", []
+    {
+        PluginProcessor processor;
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 17;
+        step.chainLength = 2;
+        processor.getSequencerState().setStepData(2, 6, step);
+        setParameter(processor, getStepActiveID(2, 6), 0.0f);
+
+        processor.synchronizeSequencerActiveStateFromParameters();
+
+        const auto synchronized = processor.getSequencerState().getStepData(2, 6);
+        if (synchronized.active) throw std::runtime_error("sequencer metadata ignored automated step-off state");
+        if (synchronized.presetIndex != 17) throw std::runtime_error("active-state sync discarded preset metadata");
+        if (synchronized.chainLength != 2) throw std::runtime_error("active-state sync discarded chain metadata");
+    }});
+
+    tests.push_back({"step automation retriggers slice when enabled inside the current step", []
+    {
+        constexpr double sampleRate = 64.0;
+        constexpr int blockSize = 4;
+        PluginProcessor processor;
+        processor.prepareToPlay(sampleRate, blockSize);
+        setParameter(processor, ParameterIDs::clockSource, 1.0f);
+        setParameter(processor, ParameterIDs::tempo, 60.0f);
+        setParameter(processor, ParameterIDs::stepResolution, 0.0f);
+        setParameter(processor, ParameterIDs::dryWet, 100.0f);
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 5;
+        processor.getSequencerState().setStepData(0, 1, step);
+        setParameter(processor, getStepActiveID(0, 1), 0.0f);
+
+        juce::MidiBuffer midi;
+        for (int block = 0; block < 4; ++block)
+        {
+            juce::AudioBuffer<float> history(2, blockSize);
+            fillBuffer(history, 1.0f);
+            processor.processBlock(history, midi);
+        }
+
+        juce::AudioBuffer<float> disabledBlock(2, blockSize);
+        disabledBlock.clear();
+        processor.processBlock(disabledBlock, midi);
+
+        setParameter(processor, getStepActiveID(0, 1), 1.0f);
+        juce::AudioBuffer<float> enabledBlock(2, blockSize);
+        enabledBlock.clear();
+        processor.processBlock(enabledBlock, midi);
+
+        float outputEnergy = 0.0f;
+        for (int sample = 0; sample < blockSize; ++sample)
+            outputEnergy += std::abs(enabledBlock.getSample(0, sample));
+
+        if (outputEnergy <= 0.01f)
+            throw std::runtime_error("slice did not retrigger after host automation enabled the current step");
+    }});
+
     tests.push_back({"workspace controls stay visible and contained at supported logical sizes", []
     {
         WorkspacePanel panel;
@@ -127,6 +397,16 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
             throw std::runtime_error("chain badge is not aligned with the painted upper-left affordance");
     }});
 
+    tests.push_back({"step cell follows its host-controlled toggle state", []
+    {
+        StepCell cell(0, 0);
+        cell.setActive(true);
+        cell.setToggleState(false, juce::dontSendNotification);
+
+        if (cell.isActive())
+            throw std::runtime_error("step cell remained active after its APVTS toggle was disabled");
+    }});
+
     tests.push_back({"host-state roundtrip preserves parameters and sequencer state", []
     {
         PluginProcessor processor;
@@ -144,6 +424,7 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         step.presetIndex = 3;
         step.chainLength = 2;
         processor.getSequencerState().setStepData(0, 0, step);
+        setParameter(processor, getStepActiveID(0, 0), 1.0f);
 
         auto slot = processor.getSequencerState().getUserSlot(0, 0);
         slot.volume = 0.75f;
@@ -236,6 +517,26 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         if (!restoredStep.active) throw std::runtime_error("step active changed after invalid host state");
         if (restoredStep.presetIndex != 8) throw std::runtime_error("step preset changed after invalid host state");
         if (restoredStep.chainLength != 3) throw std::runtime_error("step chain changed after invalid host state");
+    }});
+
+    tests.push_back({"wrong-root host state cannot replace sequencer data", []
+    {
+        PluginProcessor processor;
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 12;
+        step.chainLength = 4;
+        processor.getSequencerState().setStepData(4, 9, step);
+
+        juce::ValueTree wrongRoot("NotZikadaratorState");
+        wrongRoot.addChild(juce::ValueTree("SequencerState"), -1, nullptr);
+        processor.applyFullState(wrongRoot);
+
+        const auto preservedStep = processor.getSequencerState().getStepData(4, 9);
+        if (!preservedStep.active) throw std::runtime_error("wrong-root state cleared sequencer active flag");
+        if (preservedStep.presetIndex != 12) throw std::runtime_error("wrong-root state replaced sequencer preset");
+        if (preservedStep.chainLength != 4) throw std::runtime_error("wrong-root state replaced sequencer chain");
     }});
 
     tests.push_back({"malformed binary host state is ignored without corrupting current state", []

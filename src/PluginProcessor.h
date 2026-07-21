@@ -69,6 +69,7 @@ public:
 
     juce::ValueTree exportFullState();
     void applyFullState(const juce::ValueTree& stateTree);
+    bool synchronizeSequencerActiveStateFromParameters();
 
     bool isPlaying() const { return isPlayingFlag; }
     double getCurrentBPM() const { return currentBPM; }
@@ -99,6 +100,7 @@ private:
     PluginState state;
     PresetManager presetManager;
     SequencerState sequencerState;
+    std::array<std::array<std::atomic<float>*, SequencerState::NumSteps>, SequencerState::NumLanes> stepActiveParameters{};
     SequencerEngine sequencerEngine;
     SliceEngine sliceEngine;
     LoopEngine loopEngine;

@@ -722,6 +722,12 @@ PluginProcessor::PluginProcessor()
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       state(*this)
 {
+    auto& apvts = state.getValueTreeState();
+    for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+        for (int step = 0; step < SequencerState::NumSteps; ++step)
+            stepActiveParameters[static_cast<size_t>(lane)][static_cast<size_t>(step)] =
+                apvts.getRawParameterValue(getStepActiveID(lane, step));
+
     debugProcessorLog("constructed processor=" + juce::String::toHexString(static_cast<juce::int64>(reinterpret_cast<std::uintptr_t>(this))));
 }
 
@@ -865,6 +871,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         sequencerEngine.setPlaying(true);
     }
 
+    sliceEngine.setTempo(bpm);
+
     StepScheduler::Segment segments[64]{};
     const int segmentCount = stepScheduler.makeHostSegments({sampleRate,
                                                              bpm,
@@ -891,7 +899,13 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         return;
     }
 
-    const auto sequencerSnapshot = sequencerState.getSnapshot();
+    auto sequencerSnapshot = sequencerState.getSnapshot();
+    for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+        for (int step = 0; step < SequencerState::NumSteps; ++step)
+            if (const auto* activeParameter = stepActiveParameters[static_cast<size_t>(lane)][static_cast<size_t>(step)])
+                sequencerSnapshot.grid[static_cast<size_t>(lane)][static_cast<size_t>(step)].active =
+                    activeParameter->load() > 0.5f;
+
     float laneMix[6] = {};
     bool laneMuted[6] = {};
     bool laneSoloed[6] = {};
@@ -1009,39 +1023,39 @@ void PluginProcessor::processSegment(float* leftChannel,
     const double beatSeconds = getBeatSeconds(bpm);
     const double stepDurationSeconds = beatSeconds * blockPpqPerStep;
 
-    if (effSliceStep != lastEffectiveSteps[kSliceLane])
+    if (!sliceStep.active || sliceStep.presetIndex <= 0)
+    {
+        lastEffectiveSteps[kSliceLane] = -1;
+    }
+    else if (effSliceStep != lastEffectiveSteps[kSliceLane])
     {
         lastEffectiveSteps[kSliceLane] = effSliceStep;
-        if (sliceStep.active && sliceStep.presetIndex > 0)
-        {
-            const auto sliceConfig = getSliceConfigForPreset(sliceStep.presetIndex, effSliceStep);
-            sliceEngine.setPlaybackMode(sliceConfig.mode, sliceConfig.repeats);
-            sliceEngine.triggerSlice(sliceConfig.sliceIndex);
-        }
+        const auto sliceConfig = getSliceConfigForPreset(sliceStep.presetIndex, effSliceStep);
+        sliceEngine.setPlaybackMode(sliceConfig.mode, sliceConfig.repeats);
+        sliceEngine.triggerSlice(sliceConfig.sliceIndex);
     }
 
-    if (effLoopStep != lastEffectiveSteps[kLoopLane])
+    if (!loopStep.active || loopStep.presetIndex <= 0)
+    {
+        lastEffectiveSteps[kLoopLane] = -1;
+        loopEngine.setEnabled(false);
+    }
+    else if (effLoopStep != lastEffectiveSteps[kLoopLane])
     {
         lastEffectiveSteps[kLoopLane] = effLoopStep;
-        if (loopStep.active && loopStep.presetIndex > 0)
-        {
-            configureLoopEngineForPreset(loopEngine, loopStep.presetIndex, loopSlot, beatSeconds);
-            loopEngine.trigger();
-        }
-        else
-        {
-            loopEngine.setEnabled(false);
-        }
+        configureLoopEngineForPreset(loopEngine, loopStep.presetIndex, loopSlot, beatSeconds);
+        loopEngine.trigger();
     }
 
-    if (effFilterStep != lastEffectiveSteps[kFilterLane])
+    if (!filterStep.active || filterStep.presetIndex <= 0)
+    {
+        lastEffectiveSteps[kFilterLane] = -1;
+    }
+    else if (effFilterStep != lastEffectiveSteps[kFilterLane])
     {
         lastEffectiveSteps[kFilterLane] = effFilterStep;
-        if (filterStep.active && filterStep.presetIndex > 0)
-        {
-            configureFilterForStep(filterEngine, filterStep.presetIndex, filterSlot);
-            modulationEngine.setStepData(filterSlot.modulation, bpm, stepDurationSeconds);
-        }
+        configureFilterForStep(filterEngine, filterStep.presetIndex, filterSlot);
+        modulationEngine.setStepData(filterSlot.modulation, bpm, stepDurationSeconds);
     }
 
     sliceEngine.writeToBuffer(leftChannel, rightChannel, numSamples);
@@ -1258,26 +1272,78 @@ juce::ValueTree PluginProcessor::exportFullState()
     auto existingSequencer = stateTree.getChildWithName("SequencerState");
     if (existingSequencer.isValid())
         stateTree.removeChild(existingSequencer, nullptr);
-    stateTree.addChild(sequencerState.toValueTree(), -1, nullptr);
+
+    auto sequencerSnapshot = sequencerState.getSnapshot();
+    for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+        for (int step = 0; step < SequencerState::NumSteps; ++step)
+            if (const auto* activeParameter = stepActiveParameters[static_cast<size_t>(lane)][static_cast<size_t>(step)])
+                sequencerSnapshot.grid[static_cast<size_t>(lane)][static_cast<size_t>(step)].active =
+                    activeParameter->load() > 0.5f;
+
+    stateTree.setProperty(stateSchemaVersionProperty, currentStateSchemaVersion, nullptr);
+    stateTree.addChild(sequencerSnapshot.toValueTree(), -1, nullptr);
     return stateTree;
+}
+
+bool PluginProcessor::synchronizeSequencerActiveStateFromParameters()
+{
+    bool changed = false;
+
+    for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+    {
+        for (int step = 0; step < SequencerState::NumSteps; ++step)
+        {
+            const auto* activeParameter = stepActiveParameters[static_cast<size_t>(lane)][static_cast<size_t>(step)];
+            if (activeParameter == nullptr)
+                continue;
+
+            const bool parameterActive = activeParameter->load() > 0.5f;
+            auto stepData = sequencerState.getStepData(lane, step);
+            if (stepData.active == parameterActive)
+                continue;
+
+            stepData.active = parameterActive;
+            sequencerState.setStepData(lane, step, stepData);
+            changed = true;
+        }
+    }
+
+    return changed;
 }
 
 void PluginProcessor::applyFullState(const juce::ValueTree& stateTree)
 {
-    if (!stateTree.isValid())
+    if (!stateTree.isValid() || !stateTree.hasType(state.getValueTreeState().state.getType()))
         return;
 
     auto fullTree = stateTree.createCopy();
     auto seqChild = fullTree.getChildWithName("SequencerState");
 
+    const int schemaVersion = static_cast<int>(fullTree.getProperty(stateSchemaVersionProperty, 0));
+    if (seqChild.isValid() && schemaVersion < currentStateSchemaVersion)
+    {
+        SequencerState legacySequencer;
+        legacySequencer.fromValueTree(seqChild);
+        const auto legacySnapshot = legacySequencer.getSnapshot();
+
+        for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+            for (int step = 0; step < SequencerState::NumSteps; ++step)
+                setParameterStateValue(fullTree,
+                                       getStepActiveID(lane, step),
+                                       legacySnapshot.getStepData(lane, step).active ? 1.0f : 0.0f);
+    }
+
+    fullTree.setProperty(stateSchemaVersionProperty, currentStateSchemaVersion, nullptr);
+
     if (seqChild.isValid())
         fullTree.removeChild(seqChild, nullptr);
 
-    if (fullTree.hasType(state.getValueTreeState().state.getType()))
-        state.getValueTreeState().replaceState(fullTree);
+    state.getValueTreeState().replaceState(fullTree);
 
     if (seqChild.isValid())
         sequencerState.fromValueTree(seqChild);
+
+    synchronizeSequencerActiveStateFromParameters();
 
     lastEffectiveSteps.fill(-1);
 }

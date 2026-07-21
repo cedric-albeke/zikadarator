@@ -50,11 +50,18 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - The standalone JUCE audio/MIDI selector is constrained to a scrolling viewport, so its self-sized child controls cannot paint across product settings at compact editor heights.
 - Step chain-badge painting and hit testing now use the same bounds, and the duplicate painted `STEP RES` footer label is removed.
 - JUCE geometry regressions cover visible Presets/Settings controls at 1184x718 and 900x600; standalone desktop checks also cover the default and compact window layouts.
+- SliceEngine now follows the resolved host/free-clock BPM every block; processor coverage proves 60 BPM slices render materially longer than 120 BPM slices.
+- APVTS step-active parameters are now the canonical realtime gate through cached atomic pointers, while sequencer metadata, export state, StepCell visuals, chains, and header state are synchronized on the message thread.
+- Factory presets now use JUCE APVTS `PARAM` child trees, keep their step gates consistent with SequencerState, and load through a versioned migration path that preserves legacy patterns.
+- Full-state export serializes an immutable sequencer snapshot and overlays realtime APVTS gates without writing to the live UI-owned state.
+- Wrong-root host state is rejected before a nested SequencerState can clear the current pattern.
+- Automated step Off-to-On transitions inside the current step have direct SLICE retrigger coverage; LOOP/FILTER use the same latch-reset policy and remain to be covered by dedicated behavior tests.
+- EnvFollowerEngine now applies its bipolar flag correctly and has direct engine regression coverage.
 
 ## Open V1 Gates
 
 1. Fix the remaining UI correctness issues in lane-mix automation sync, drag-to-paint behavior, keyboard/accessibility coverage, and stale waveform/CRT animation behavior.
-2. Fix confirmed DSP/state defects: SLICE tempo synchronization, APVTS/sequencer divergence, malformed structured-state validation, possible audio-thread scratch growth, and same-step seek/loop retriggering.
+2. Fix the remaining DSP/state defects: possible audio-thread scratch growth, absolute host loop/seek retrigger identity, loop-history limits, and any DSP labels that still overstate implemented behavior.
 3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.
 5. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.

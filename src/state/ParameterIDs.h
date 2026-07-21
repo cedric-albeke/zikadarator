@@ -4,6 +4,12 @@
 
 namespace zikada {
 
+inline const juce::Identifier stateSchemaVersionProperty{"zikadaStateSchemaVersion"};
+inline constexpr int currentStateSchemaVersion = 2;
+inline const juce::Identifier parameterStateTreeType{"PARAM"};
+inline const juce::Identifier parameterStateIdProperty{"id"};
+inline const juce::Identifier parameterStateValueProperty{"value"};
+
 class ParameterIDs
 {
 public:
@@ -34,6 +40,41 @@ inline juce::String getLaneMuteID(int lane)
 inline juce::String getLaneSoloID(int lane)
 {
     return "laneSolo_L" + juce::String(lane);
+}
+
+inline juce::ValueTree findParameterState(const juce::ValueTree& root, const juce::String& parameterID)
+{
+    for (const auto& child : root)
+        if (child.hasType(parameterStateTreeType)
+            && child.getProperty(parameterStateIdProperty).toString() == parameterID)
+            return child;
+
+    return {};
+}
+
+inline void setParameterStateValue(juce::ValueTree& root,
+                                   const juce::String& parameterID,
+                                   float value)
+{
+    auto parameterState = findParameterState(root, parameterID);
+    if (!parameterState.isValid())
+    {
+        parameterState = juce::ValueTree(parameterStateTreeType);
+        parameterState.setProperty(parameterStateIdProperty, parameterID, nullptr);
+        root.addChild(parameterState, -1, nullptr);
+    }
+
+    parameterState.setProperty(parameterStateValueProperty, value, nullptr);
+}
+
+inline float getParameterStateValue(const juce::ValueTree& root,
+                                    const juce::String& parameterID,
+                                    float fallback = 0.0f)
+{
+    const auto parameterState = findParameterState(root, parameterID);
+    return parameterState.isValid()
+        ? static_cast<float>(parameterState.getProperty(parameterStateValueProperty, fallback))
+        : fallback;
 }
 
 inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()

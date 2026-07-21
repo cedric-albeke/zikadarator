@@ -9,7 +9,7 @@ public:
 
     void prepare(double sr);
 
-    void setParameters(float attackMs, float releaseMs, bool isBipolar);
+    void setParameters(float attackMs, float releaseMs, bool bipolar);
 
     float processSample(float left, float right);
 

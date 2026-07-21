@@ -9,6 +9,7 @@ namespace zikada::tests {
 void addEnvelopeShapeTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 void addRealtimeRingBufferTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 void addSliceEngineTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
+void addEnvFollowerEngineTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 void addStepSchedulerTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
 void addSequencerStateTests(std::vector<std::pair<std::string, std::function<void()>>>& tests);
@@ -20,6 +21,7 @@ int main()
     zikada::tests::addEnvelopeShapeTests(tests);
     zikada::tests::addRealtimeRingBufferTests(tests);
     zikada::tests::addSliceEngineTests(tests);
+    zikada::tests::addEnvFollowerEngineTests(tests);
     zikada::tests::addStepSchedulerTests(tests);
     zikada::tests::addLaneTransitionTests(tests);
     zikada::tests::addSequencerStateTests(tests);

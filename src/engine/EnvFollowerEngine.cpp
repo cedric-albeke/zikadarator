@@ -12,11 +12,11 @@ void EnvFollowerEngine::prepare(double sr)
     envelope   = 0.0f;
 }
 
-void EnvFollowerEngine::setParameters(float attackMs, float releaseMs, bool isBipolar)
+void EnvFollowerEngine::setParameters(float attackMs, float releaseMs, bool bipolar)
 {
     attackCoeff  = coeffFromMs (attackMs);
     releaseCoeff = coeffFromMs (releaseMs);
-    isBipolar    = isBipolar;
+    isBipolar    = bipolar;
 }
 
 float EnvFollowerEngine::processSample(float left, float right)
