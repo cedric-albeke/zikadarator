@@ -206,6 +206,7 @@ target_compile_definitions(ZikadaProcessorTests
     PRIVATE
         JucePlugin_Name="ZIKADARATOR"
         JucePlugin_Build_Standalone=0
+        JUCE_MODAL_LOOPS_PERMITTED=1
 )
 
 target_link_libraries(ZikadaProcessorTests

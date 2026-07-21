@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ZikadaLookAndFeel.h"
+#include <juce_audio_processors/juce_audio_processors.h>
 
 namespace zikada {
 
@@ -41,6 +42,9 @@ public:
     void setScaleMode(KnobScaleMode newMode);
     
     std::function<void()> onValueChange;
+    std::function<void()> onDragStart;
+    std::function<void()> onDragEnd;
+    std::function<void(double)> onDefaultValueRequested;
 
 private:
     double value{0.5};
@@ -58,9 +62,32 @@ private:
     juce::String formatValue() const;
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseUp(const juce::MouseEvent& event) override;
     void mouseDoubleClick(const juce::MouseEvent& event) override;
     
     double normalizedOnMouseDown{0.0};
+};
+
+class KnobParameterAttachment
+{
+public:
+    KnobParameterAttachment(juce::RangedAudioParameter& parameter,
+                            Knob& knob,
+                            juce::UndoManager* undoManager = nullptr);
+    ~KnobParameterAttachment();
+
+    void sendInitialUpdate();
+
+private:
+    void setValue(float newValue);
+    void beginGesture();
+    void endGesture();
+    void resetToDefault(double defaultValue);
+
+    Knob& knob;
+    juce::ParameterAttachment attachment;
+    bool ignoreCallbacks{false};
+    bool gestureActive{false};
 };
 
 }

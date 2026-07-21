@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "state/ParameterIDs.h"
+#include "ui/components/Knob.h"
+#include "ui/components/StepGrid.h"
 #include "ui/components/StepCell.h"
 #include "ui/panels/WorkspacePanel.h"
 
@@ -8,6 +10,7 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -71,6 +74,64 @@ float sumFiniteAbsoluteSamples(const juce::AudioBuffer<float>& buffer,
     }
     return energy;
 }
+
+zikada::Knob* findLaneMixKnob(zikada::StepGrid& grid, int lane)
+{
+    int knobIndex = 0;
+    for (int childIndex = 0; childIndex < grid.getNumChildComponents(); ++childIndex)
+    {
+        if (auto* knob = dynamic_cast<zikada::Knob*>(grid.getChildComponent(childIndex)))
+        {
+            if (knobIndex == lane)
+                return knob;
+            ++knobIndex;
+        }
+    }
+
+    return nullptr;
+}
+
+juce::MouseEvent makeMouseEvent(juce::Component& component,
+                                juce::Point<float> position,
+                                juce::Point<float> mouseDownPosition,
+                                juce::ModifierKeys modifiers,
+                                bool wasDragged,
+                                int numberOfClicks = 1)
+{
+    const auto eventTime = juce::Time::getCurrentTime();
+    return {juce::Desktop::getInstance().getMainMouseSource(),
+            position,
+            modifiers,
+            1.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            &component,
+            &component,
+            eventTime,
+            mouseDownPosition,
+            eventTime,
+            numberOfClicks,
+            wasDragged};
+}
+
+class ParameterGestureProbe final : public juce::AudioProcessorParameter::Listener
+{
+public:
+    void parameterValueChanged(int, float) override {}
+
+    void parameterGestureChanged(int, bool gestureIsStarting) override
+    {
+        if (gestureIsStarting)
+            ++beginCount;
+        else
+            ++endCount;
+    }
+
+    int beginCount{0};
+    int endCount{0};
+};
 
 class TestPlayHead final : public juce::AudioPlayHead
 {
@@ -610,6 +671,160 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
 
         if (cell.isActive())
             throw std::runtime_error("step cell remained active after its APVTS toggle was disabled");
+    }});
+
+    tests.push_back({"lane mix knob follows automation and preset restore", []
+    {
+        PluginProcessor processor;
+        auto& apvts = processor.getPluginState().getValueTreeState();
+        StepGrid grid(apvts, processor.getSequencerState());
+        auto* knob = findLaneMixKnob(grid, 0);
+        if (knob == nullptr)
+            throw std::runtime_error("lane mix knob was not found in the sequencer grid");
+
+        setParameter(processor, getLaneMixID(0), 37.0f);
+        requireNear(static_cast<float>(knob->getValue()), 37.0f, 0.001f,
+                    "lane mix knob ignored external parameter automation");
+
+        auto* parameter = apvts.getParameter(getLaneMixID(0));
+        if (parameter == nullptr)
+            throw std::runtime_error("lane mix automation test could not resolve its parameter");
+        std::thread automationThread([parameter]
+        {
+            parameter->setValueNotifyingHost(parameter->convertTo0to1(48.0f));
+        });
+        automationThread.join();
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(50);
+        requireNear(static_cast<float>(knob->getValue()), 48.0f, 0.001f,
+                    "lane mix knob ignored asynchronous host automation");
+
+        auto restoredState = apvts.copyState();
+        setParameterStateValue(restoredState, getLaneMixID(0), 62.0f);
+        apvts.replaceState(restoredState);
+        requireNear(static_cast<float>(knob->getValue()), 62.0f, 0.001f,
+                    "lane mix knob ignored preset state restore");
+    }});
+
+    tests.push_back({"lane mix knob sends one bounded host gesture per drag", []
+    {
+        PluginProcessor processor;
+        setParameter(processor, getLaneMixID(0), 40.0f);
+
+        auto& apvts = processor.getPluginState().getValueTreeState();
+        StepGrid grid(apvts, processor.getSequencerState());
+        auto* knob = findLaneMixKnob(grid, 0);
+        auto* parameter = apvts.getParameter(getLaneMixID(0));
+        if (knob == nullptr || parameter == nullptr)
+            throw std::runtime_error("lane mix gesture test could not resolve its control or parameter");
+
+        ParameterGestureProbe probe;
+        parameter->addListener(&probe);
+
+        juce::Component& control = *knob;
+        const auto mouseDownPosition = juce::Point<float>(24.0f, 32.0f);
+        control.mouseDown(makeMouseEvent(control,
+                                         mouseDownPosition,
+                                         mouseDownPosition,
+                                         juce::ModifierKeys::leftButtonModifier,
+                                         false));
+        control.mouseDrag(makeMouseEvent(control,
+                                         {24.0f, 12.0f},
+                                         mouseDownPosition,
+                                         juce::ModifierKeys::leftButtonModifier,
+                                         true));
+        control.mouseUp(makeMouseEvent(control,
+                                       {24.0f, 12.0f},
+                                       mouseDownPosition,
+                                       juce::ModifierKeys{},
+                                       true));
+
+        parameter->removeListener(&probe);
+
+        if (probe.beginCount != 1 || probe.endCount != 1)
+            throw std::runtime_error("lane mix drag emitted unbalanced host gestures: begin="
+                                     + std::to_string(probe.beginCount) + " end="
+                                     + std::to_string(probe.endCount));
+
+        requireNear(parameter->convertFrom0to1(parameter->getValue()), 50.0f, 0.001f,
+                    "lane mix drag did not update the host parameter");
+    }});
+
+    tests.push_back({"lane mix double-click reset uses a complete host gesture", []
+    {
+        PluginProcessor processor;
+        setParameter(processor, getLaneMixID(0), 40.0f);
+
+        auto& apvts = processor.getPluginState().getValueTreeState();
+        StepGrid grid(apvts, processor.getSequencerState());
+        auto* knob = findLaneMixKnob(grid, 0);
+        auto* parameter = apvts.getParameter(getLaneMixID(0));
+        if (knob == nullptr || parameter == nullptr)
+            throw std::runtime_error("lane mix reset test could not resolve its control or parameter");
+
+        ParameterGestureProbe probe;
+        parameter->addListener(&probe);
+
+        juce::Component& control = *knob;
+        const auto position = juce::Point<float>(24.0f, 24.0f);
+        control.mouseDown(makeMouseEvent(control,
+                                         position,
+                                         position,
+                                         juce::ModifierKeys::leftButtonModifier,
+                                         false));
+        control.mouseUp(makeMouseEvent(control,
+                                       position,
+                                       position,
+                                       juce::ModifierKeys{},
+                                       false));
+
+        const int beginsBeforeReset = probe.beginCount;
+        const int endsBeforeReset = probe.endCount;
+        if (beginsBeforeReset != 1 || endsBeforeReset != 1)
+            throw std::runtime_error("lane mix click-without-drag emitted unbalanced host gestures");
+        control.mouseDoubleClick(makeMouseEvent(control,
+                                                position,
+                                                position,
+                                                juce::ModifierKeys::leftButtonModifier,
+                                                false,
+                                                2));
+
+        parameter->removeListener(&probe);
+
+        if (probe.beginCount != beginsBeforeReset + 1 || probe.endCount != endsBeforeReset + 1)
+            throw std::runtime_error("lane mix double-click reset was not wrapped in one complete host gesture");
+        requireNear(parameter->convertFrom0to1(parameter->getValue()), 100.0f, 0.001f,
+                    "lane mix double-click did not restore its default value");
+    }});
+
+    tests.push_back({"lane mix attachment closes an active gesture during destruction", []
+    {
+        PluginProcessor processor;
+        auto& apvts = processor.getPluginState().getValueTreeState();
+        auto* parameter = apvts.getParameter(getLaneMixID(0));
+        if (parameter == nullptr)
+            throw std::runtime_error("lane mix destruction test could not resolve its parameter");
+
+        Knob knob;
+        knob.setRange(0.0, 100.0);
+        auto attachment = std::make_unique<KnobParameterAttachment>(*parameter, knob);
+        ParameterGestureProbe probe;
+        parameter->addListener(&probe);
+
+        juce::Component& control = knob;
+        const auto position = juce::Point<float>(24.0f, 24.0f);
+        control.mouseDown(makeMouseEvent(control,
+                                         position,
+                                         position,
+                                         juce::ModifierKeys::leftButtonModifier,
+                                         false));
+        attachment.reset();
+
+        parameter->removeListener(&probe);
+
+        if (probe.beginCount != 1 || probe.endCount != 1)
+            throw std::runtime_error("destroyed lane mix attachment left an unbalanced host gesture: begin="
+                                     + std::to_string(probe.beginCount) + " end="
+                                     + std::to_string(probe.endCount));
     }});
 
     tests.push_back({"host-state roundtrip preserves parameters and sequencer state", []

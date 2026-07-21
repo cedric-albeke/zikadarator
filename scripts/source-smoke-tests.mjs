@@ -361,6 +361,17 @@ assertContains(editor, "onStepPresetEditStarting", "editor must snapshot before 
 assertContains(editor, "onStepPresetChanged", "editor must listen for wheel-driven preset changes");
 assertContains(knobHeader, "KnobDisplayMode", "knobs must expose unit-aware display modes");
 assertContains(knobHeader, "KnobScaleMode", "knobs must expose linear/log scale modes");
+assertContains(knobHeader, "KnobParameterAttachment", "custom knobs must expose a bidirectional JUCE parameter attachment");
+assertContains(knob, "attachment.beginGesture()", "custom knob attachment must begin host gestures on drag start");
+assertContains(knob, "attachment.endGesture()", "custom knob attachment must end host gestures on mouse release");
+assertContains(knobHeader, "onDefaultValueRequested", "custom knobs must route attached default resets through a complete host gesture");
+assertContains(knob, "attachment.setValueAsCompleteGesture", "custom knob default reset must use a complete host gesture");
+assertContains(knob, "if (!gestureActive)", "custom knob attachment must close gestures idempotently during mouse-up or destruction");
+assertContains(stepGridHeader, "mixAttachments", "lane mix controls must retain their parameter attachments");
+assertContains(processorTests, "lane mix knob follows automation and preset restore", "processor tests must cover external lane-mix UI synchronization");
+assertContains(processorTests, "lane mix knob sends one bounded host gesture per drag", "processor tests must cover lane-mix host gesture boundaries");
+assertContains(processorTests, "lane mix double-click reset uses a complete host gesture", "processor tests must cover attached knob default-reset gestures");
+assertContains(processorTests, "lane mix attachment closes an active gesture during destruction", "processor tests must cover editor destruction during a lane-mix drag");
 assertContains(knob, "outerRing", "knobs must have an outer ring stroke");
 assertContains(knob, "backgroundArc", "knobs must have a background arc track");
 assertContains(knob, "valueArc", "knobs must have a colored value arc indicator");

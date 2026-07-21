@@ -60,6 +60,7 @@ private:
     std::array<std::array<std::unique_ptr<StepCell>, numSteps>, numLanes> cells;
     std::array<std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numSteps>, numLanes> attachments;
     std::array<std::unique_ptr<Knob>, numLanes> mixKnobs;
+    std::array<std::unique_ptr<KnobParameterAttachment>, numLanes> mixAttachments;
     std::array<std::unique_ptr<juce::TextButton>, numLanes> muteButtons;
     std::array<std::unique_ptr<juce::TextButton>, numLanes> soloButtons;
     std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numLanes> muteAttachments;

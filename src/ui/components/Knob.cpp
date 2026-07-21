@@ -260,6 +260,8 @@ void Knob::mouseDown(const juce::MouseEvent& event)
 {
     juce::ignoreUnused(event);
     normalizedOnMouseDown = getNormalizedValue();
+    if (onDragStart)
+        onDragStart();
 }
 
 void Knob::mouseDrag(const juce::MouseEvent& event)
@@ -269,10 +271,81 @@ void Knob::mouseDrag(const juce::MouseEvent& event)
     setValue(normalizedToValue(normalizedOnMouseDown + normalizedDelta));
 }
 
+void Knob::mouseUp(const juce::MouseEvent& event)
+{
+    juce::ignoreUnused(event);
+    if (onDragEnd)
+        onDragEnd();
+}
+
 void Knob::mouseDoubleClick(const juce::MouseEvent& event)
 {
     juce::ignoreUnused(event);
-    setValue(defaultValue);
+    if (onDefaultValueRequested)
+        onDefaultValueRequested(defaultValue);
+    else
+        setValue(defaultValue);
+}
+
+KnobParameterAttachment::KnobParameterAttachment(juce::RangedAudioParameter& parameter,
+                                                 Knob& control,
+                                                 juce::UndoManager* undoManager)
+    : knob(control),
+      attachment(parameter, [this](float value) { setValue(value); }, undoManager)
+{
+    knob.onDragStart = [this] { beginGesture(); };
+    knob.onValueChange = [this]
+    {
+        if (!ignoreCallbacks)
+            attachment.setValueAsPartOfGesture(static_cast<float>(knob.getValue()));
+    };
+    knob.onDragEnd = [this] { endGesture(); };
+    knob.onDefaultValueRequested = [this](double value) { resetToDefault(value); };
+    sendInitialUpdate();
+}
+
+KnobParameterAttachment::~KnobParameterAttachment()
+{
+    endGesture();
+    knob.onDragStart = nullptr;
+    knob.onValueChange = nullptr;
+    knob.onDragEnd = nullptr;
+    knob.onDefaultValueRequested = nullptr;
+}
+
+void KnobParameterAttachment::sendInitialUpdate()
+{
+    attachment.sendInitialUpdate();
+}
+
+void KnobParameterAttachment::setValue(float newValue)
+{
+    const juce::ScopedValueSetter<bool> scopedIgnore(ignoreCallbacks, true);
+    knob.setValue(newValue);
+}
+
+void KnobParameterAttachment::beginGesture()
+{
+    if (gestureActive)
+        return;
+
+    gestureActive = true;
+    attachment.beginGesture();
+}
+
+void KnobParameterAttachment::endGesture()
+{
+    if (!gestureActive)
+        return;
+
+    gestureActive = false;
+    attachment.endGesture();
+}
+
+void KnobParameterAttachment::resetToDefault(double defaultValue)
+{
+    endGesture();
+    attachment.setValueAsCompleteGesture(static_cast<float>(defaultValue));
 }
 
 }

@@ -57,10 +57,11 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Wrong-root host state is rejected before a nested SequencerState can clear the current pattern.
 - Automated step Off-to-On transitions inside the current step have direct behavioral coverage for SLICE retriggering, LOOP history playback, and FILTER reconfiguration.
 - EnvFollowerEngine now applies its bipolar flag correctly and has direct engine regression coverage.
+- Lane mix knobs now use a bidirectional JUCE parameter attachment, follow synchronous/asynchronous automation and preset restore, and keep host gestures balanced across drag, click, double-click reset, and destruction during an active drag.
 
 ## Open V1 Gates
 
-1. Fix the remaining UI correctness issues in lane-mix automation sync, drag-to-paint behavior, keyboard/accessibility coverage, and stale waveform/CRT animation behavior.
+1. Fix the remaining UI correctness issues in drag-to-paint behavior, keyboard/accessibility coverage, and stale waveform/CRT animation behavior.
 2. Fix the remaining DSP/state defects: possible audio-thread scratch growth, absolute host loop/seek retrigger identity, loop-history limits, and any DSP labels that still overstate implemented behavior.
 3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.

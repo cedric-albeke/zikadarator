@@ -150,18 +150,11 @@ void StepGrid::setupGrid()
 
         auto mixParamID = getLaneMixID(lane);
         auto* mixParam = apvts.getParameter(mixParamID);
-        if (mixParam != nullptr)
-            knob->setValue(mixParam->getValue() * 100.0);
-
-        knob->onValueChange = [this, lane, mixParamID]()
-        {
-            auto* param = apvts.getParameter(mixParamID);
-            if (param != nullptr)
-                param->setValueNotifyingHost(static_cast<float>(mixKnobs[lane]->getValue()) / 100.0f);
-        };
 
         addAndMakeVisible(knob.get());
         mixKnobs[lane] = std::move(knob);
+        if (mixParam != nullptr)
+            mixAttachments[lane] = std::make_unique<KnobParameterAttachment>(*mixParam, *mixKnobs[lane]);
 
         auto muteBtn = std::make_unique<juce::TextButton>("M");
         muteBtn->setClickingTogglesState(true);
