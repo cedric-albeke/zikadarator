@@ -50,12 +50,12 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - The standalone JUCE audio/MIDI selector is constrained to a scrolling viewport, so its self-sized child controls cannot paint across product settings at compact editor heights.
 - Step chain-badge painting and hit testing now use the same bounds, and the duplicate painted `STEP RES` footer label is removed.
 - JUCE geometry regressions cover visible Presets/Settings controls at 1184x718 and 900x600; standalone desktop checks also cover the default and compact window layouts.
-- SliceEngine now follows the resolved host/free-clock BPM every block; processor coverage proves 60 BPM slices render materially longer than 120 BPM slices.
+- SliceEngine now follows the resolved host/free-clock BPM every block; separate free-clock and simulated-host-playhead regressions prove 60 BPM slices render materially longer than 120 BPM slices.
 - APVTS step-active parameters are now the canonical realtime gate through cached atomic pointers, while sequencer metadata, export state, StepCell visuals, chains, and header state are synchronized on the message thread.
 - Factory presets now use JUCE APVTS `PARAM` child trees, keep their step gates consistent with SequencerState, and load through a versioned migration path that preserves legacy patterns.
 - Full-state export serializes an immutable sequencer snapshot and overlays realtime APVTS gates without writing to the live UI-owned state.
 - Wrong-root host state is rejected before a nested SequencerState can clear the current pattern.
-- Automated step Off-to-On transitions inside the current step have direct SLICE retrigger coverage; LOOP/FILTER use the same latch-reset policy and remain to be covered by dedicated behavior tests.
+- Automated step Off-to-On transitions inside the current step have direct behavioral coverage for SLICE retriggering, LOOP history playback, and FILTER reconfiguration.
 - EnvFollowerEngine now applies its bipolar flag correctly and has direct engine regression coverage.
 
 ## Open V1 Gates

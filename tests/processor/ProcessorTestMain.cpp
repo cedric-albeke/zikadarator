@@ -57,6 +57,46 @@ void fillBuffer(juce::AudioBuffer<float>& buffer, float sampleValue)
             buffer.setSample(channel, i, sampleValue);
 }
 
+float sumFiniteAbsoluteSamples(const juce::AudioBuffer<float>& buffer,
+                               int channel,
+                               const char* context)
+{
+    float energy = 0.0f;
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+    {
+        const float value = buffer.getSample(channel, sample);
+        if (!std::isfinite(value))
+            throw std::runtime_error(std::string(context) + " produced a non-finite sample");
+        energy += std::abs(value);
+    }
+    return energy;
+}
+
+class TestPlayHead final : public juce::AudioPlayHead
+{
+public:
+    void setPosition(double newBpm, double newPpqPosition, bool playing)
+    {
+        bpm = newBpm;
+        ppqPosition = newPpqPosition;
+        isPlaying = playing;
+    }
+
+    juce::Optional<PositionInfo> getPosition() const override
+    {
+        PositionInfo position;
+        position.setBpm(bpm);
+        position.setPpqPosition(ppqPosition);
+        position.setIsPlaying(isPlaying);
+        return position;
+    }
+
+private:
+    double bpm{120.0};
+    double ppqPosition{0.0};
+    bool isPlaying{true};
+};
+
 int countRenderedSliceSamples(float tempo, bool automatedStepActive = true)
 {
     constexpr double sampleRate = 64.0;
@@ -92,6 +132,54 @@ int countRenderedSliceSamples(float tempo, bool automatedStepActive = true)
                     ++renderedSamples;
     }
 
+    return renderedSamples;
+}
+
+int countHostSyncedSliceSamples(float hostTempo)
+{
+    constexpr double sampleRate = 64.0;
+    constexpr int blockSize = 4;
+    constexpr int blocksToRender = 16;
+
+    TestPlayHead playHead;
+    zikada::PluginProcessor processor;
+    processor.setPlayHead(&playHead);
+    processor.prepareToPlay(sampleRate, blockSize);
+    setParameter(processor, zikada::ParameterIDs::clockSource, 0.0f);
+    setParameter(processor, zikada::ParameterIDs::tempo, 300.0f);
+    setParameter(processor, zikada::ParameterIDs::stepResolution, 0.0f);
+    setParameter(processor, zikada::ParameterIDs::dryWet, 100.0f);
+
+    zikada::StepData sliceStep;
+    sliceStep.active = true;
+    sliceStep.presetIndex = 5;
+    processor.getSequencerState().setStepData(0, 1, sliceStep);
+    setParameter(processor, zikada::getStepActiveID(0, 1), 1.0f);
+
+    juce::MidiBuffer midi;
+    int renderedSamples = 0;
+    const int samplesPerStep = static_cast<int>(std::round(sampleRate * 60.0 / hostTempo * 0.25));
+    const double ppqPerSample = (hostTempo / 60.0) / sampleRate;
+
+    for (int block = 0; block < blocksToRender; ++block)
+    {
+        playHead.setPosition(hostTempo,
+                             static_cast<double>(block * blockSize) * ppqPerSample,
+                             true);
+
+        juce::AudioBuffer<float> buffer(2, blockSize);
+        const bool feedingHistory = block * blockSize < samplesPerStep;
+        fillBuffer(buffer, feedingHistory ? 1.0f : 0.0f);
+        processor.processBlock(buffer, midi);
+
+        if (!feedingHistory)
+            for (int sample = 0; sample < blockSize; ++sample)
+                if (std::abs(buffer.getSample(0, sample)) > 0.01f)
+                    ++renderedSamples;
+    }
+
+    requireNear(static_cast<float>(processor.getCurrentBPM()), hostTempo, 0.001f,
+                "processor did not retain host BPM");
     return renderedSamples;
 }
 
@@ -147,6 +235,22 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
 
         if (samplesAt60Bpm <= samplesAt120Bpm + 4)
             throw std::runtime_error("60 BPM slice was not materially longer than 120 BPM after edge fades: "
+                                     + std::to_string(samplesAt60Bpm) + " vs "
+                                     + std::to_string(samplesAt120Bpm));
+    }});
+
+    tests.push_back({"slice duration follows resolved host tempo", []
+    {
+        const int samplesAt60Bpm = countHostSyncedSliceSamples(60.0f);
+        const int samplesAt120Bpm = countHostSyncedSliceSamples(120.0f);
+
+        if (samplesAt120Bpm < 4)
+            throw std::runtime_error("host-tempo test did not render the reference slice: "
+                                     + std::to_string(samplesAt60Bpm) + " vs "
+                                     + std::to_string(samplesAt120Bpm));
+
+        if (samplesAt60Bpm <= samplesAt120Bpm + 4)
+            throw std::runtime_error("host 60 BPM slice was not materially longer than host 120 BPM: "
                                      + std::to_string(samplesAt60Bpm) + " vs "
                                      + std::to_string(samplesAt120Bpm));
     }});
@@ -365,6 +469,107 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
 
         if (outputEnergy <= 0.01f)
             throw std::runtime_error("slice did not retrigger after host automation enabled the current step");
+    }});
+
+    tests.push_back({"step automation retriggers loop when enabled inside the current step", []
+    {
+        constexpr double sampleRate = 64.0;
+        constexpr int blockSize = 4;
+        PluginProcessor processor;
+        processor.prepareToPlay(sampleRate, blockSize);
+        setParameter(processor, ParameterIDs::clockSource, 1.0f);
+        setParameter(processor, ParameterIDs::tempo, 60.0f);
+        setParameter(processor, ParameterIDs::stepResolution, 0.0f);
+        setParameter(processor, ParameterIDs::dryWet, 100.0f);
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 5;
+        processor.getSequencerState().setStepData(1, 1, step);
+        setParameter(processor, getStepActiveID(1, 1), 0.0f);
+
+        juce::MidiBuffer midi;
+        for (int block = 0; block < 4; ++block)
+        {
+            juce::AudioBuffer<float> history(2, blockSize);
+            fillBuffer(history, 1.0f);
+            processor.processBlock(history, midi);
+        }
+
+        juce::AudioBuffer<float> disabledBlock(2, blockSize);
+        disabledBlock.clear();
+        processor.processBlock(disabledBlock, midi);
+
+        const float disabledEnergy = sumFiniteAbsoluteSamples(disabledBlock, 0, "disabled loop step");
+        if (disabledEnergy > 0.0001f)
+            throw std::runtime_error("loop rendered while its APVTS step gate was disabled: "
+                                     + std::to_string(disabledEnergy));
+
+        setParameter(processor, getStepActiveID(1, 1), 1.0f);
+        juce::AudioBuffer<float> enabledBlock(2, blockSize);
+        enabledBlock.clear();
+        processor.processBlock(enabledBlock, midi);
+
+        const float outputEnergy = sumFiniteAbsoluteSamples(enabledBlock, 0, "enabled loop step");
+
+        if (outputEnergy <= 0.01f)
+            throw std::runtime_error("loop did not retrigger after host automation enabled the current step");
+    }});
+
+    tests.push_back({"step automation configures filter when enabled inside the current step", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        PluginProcessor processor;
+        processor.prepareToPlay(sampleRate, blockSize);
+        setParameter(processor, ParameterIDs::clockSource, 1.0f);
+        setParameter(processor, ParameterIDs::tempo, 60.0f);
+        setParameter(processor, ParameterIDs::stepResolution, 0.0f);
+        setParameter(processor, ParameterIDs::dryWet, 100.0f);
+
+        StepData step;
+        step.active = true;
+        step.presetIndex = 7;
+        processor.getSequencerState().setStepData(4, 0, step);
+        setParameter(processor, getStepActiveID(4, 0), 0.0f);
+
+        juce::MidiBuffer midi;
+        juce::AudioBuffer<float> disabledBlock(2, blockSize);
+        fillBuffer(disabledBlock, 1.0f);
+        processor.processBlock(disabledBlock, midi);
+
+        for (int sample = 0; sample < blockSize; ++sample)
+        {
+            const float value = disabledBlock.getSample(0, sample);
+            if (!std::isfinite(value))
+                throw std::runtime_error("disabled filter step produced a non-finite sample");
+            requireNear(value, 1.0f, 0.0001f, "disabled filter step changed the input");
+        }
+
+        setParameter(processor, getStepActiveID(4, 0), 1.0f);
+        juce::AudioBuffer<float> enabledBlock(2, blockSize);
+        float initialOutputEnergy = 0.0f;
+        float finalOutputEnergy = 0.0f;
+        for (int block = 0; block < 64; ++block)
+        {
+            fillBuffer(enabledBlock, 1.0f);
+            processor.processBlock(enabledBlock, midi);
+            const float blockEnergy = sumFiniteAbsoluteSamples(enabledBlock, 0, "enabled filter step");
+            if (block == 0)
+                initialOutputEnergy = blockEnergy;
+            if (block == 63)
+                finalOutputEnergy = blockEnergy;
+        }
+
+        if (initialOutputEnergy <= 0.05f)
+            throw std::runtime_error("filter activation muted the signal instead of producing a high-pass transient: "
+                                     + std::to_string(initialOutputEnergy));
+
+        const float meanAbsoluteOutput = finalOutputEnergy / static_cast<float>(blockSize);
+
+        if (meanAbsoluteOutput >= 0.05f)
+            throw std::runtime_error("filter retained its default low-pass state after same-step automation: "
+                                     + std::to_string(meanAbsoluteOutput));
     }});
 
     tests.push_back({"workspace controls stay visible and contained at supported logical sizes", []

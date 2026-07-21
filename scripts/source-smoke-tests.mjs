@@ -177,6 +177,9 @@ assertContains(presetManager, "setParameterStateValue(state, getLaneMuteID(lane)
 assertContains(presetManager, "setParameterStateValue(state, getLaneSoloID(lane), 0.0f)", "factory presets must reset lane solo state");
 assertContains(processor, "schemaVersion < currentStateSchemaVersion", "legacy state restore must migrate sequencer gates into APVTS");
 assertContains(editor, "step != lastPlayingStep || sequencerActiveStateChanged", "CRT active-lane state must refresh during same-step automation");
+assertContains(processorTests, "slice duration follows resolved host tempo", "processor tests must cover SliceEngine timing from a simulated host playhead");
+assertContains(processorTests, "step automation retriggers loop when enabled inside the current step", "processor tests must cover LOOP same-step Off-to-On automation");
+assertContains(processorTests, "step automation configures filter when enabled inside the current step", "processor tests must cover FILTER same-step Off-to-On automation");
 assertContains(processor, "!stateTree.hasType(state.getValueTreeState().state.getType())", "full-state restore must reject a wrong root before loading sequencer data");
 assertContains(envFollower, "isBipolar    = bipolar;", "envelope follower must apply its bipolar parameter instead of self-assigning");
 assertContains(processSegment, "SequencerState::Snapshot", "processSegment must render from an immutable sequencer snapshot");
