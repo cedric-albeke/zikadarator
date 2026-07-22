@@ -9,6 +9,12 @@
 
 namespace {
 
+void require(bool condition, const char* message)
+{
+    if (!condition)
+        throw std::runtime_error(message);
+}
+
 void requireNear(float actual, float expected, float tolerance, const char* message)
 {
     if (std::abs(actual - expected) > tolerance)
@@ -104,6 +110,32 @@ void addSliceEngineTests(std::vector<std::pair<std::string, std::function<void()
         requireNear(right.front(), 0.0f, 0.0001f, "slice fade-in should suppress the first right-channel sample discontinuity");
         requireNear(left[static_cast<size_t>(blockSize / 2)], 1.0f, 0.0001f, "slice fade should leave the body of the slice untouched");
         requireNear(left.back(), 0.0f, 0.0001f, "slice fade-out should suppress the last sample discontinuity");
+    }});
+
+    tests.push_back({"SliceEngine bounds maximum capture work per process chunk", []
+    {
+        constexpr double sampleRate = 192000.0;
+        constexpr int blockSize = 32;
+        SliceEngine engine;
+        engine.prepare(sampleRate, blockSize);
+        engine.setTempo(20.0);
+        engine.setPlaybackMode(SliceEngine::PlaybackMode::Forward, 1);
+
+        const int historySamples = static_cast<int>(sampleRate * 12.0);
+        std::vector<float> history(static_cast<size_t>(historySamples), 0.5f);
+        engine.writeToBuffer(history.data(), history.data(), historySamples);
+        engine.beginProcessChunk(blockSize);
+        engine.triggerSlice(15);
+
+        std::vector<float> left(blockSize, 0.0f);
+        std::vector<float> right(blockSize, 0.0f);
+        engine.process(left.data(), right.data(), blockSize);
+
+        require(engine.getCaptureFramesThisChunkForTesting() <= engine.getCaptureBudgetForTesting(),
+                "slice capture must stay inside its per-chunk frame budget");
+        require(engine.getPendingCaptureFramesForTesting() > 0,
+                "maximum slice capture should be incremental instead of completing synchronously");
+        require(left[1] > 0.0f, "pending slice capture must still render immediately from pinned history");
     }});
 }
 

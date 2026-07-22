@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
 #include <vector>
 
@@ -15,6 +16,7 @@ public:
         data.assign(static_cast<size_t>(capacity), 0.0f);
         writePosition = 0;
         validSamples = 0;
+        totalSamplesWritten = 0;
     }
 
     void reset()
@@ -22,6 +24,7 @@ public:
         std::fill(data.begin(), data.end(), 0.0f);
         writePosition = 0;
         validSamples = 0;
+        totalSamplesWritten = 0;
     }
 
     void write(const float* samples, int numSamples)
@@ -34,6 +37,7 @@ public:
             data[static_cast<size_t>(writePosition)] = samples[i];
             writePosition = (writePosition + 1) % capacity;
             validSamples = std::min(capacity, validSamples + 1);
+            ++totalSamplesWritten;
         }
     }
 
@@ -63,12 +67,24 @@ public:
 
     [[nodiscard]] int getCapacity() const { return capacity; }
     [[nodiscard]] int getValidSamples() const { return validSamples; }
+    [[nodiscard]] std::int64_t getTotalSamplesWritten() const { return totalSamplesWritten; }
+
+    [[nodiscard]] float getSampleAtAbsolute(std::int64_t absoluteIndex) const
+    {
+        const auto oldestRetained = totalSamplesWritten - validSamples;
+        if (absoluteIndex < oldestRetained || absoluteIndex >= totalSamplesWritten || capacity <= 0)
+            return 0.0f;
+
+        const auto wrapped = absoluteIndex % capacity;
+        return data[static_cast<size_t>(wrapped < 0 ? wrapped + capacity : wrapped)];
+    }
 
 private:
     std::vector<float> data;
     int capacity{0};
     int writePosition{0};
     int validSamples{0};
+    std::int64_t totalSamplesWritten{0};
 };
 
 } // namespace zikada

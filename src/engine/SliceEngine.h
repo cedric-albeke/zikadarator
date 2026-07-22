@@ -3,6 +3,7 @@
 #include "engine/RealtimeRingBuffer.h"
 
 #include <vector>
+#include <cstdint>
 
 namespace zikada {
 
@@ -25,10 +26,17 @@ public:
     void setTempo(double bpm);
     void setPlaybackMode(PlaybackMode mode, int repeatCount);
     void triggerSlice(int sliceIndex);
+    void beginProcessChunk(int numSamples);
 
     void process(float* outputLeft, float* outputRight, int numSamples);
 
     void writeToBuffer(const float* inputLeft, const float* inputRight, int numSamples);
+
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    [[nodiscard]] int getCaptureFramesThisChunkForTesting() const { return captureFramesThisChunk; }
+    [[nodiscard]] int getCaptureBudgetForTesting() const { return captureBudgetFrames; }
+    [[nodiscard]] int getPendingCaptureFramesForTesting() const { return capturePending ? playbackLength - captureProgress : 0; }
+#endif
 
 private:
     double sampleRate{44100.0};
@@ -47,8 +55,15 @@ private:
     int playbackLength{0};
     int edgeFadeSamples{0};
     bool isPlayingSlice{false};
+    bool capturePending{false};
+    std::int64_t captureStartAbsolute{0};
+    int captureProgress{0};
+    int captureBudgetFrames{2048};
+    int captureFramesThisChunk{0};
 
-    int getPlaybackSampleAge(int sliceStartSamples, int position) const;
+    void servicePendingCapture();
+    int getCanonicalIndex(int position) const;
+    float getPlaybackSample(const std::vector<float>& buffer, const RealtimeRingBuffer& history, int position) const;
     float getEdgeFadeGain(int position) const;
 };
 

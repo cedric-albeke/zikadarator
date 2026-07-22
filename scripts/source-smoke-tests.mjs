@@ -104,9 +104,9 @@ const ensureLoopBufferSize = extractFunction(
   loopEngine,
   "void LoopEngine::ensureLoopBufferSize()",
 );
-const refreshLoopSnapshot = extractFunction(
+const servicePendingLoopCapture = extractFunction(
   loopEngine,
-  "void LoopEngine::refreshLoopSnapshot()",
+  "void LoopEngine::servicePendingCapture()",
 );
 const stepGridTimer = extractFunction(
   stepGrid,
@@ -293,7 +293,7 @@ assertContains(envelopeShape, "case 15:", "EnvelopeShape must back the advertise
 assertContains(envelopeShape, "case 16:", "EnvelopeShape must back the advertised Wobble preset");
 assertContains(envelopeShape, "case 20:", "EnvelopeShape must back the advertised Hold preset");
 assertContains(loopEngine, "loopBufferL.assign", "LoopEngine must preallocate snapshot buffers during prepare");
-if ([setLoopParameters, ensureLoopBufferSize, refreshLoopSnapshot].some((body) => body.includes(".resize(") || body.includes(".assign("))) {
+if ([setLoopParameters, ensureLoopBufferSize, servicePendingLoopCapture].some((body) => body.includes(".resize(") || body.includes(".assign("))) {
   fail("LoopEngine render-called loop setup/snapshot paths must not allocate on the audio thread");
 }
 assertContains(processSegment, "blendLaneOutput", "processSegment must blend each lane output against that lane input");
@@ -603,7 +603,9 @@ assertContains(loopPresetMapping, "case 20:", "loop engine preset mapping must c
 assertContains(loopPresetMapping, "beatSeconds * 0.25", "loop engine preset mapping must include 1/16 note windows");
 assertContains(loopPresetMapping, "presetIndex >= 1 && presetIndex <= 4", "loop user slots must configure real loop parameters instead of falling through to dry defaults");
 assertContains(loopEngineHeader, "loopBufferL", "LoopEngine must keep a frozen snapshot buffer for triggered loop playback");
-assertContains(loopEngine, "refreshLoopSnapshot", "LoopEngine must refresh a frozen loop snapshot on trigger");
+assertContains(loopEngine, "captureStartAbsolute", "LoopEngine must pin frozen loop history on trigger");
+assertContains(loopEngine, "captureBudgetFrames - captureFramesThisChunk", "LoopEngine must bound snapshot work per process chunk");
+assertContains(sliceEngine, "captureBudgetFrames - captureFramesThisChunk", "SliceEngine must bound snapshot work per process chunk");
 assertContains(loopEngine, "std::round(loopLengthSeconds * sampleRate)", "LoopEngine must round loop durations to sample counts instead of truncating");
 assertContains(footer, '"LEN"', "loop footer controls must use loop-specific labels");
 assertContains(footer, '"RATE"', "loop footer controls must use loop-specific labels");

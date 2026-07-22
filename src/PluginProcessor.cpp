@@ -1081,6 +1081,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         std::copy(leftChannel, leftChannel + chunkSamples, dryLeftBuffer.begin());
         std::copy(rightChannel, rightChannel + chunkSamples, dryRightBuffer.begin());
         waveformTap.pushFromAudioThread(dryLeftBuffer.data(), chunkSamples);
+        sliceEngine.beginProcessChunk(chunkSamples);
+        loopEngine.beginProcessChunk(chunkSamples);
 
 #if defined(ZIKADA_ENABLE_TEST_HOOKS)
         ++lastProcessChunkCountForTesting;

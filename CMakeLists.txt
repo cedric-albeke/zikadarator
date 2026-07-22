@@ -147,6 +147,8 @@ target_sources(ZikadaEngineTests
         src/engine/EnvFollowerEngine.cpp
 )
 
+target_compile_definitions(ZikadaEngineTests PRIVATE ZIKADA_ENABLE_TEST_HOOKS=1)
+
 target_link_libraries(ZikadaEngineTests
     PRIVATE
         juce::juce_audio_basics

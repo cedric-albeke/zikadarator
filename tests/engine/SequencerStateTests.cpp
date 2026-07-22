@@ -1,10 +1,12 @@
 #include "state/SequencerState.h"
 
+#include <atomic>
 #include <cmath>
 #include <functional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -114,6 +116,88 @@ void addSequencerStateTests(std::vector<std::pair<std::string, std::function<voi
         static_assert(std::is_same_v<decltype(std::declval<const SequencerState&>().getSnapshot()),
                                      SequencerState::Snapshot>,
                       "SequencerState::getSnapshot must return a plain value, not shared ownership");
+    }});
+
+    tests.push_back({"SequencerState serializes concurrent publishers", []
+    {
+        SequencerState state;
+        std::atomic<bool> start{false};
+        std::atomic<bool> writersDone{false};
+        std::atomic<bool> coherent{true};
+
+        StepData initialStep;
+        initialStep.chainLength = 1;
+        state.setStepData(0, 0, initialStep);
+        UserSlotData initialSlot;
+        initialSlot.filterCutoff = 0.0f;
+        initialSlot.delayTime = 1.0f;
+        initialSlot.volume = 2.0f;
+        state.setUserSlot(0, 0, initialSlot);
+
+        auto stepWriter = std::thread([&]
+        {
+            while (!start.load(std::memory_order_acquire)) {}
+
+            for (int id = 1; id <= 20000; ++id)
+            {
+                StepData step;
+                step.active = (id & 1) != 0;
+                step.presetIndex = id;
+                step.chainLength = id + 1;
+                state.setStepData(0, 0, step);
+            }
+        });
+
+        auto slotWriter = std::thread([&]
+        {
+            while (!start.load(std::memory_order_acquire)) {}
+
+            for (int id = 1; id <= 20000; ++id)
+            {
+                UserSlotData slot;
+                slot.filterCutoff = static_cast<float>(id);
+                slot.delayTime = static_cast<float>(id + 1);
+                slot.volume = static_cast<float>(id + 2);
+                state.setUserSlot(0, 0, slot);
+            }
+        });
+
+        auto reader = std::thread([&]
+        {
+            while (!start.load(std::memory_order_acquire)) {}
+
+            while (!writersDone.load(std::memory_order_acquire))
+            {
+                const auto snapshot = state.getSnapshot();
+                const auto& step = snapshot.getStepData(0, 0);
+                const auto& slot = snapshot.getUserSlot(0, 0);
+
+                if (step.chainLength != step.presetIndex + 1
+                    || step.active != ((step.presetIndex & 1) != 0)
+                    || slot.delayTime != slot.filterCutoff + 1.0f
+                    || slot.volume != slot.filterCutoff + 2.0f)
+                {
+                    coherent.store(false, std::memory_order_release);
+                    return;
+                }
+            }
+        });
+
+        start.store(true, std::memory_order_release);
+        stepWriter.join();
+        slotWriter.join();
+        writersDone.store(true, std::memory_order_release);
+        reader.join();
+
+        require(coherent.load(std::memory_order_acquire),
+                "concurrent publishers must expose field-coherent snapshots");
+
+        static_assert(std::is_same_v<decltype(std::declval<const SequencerState&>().getStepData(0, 0)),
+                                     StepData>,
+                      "live step reads must return a synchronized value");
+        static_assert(std::is_same_v<decltype(std::declval<const SequencerState&>().getUserSlot(0, 0)),
+                                     UserSlotData>,
+                      "live user-slot reads must return a synchronized value");
     }});
 }
 

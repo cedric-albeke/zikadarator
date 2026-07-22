@@ -10,11 +10,12 @@ namespace zikada {
 void LoopEngine::prepare(double newSampleRate, int maxBlockSize)
 {
     sampleRate = newSampleRate;
-    historySizeSamples = juce::jmax(maxBlockSize * 32, static_cast<int>(sampleRate * 4.0));
+    maxLoopSamples = juce::jmax(1, static_cast<int>(std::ceil(sampleRate * 4.0)));
+    historySizeSamples = maxLoopSamples + juce::jmax(1, maxBlockSize);
     bufferL.prepare(historySizeSamples);
     bufferR.prepare(historySizeSamples);
-    loopBufferL.assign(static_cast<size_t>(historySizeSamples), 0.0f);
-    loopBufferR.assign(static_cast<size_t>(historySizeSamples), 0.0f);
+    loopBufferL.assign(static_cast<size_t>(maxLoopSamples), 0.0f);
+    loopBufferR.assign(static_cast<size_t>(maxLoopSamples), 0.0f);
     reset();
 }
 
@@ -24,6 +25,9 @@ void LoopEngine::reset()
     bufferR.reset();
     phase = 0.0f;
     snapshotPending = false;
+    captureAnchored = false;
+    captureProgress = 0;
+    captureFramesThisChunk = 0;
     hasSnapshot = false;
     std::fill(loopBufferL.begin(), loopBufferL.end(), 0.0f);
     std::fill(loopBufferR.begin(), loopBufferR.end(), 0.0f);
@@ -36,7 +40,7 @@ void LoopEngine::setLoopParameters(float loopLengthSeconds,
                                    float smoothingAmount)
 {
     loopLengthSamples = juce::jlimit(1,
-                                     juce::jmax(1, historySizeSamples - 1),
+                                     maxLoopSamples,
                                      static_cast<int>(std::round(loopLengthSeconds * sampleRate)));
     rate = juce::jlimit(0.25f, 4.0f, playbackRate);
     reverse = reversePlayback;
@@ -57,15 +61,28 @@ void LoopEngine::trigger()
     phase = 0.0f;
     triggerFadePosition = 0;
     snapshotPending = true;
+    captureAnchored = false;
+    captureProgress = 0;
+}
+
+void LoopEngine::beginProcessChunk(int numSamples)
+{
+    captureBudgetFrames = juce::jmax(2048, numSamples);
+    captureFramesThisChunk = 0;
 }
 
 void LoopEngine::captureInput(const float* left, const float* right, int numSamples)
 {
+    if (snapshotPending && captureAnchored)
+        servicePendingCapture();
+
     bufferL.write(left, numSamples);
     bufferR.write(right, numSamples);
 
-    if (snapshotPending)
-        refreshLoopSnapshot();
+    if (snapshotPending && !captureAnchored)
+        beginPendingCapture();
+
+    servicePendingCapture();
 }
 
 void LoopEngine::ensureLoopBufferSize()
@@ -80,31 +97,64 @@ void LoopEngine::ensureLoopBufferSize()
     loopLengthSamples = juce::jlimit(1, preparedCapacity, loopLengthSamples);
 }
 
-void LoopEngine::refreshLoopSnapshot()
+void LoopEngine::beginPendingCapture()
 {
     ensureLoopBufferSize();
 
     if (loopBufferL.empty() || loopBufferR.empty())
     {
         snapshotPending = false;
+        captureAnchored = false;
         hasSnapshot = false;
         return;
     }
 
-    for (int i = 0; i < loopLengthSamples; ++i)
-    {
-        const int samplesAgo = loopLengthSamples - 1 - i;
-        loopBufferL[static_cast<size_t>(i)] = bufferL.getSampleAgo(samplesAgo);
-        loopBufferR[static_cast<size_t>(i)] = bufferR.getSampleAgo(samplesAgo);
-    }
-
-    snapshotPending = false;
+    captureStartAbsolute = bufferL.getTotalSamplesWritten() - loopLengthSamples;
+    captureProgress = 0;
+    captureAnchored = true;
     hasSnapshot = true;
-    phase = 0.0f;
-    triggerFadePosition = 0;
 }
 
-float LoopEngine::readRawLoopSample(const std::vector<float>& buffer, float phaseIndex) const
+void LoopEngine::servicePendingCapture()
+{
+    if (!snapshotPending || !captureAnchored)
+        return;
+
+    const int remainingBudget = juce::jmax(0, captureBudgetFrames - captureFramesThisChunk);
+    const int frames = juce::jmin(remainingBudget, loopLengthSamples - captureProgress);
+
+    for (int i = 0; i < frames; ++i)
+    {
+        const int destination = captureProgress + i;
+        const auto source = captureStartAbsolute + destination;
+        loopBufferL[static_cast<size_t>(destination)] = bufferL.getSampleAtAbsolute(source);
+        loopBufferR[static_cast<size_t>(destination)] = bufferR.getSampleAtAbsolute(source);
+    }
+
+    captureProgress += frames;
+    captureFramesThisChunk += frames;
+
+    if (captureProgress >= loopLengthSamples)
+    {
+        snapshotPending = false;
+        captureAnchored = false;
+    }
+}
+
+float LoopEngine::getCanonicalSample(const std::vector<float>& buffer,
+                                     const RealtimeRingBuffer& history,
+                                     int index) const
+{
+    const int wrapped = (index % loopLengthSamples + loopLengthSamples) % loopLengthSamples;
+    if (!snapshotPending || wrapped < captureProgress)
+        return buffer[static_cast<size_t>(wrapped)];
+
+    return history.getSampleAtAbsolute(captureStartAbsolute + wrapped);
+}
+
+float LoopEngine::readRawLoopSample(const std::vector<float>& buffer,
+                                    const RealtimeRingBuffer& history,
+                                    float phaseIndex) const
 {
     if (loopLengthSamples <= 1 || buffer.empty())
         return 0.0f;
@@ -118,14 +168,16 @@ float LoopEngine::readRawLoopSample(const std::vector<float>& buffer, float phas
     const auto index1 = (index0 + 1) % loopLengthSamples;
     const auto fraction = wrappedIndex - static_cast<float>(index0);
 
-    const float a = buffer[static_cast<size_t>(index0)];
-    const float b = buffer[static_cast<size_t>(index1)];
+    const float a = getCanonicalSample(buffer, history, index0);
+    const float b = getCanonicalSample(buffer, history, index1);
     return a + (b - a) * fraction;
 }
 
-float LoopEngine::readLoopSample(const std::vector<float>& buffer, float phaseIndex) const
+float LoopEngine::readLoopSample(const std::vector<float>& buffer,
+                                 const RealtimeRingBuffer& history,
+                                 float phaseIndex) const
 {
-    float sample = readRawLoopSample(buffer, phaseIndex);
+    float sample = readRawLoopSample(buffer, history, phaseIndex);
 
     if (edgeFadeSamples > 1 && loopLengthSamples > edgeFadeSamples * 2)
     {
@@ -133,7 +185,7 @@ float LoopEngine::readLoopSample(const std::vector<float>& buffer, float phaseIn
         if (phaseIndex >= fadeStart)
         {
             const float amount = juce::jlimit(0.0f, 1.0f, (phaseIndex - fadeStart) / static_cast<float>(edgeFadeSamples));
-            const float wrapSample = readRawLoopSample(buffer, 0.0f);
+            const float wrapSample = readRawLoopSample(buffer, history, 0.0f);
             sample = sample * (1.0f - amount) + wrapSample * amount;
         }
     }
@@ -146,8 +198,10 @@ void LoopEngine::process(float* left, float* right, int numSamples)
     if (!enabled)
         return;
 
-    if (snapshotPending)
-        refreshLoopSnapshot();
+    if (snapshotPending && !captureAnchored)
+        beginPendingCapture();
+
+    servicePendingCapture();
 
     if (!hasSnapshot)
         return;
@@ -155,8 +209,8 @@ void LoopEngine::process(float* left, float* right, int numSamples)
     for (int i = 0; i < numSamples; ++i)
     {
         const float phaseIndex = juce::jlimit(0.0f, static_cast<float>(loopLengthSamples - 1), phase);
-        const float loopL = readLoopSample(loopBufferL, phaseIndex);
-        const float loopR = readLoopSample(loopBufferR, phaseIndex);
+        const float loopL = readLoopSample(loopBufferL, bufferL, phaseIndex);
+        const float loopR = readLoopSample(loopBufferR, bufferR, phaseIndex);
         float effectiveMix = mix;
 
         if (triggerFadeSamples > 1 && triggerFadePosition < triggerFadeSamples)

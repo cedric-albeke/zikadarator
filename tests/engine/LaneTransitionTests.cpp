@@ -137,6 +137,31 @@ void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<voi
         require(totalDifference < 0.001f, "triggered loop should keep repeating the frozen pattern after later input changes");
     }});
 
+    tests.push_back({"LoopEngine bounds maximum capture work per process chunk", []
+    {
+        constexpr double sampleRate = 192000.0;
+        constexpr int blockSize = 32;
+        LoopEngine loop;
+        loop.prepare(sampleRate, blockSize);
+
+        std::vector<float> history(static_cast<size_t>(sampleRate * 4.0), 0.25f);
+        loop.captureInput(history.data(), history.data(), static_cast<int>(history.size()));
+        loop.setLoopParameters(4.0f, 1.0f, false, 1.0f, 0.0f);
+        loop.setEnabled(true);
+        loop.beginProcessChunk(blockSize);
+        loop.trigger();
+
+        std::vector<float> left(blockSize, 0.0f);
+        std::vector<float> right(blockSize, 0.0f);
+        loop.process(left.data(), right.data(), blockSize);
+
+        require(loop.getCaptureFramesThisChunkForTesting() <= loop.getCaptureBudgetForTesting(),
+                "loop capture must stay inside its per-chunk frame budget");
+        require(loop.getPendingCaptureFramesForTesting() > 0,
+                "maximum loop capture should be incremental instead of completing synchronously");
+        require(rms(left) > 0.01f, "pending loop capture must still render immediately from pinned history");
+    }});
+
     tests.push_back({"DelayEngine interpolates fractional delay times", []
     {
         constexpr double sampleRate = 48000.0;

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <atomic>
+#include <mutex>
 #include "StepData.h"
 #include "UserSlotData.h"
 
@@ -71,24 +72,28 @@ public:
         publishSnapshot();
     }
 
-    const StepData& getStepData (int lane, int step) const
+    StepData getStepData (int lane, int step) const
     {
+        const std::lock_guard<std::mutex> lock (liveStateMutex);
         return grid[static_cast<size_t> (lane)][static_cast<size_t> (step)];
     }
 
     void setStepData (int lane, int step, const StepData& data)
     {
+        const std::lock_guard<std::mutex> lock (liveStateMutex);
         grid[static_cast<size_t> (lane)][static_cast<size_t> (step)] = data;
         publishSnapshot();
     }
 
-    const UserSlotData& getUserSlot (int lane, int slot) const
+    UserSlotData getUserSlot (int lane, int slot) const
     {
+        const std::lock_guard<std::mutex> lock (liveStateMutex);
         return userSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)];
     }
 
     void setUserSlot (int lane, int slot, const UserSlotData& data)
     {
+        const std::lock_guard<std::mutex> lock (liveStateMutex);
         userSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)] = data;
         publishSnapshot();
     }
@@ -121,8 +126,8 @@ public:
         if (! root.hasType ("SequencerState"))
             return;
 
-        grid = {};
-        userSlots = {};
+        StepGrid loadedGrid{};
+        UserSlotGrid loadedUserSlots{};
 
         for (int li = 0; li < root.getNumChildren(); ++li)
         {
@@ -141,7 +146,7 @@ public:
                     int step = static_cast<int> (stepTree.getProperty ("index", si));
 
                     if (step >= 0 && step < NumSteps)
-                        grid[static_cast<size_t> (lane)][static_cast<size_t> (step)] = StepData::fromValueTree (stepTree);
+                        loadedGrid[static_cast<size_t> (lane)][static_cast<size_t> (step)] = StepData::fromValueTree (stepTree);
                 }
             }
             else
@@ -153,7 +158,7 @@ public:
                     {
                         int step = static_cast<int> (stepTree.getProperty ("index", si));
                         if (step >= 0 && step < NumSteps)
-                            grid[static_cast<size_t> (lane)][static_cast<size_t> (step)] = StepData::fromValueTree (stepTree);
+                            loadedGrid[static_cast<size_t> (lane)][static_cast<size_t> (step)] = StepData::fromValueTree (stepTree);
                     }
                 }
             }
@@ -167,11 +172,14 @@ public:
                     int slot = static_cast<int> (slotTree.getProperty ("index", si));
 
                     if (slot >= 0 && slot < NumUserSlots)
-                        userSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)] = UserSlotData::fromValueTree (slotTree);
+                        loadedUserSlots[static_cast<size_t> (lane)][static_cast<size_t> (slot)] = UserSlotData::fromValueTree (slotTree);
                 }
             }
         }
 
+        const std::lock_guard<std::mutex> lock (liveStateMutex);
+        grid = loadedGrid;
+        userSlots = loadedUserSlots;
         publishSnapshot();
     }
 
@@ -180,6 +188,7 @@ private:
 
     StepGrid grid{};
     UserSlotGrid userSlots{};
+    mutable std::mutex liveStateMutex;
     std::array<Snapshot, NumSnapshotBuffers> snapshots{};
     mutable std::array<std::atomic<int>, NumSnapshotBuffers> snapshotReaders{};
     std::atomic<int> publishedSnapshotIndex{0};

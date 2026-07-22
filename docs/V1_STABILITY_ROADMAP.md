@@ -64,11 +64,13 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - `processBlock()` now uses only prepare-time scratch capacity: oversized host buffers are split into bounded chunks without vector growth, while cached atomic pointers replace per-block lane-ID construction and APVTS lookup. A 4097-after-64 regression verifies unchanged capacity, exact chunk count, and complete dry output.
 - Host transport now uses bounded signed absolute scheduler steps plus a discontinuity generation derived from sample time and PPQ. Same-step loops, 16-step seeks, stop/restart, negative preroll, host/free and resolution changes, bypassed seeks, state restore, and preset swaps retrigger Slice/Loop/Filter correctly; continuous blocks and chain continuations do not. Stopped host callbacks freeze sequenced engines while retaining output gain/bypass, and scheduler-safe chunking preserves offline blocks beyond the fixed 64-segment stack batch.
 - Invalid, non-finite, or sub-10 Hz host sample rates are normalized before every engine and waveform tap is prepared; pitch-path regressions cover the former zero-sized-ring inputs.
+- Concurrent sequencer UI/restore writers are serialized across live-grid mutation and fixed-buffer snapshot publication. Live getters return synchronized values, while the audio callback still consumes a lock-free immutable snapshot.
+- LOOP and SLICE trigger capture is incremental and allocation-free: each scheduler chunk copies at most 2,048 frames (or the chunk size for larger offline chunks), while uncopied playback reads immediately from pinned, overwrite-protected ring history. SLICE retention now covers all 16 offsets at 20 BPM.
 
 ## Open V1 Gates
 
 1. Add discoverable keyboard commands for advanced StepGrid tie-chain editing and preset cycling.
-2. Fix the remaining DSP/state defects: serialized snapshot writers, bounded LOOP/SLICE trigger capture, filter coefficient update cost, loop-history limits, and any DSP labels that still overstate implemented behavior.
+2. Fix the remaining DSP defects: filter coefficient update cost, musical LOOP duration limits, and any DSP labels that still overstate implemented behavior.
 3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.
 5. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.

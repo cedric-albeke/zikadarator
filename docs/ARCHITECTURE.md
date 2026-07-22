@@ -116,8 +116,8 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 - State restore publishes an atomic onset-invalidation request which is consumed by the audio thread; message-thread restore never writes live trigger identities directly.
 - Stopped host segments do not enter sequenced engines or consume onset identity. Their effect state remains frozen until playback resumes, while output gain and bypass remain valid for live monitoring; free-clock mode remains continuously running.
 - Scheduler calls are bounded below the fixed 64-segment stack capacity. Offline or pathological blocks are split into additional allocation-free chunks instead of collapsing later step boundaries.
-- `SliceEngine` and `LoopEngine` capture input/history through `RealtimeRingBuffer`, allowing deterministic overwrite history and interpolated reads.
-- `LoopEngine::trigger()` creates a frozen loop snapshot from the history buffer. Playback reads the snapshot with interpolation and wrap smoothing.
+- `SliceEngine` and `LoopEngine` pin absolute positions in `RealtimeRingBuffer` history on trigger. Preallocated snapshots are filled incrementally under a per-scheduler-chunk frame budget; playback reads uncopied frames directly from protected history without onset latency.
+- `LoopEngine::trigger()` preserves its post-capture timing contract, then playback reads the frozen window with interpolation and wrap smoothing. Slice history retains every 16-step offset down to the 20 BPM preparation floor.
 - `Envelope` processing applies per-step amplitude curves using scheduler phase.
 - FX1 and FX2 host delay, reverb, bitcrush, pitch-color, and tone-filter paths.
 - `FilterEngine` is used both as the dedicated FILTER lane and as an internal tone shaper for FX presets.
