@@ -78,6 +78,7 @@ const headerPanel = read("src/ui/panels/HeaderPanel.cpp");
 const windowsPackageScript = read("scripts/package-windows-release.ps1");
 const windowsWorkflow = read(".github/workflows/build-windows-vst3.yml");
 const macosWorkflow = read(".github/workflows/build-macos-packages.yml");
+const macosValidationScript = read("scripts/validate-macos.sh");
 const windowsInstallerScript = read("packaging/windows/ZIKADARATOR.iss");
 const abletonLogScanScript = read("scripts/ableton-log-scan.ps1");
 const processBlock = extractFunction(
@@ -312,6 +313,10 @@ assertContains(macosWorkflow, "pkgutil --check-signature", "macOS CI must verify
 assertContains(macosWorkflow, "xcrun stapler validate", "macOS CI must validate the notarization ticket on the final installer");
 assertContains(macosWorkflow, "NOTARIZATION_STATUS", "macOS release metadata must distinguish signing from notarization");
 assertContains(macosWorkflow, "shasum -a 256 -c SHA256SUMS.txt", "macOS CI must verify final package checksums before upload");
+assertContains(macosValidationScript, 'rm -rf "$HOME/Library/Caches/AudioUnitCache"', "macOS validation must invalidate the user AU registry cache after installation");
+assertContains(macosValidationScript, 'au_registry="$(auval -a 2>&1 || true)"', "macOS validation must force AU registry discovery before targeted auval");
+assertContains(macosValidationScript, '$1 == type && $2 == subtype && $3 == manufacturer', "macOS validation must require the exact AU identity in the registry");
+assertContains(macosValidationScript, "for attempt in 1 2 3", "macOS validation must tolerate bounded AU registrar startup races");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }

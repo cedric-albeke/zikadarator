@@ -87,7 +87,9 @@ if [[ -e "$au_installed_path" ]]; then
 fi
 cp -R "$au_path" "$au_installed_path"
 au_installed_by_script=1
+rm -rf "$HOME/Library/Caches/AudioUnitCache"
 killall -9 AudioComponentRegistrar >/dev/null 2>&1 || true
+sleep 2
 
 step "Prepare pluginval $PLUGINVAL_VERSION"
 pluginval_dir="build/pluginval-$PLUGINVAL_VERSION-macos"
@@ -165,6 +167,31 @@ if ! command -v auval >/dev/null 2>&1; then
   echo "auval was not found on this macOS runner." >&2
   exit 1
 fi
+
+au_registry=""
+au_registered=0
+for attempt in 1 2 3; do
+  au_registry="$(auval -a 2>&1 || true)"
+  if printf '%s\n' "$au_registry" | awk \
+      -v type="$AUVAL_TYPE" \
+      -v subtype="$AUVAL_SUBTYPE" \
+      -v manufacturer="$AUVAL_MANUFACTURER" \
+      '$1 == type && $2 == subtype && $3 == manufacturer { found = 1 } END { exit !found }'; then
+    au_registered=1
+    break
+  fi
+
+  echo "AU registry scan $attempt did not list the installed component; retrying..." >&2
+  killall -9 AudioComponentRegistrar >/dev/null 2>&1 || true
+  sleep 3
+done
+
+printf '%s\n' "$au_registry"
+if [[ "$au_registered" -ne 1 ]]; then
+  echo "Installed AU was not discoverable as $AUVAL_TYPE/$AUVAL_SUBTYPE/$AUVAL_MANUFACTURER." >&2
+  exit 1
+fi
+
 auval -v "$AUVAL_TYPE" "$AUVAL_SUBTYPE" "$AUVAL_MANUFACTURER"
 
 printf '\nmacOS validation completed successfully.\n'
