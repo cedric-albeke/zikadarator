@@ -1,6 +1,7 @@
 #pragma once
 
 #include "StepCell.h"
+#include "KeyboardTextButton.h"
 #include "../components/Knob.h"
 #include "../../state/ParameterIDs.h"
 #include "../../state/SequencerState.h"
@@ -28,6 +29,7 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;
     void focusGained(juce::Component::FocusChangeType cause) override;
     void focusLost(juce::Component::FocusChangeType cause) override;
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
     void setPlayingStep(int step);
     void setSelectedStep(int lane, int step);
@@ -61,8 +63,8 @@ private:
     std::array<std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numSteps>, numLanes> attachments;
     std::array<std::unique_ptr<Knob>, numLanes> mixKnobs;
     std::array<std::unique_ptr<KnobParameterAttachment>, numLanes> mixAttachments;
-    std::array<std::unique_ptr<juce::TextButton>, numLanes> muteButtons;
-    std::array<std::unique_ptr<juce::TextButton>, numLanes> soloButtons;
+    std::array<std::unique_ptr<KeyboardTextButton>, numLanes> muteButtons;
+    std::array<std::unique_ptr<KeyboardTextButton>, numLanes> soloButtons;
     std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numLanes> muteAttachments;
     std::array<std::unique_ptr<juce::ButtonParameterAttachment>, numLanes> soloAttachments;
 
@@ -107,6 +109,7 @@ private:
     void selectStepAndNotify(int lane, int step);
     bool moveSelectionBy(int laneDelta, int stepDelta);
     bool toggleSelectedStep();
+    void updateAccessibilityDescription();
     void drawKeyboardFocusRing(juce::Graphics& g);
     void drawPlayheadRail(juce::Graphics& g);
     int findChainRoot(int lane, int step) const;

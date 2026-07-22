@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ZikadaLookAndFeel.h"
+#include "../components/KeyboardTextButton.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
@@ -50,14 +51,14 @@ private:
     std::unique_ptr<juce::Drawable> undoIcon;
     std::unique_ptr<juce::Drawable> redoIcon;
     std::unique_ptr<juce::Drawable> saveIcon;
-    juce::TextButton undoButton{"UNDO"};
-    juce::TextButton redoButton{"REDO"};
-    juce::TextButton sequencerTab{"SEQUENCER"};
-    juce::TextButton presetsTab{"PRESETS"};
-    juce::TextButton settingsTab{"SETTINGS"};
-    juce::TextButton presetSelectButton;
-    juce::TextButton presetPrevButton{"<"};
-    juce::TextButton presetNextButton{">"};
+    KeyboardTextButton undoButton{"UNDO"};
+    KeyboardTextButton redoButton{"REDO"};
+    KeyboardTextButton sequencerTab{"SEQUENCER"};
+    KeyboardTextButton presetsTab{"PRESETS"};
+    KeyboardTextButton settingsTab{"SETTINGS"};
+    KeyboardTextButton presetSelectButton;
+    KeyboardTextButton presetPrevButton{"<"};
+    KeyboardTextButton presetNextButton{">"};
     juce::Label presetMetaLabel;
     juce::Rectangle<int> fxDisplayBounds;
     Page selectedPage{Page::Sequencer};

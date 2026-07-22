@@ -50,6 +50,8 @@ static std::unique_ptr<juce::Drawable> parseSvgString(const juce::String& svgTex
 
 HeaderPanel::HeaderPanel()
 {
+    setTitle("ZIKADARATOR header");
+    setDescription("Page navigation, effect monitor, preset navigation, undo and redo.");
     logoImage = juce::ImageCache::getFromMemory(
         BinaryData::zikatorlogo_png, BinaryData::zikatorlogo_pngSize);
 
@@ -66,8 +68,11 @@ HeaderPanel::HeaderPanel()
         button.setColour(juce::TextButton::textColourOffId, juce::Colours::transparentBlack);
         button.setColour(juce::TextButton::textColourOnId, juce::Colours::transparentBlack);
         button.setButtonText("");
-        button.onClick = [this, page]
+        button.onClick = [this, page, &button]
         {
+            if (!button.getToggleState())
+                return;
+
             setSelectedPage(page);
             if (onPageSelected)
                 onPageSelected(page);
@@ -78,6 +83,23 @@ HeaderPanel::HeaderPanel()
     configureTab(sequencerTab, Page::Sequencer);
     configureTab(presetsTab, Page::Presets);
     configureTab(settingsTab, Page::Settings);
+
+    auto configureAccessibility = [](juce::Button& button,
+                                     const juce::String& title,
+                                     const juce::String& help,
+                                     int focusOrder)
+    {
+        button.setTitle(title);
+        button.setDescription(help);
+        button.setHelpText(help);
+        button.setTooltip(help);
+        button.setWantsKeyboardFocus(true);
+        button.setExplicitFocusOrder(focusOrder);
+    };
+
+    configureAccessibility(sequencerTab, "Sequencer", "Show the sequencer page.", 101);
+    configureAccessibility(presetsTab, "Presets", "Show the preset browser.", 102);
+    configureAccessibility(settingsTab, "Settings", "Show plugin settings.", 103);
 
     auto configureHitZone = [](juce::TextButton& button)
     {
@@ -95,6 +117,8 @@ HeaderPanel::HeaderPanel()
     redoButton.onClick = [this] { if (onRedoRequested) onRedoRequested(); };
     addAndMakeVisible(undoButton);
     addAndMakeVisible(redoButton);
+    configureAccessibility(undoButton, "Undo", "Undo the last edit.", 107);
+    configureAccessibility(redoButton, "Redo", "Redo the last undone edit.", 108);
 
     configureHitZone(presetSelectButton);
     presetSelectButton.setButtonText("");
@@ -104,10 +128,12 @@ HeaderPanel::HeaderPanel()
             onPresetMenuRequested();
     };
     addAndMakeVisible(presetSelectButton);
+    configureAccessibility(presetSelectButton, "Preset menu", "Open the preset menu.", 105);
 
     presetMetaLabel.setJustificationType(juce::Justification::centredLeft);
     presetMetaLabel.setColour(juce::Label::textColourId, Colours::white50);
     addAndMakeVisible(presetMetaLabel);
+    presetMetaLabel.setAccessible(false);
 
     configureHitZone(presetPrevButton);
     configureHitZone(presetNextButton);
@@ -117,6 +143,8 @@ HeaderPanel::HeaderPanel()
     presetNextButton.onClick = [this] { if (onPresetNextRequested) onPresetNextRequested(); };
     addAndMakeVisible(presetPrevButton);
     addAndMakeVisible(presetNextButton);
+    configureAccessibility(presetPrevButton, "Previous preset", "Load the previous preset.", 104);
+    configureAccessibility(presetNextButton, "Next preset", "Load the next preset.", 106);
 
     setSelectedPage(Page::Sequencer);
     setUndoEnabled(false);
@@ -189,6 +217,8 @@ void HeaderPanel::setPresetDisplay(const juce::String& presetName,
     currentPresetName = presetName;
     currentPresetMeta = presetMeta;
     presetDirty = dirty;
+    presetSelectButton.setDescription("Open the preset menu. Current preset: "
+                                      + currentPresetName + (presetDirty ? ", modified." : "."));
     repaint();
 }
 

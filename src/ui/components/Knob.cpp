@@ -6,6 +6,9 @@ namespace zikada {
 Knob::Knob()
 {
     setSize(48, 64);
+    setWantsKeyboardFocus(true);
+    setMouseClickGrabsKeyboardFocus(true);
+    setHelpText("Use the arrow keys to adjust; Home and End select the minimum and maximum.");
 }
 
 void Knob::paint(juce::Graphics& g)
@@ -126,6 +129,12 @@ void Knob::paint(juce::Graphics& g)
     g.setFont(laf != nullptr ? laf->getSpaceMonoFont(10.0f)
                              : juce::Font(juce::FontOptions().withHeight(10.0f)));
     g.drawText(valueStr, valueRect.toNearestInt(), juce::Justification::centred, false);
+
+    if (hasKeyboardFocus(false))
+    {
+        g.setColour(accentColour.withAlpha(0.90f));
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1.0f), 4.0f, 1.5f);
+    }
 }
 
 void Knob::resized()
@@ -141,6 +150,8 @@ void Knob::setValue(double newValue)
         repaint();
         if (onValueChange)
             onValueChange();
+        if (auto* handler = getAccessibilityHandler())
+            handler->notifyAccessibilityEvent(juce::AccessibilityEvent::valueChanged);
     }
 }
 
@@ -166,6 +177,8 @@ void Knob::setColour(juce::Colour newColour)
 void Knob::setLabel(const juce::String& lbl)
 {
     label = lbl;
+    setTitle(label);
+    setDescription("Adjust the " + label.toLowerCase() + " value.");
     repaint();
 }
 
@@ -254,6 +267,113 @@ juce::String Knob::formatValue() const
         default:
             return juce::String(static_cast<int>(std::round(getNormalizedValue() * 100.0))) + "%";
     }
+}
+
+void Knob::setValueAsCompleteGesture(double newValue)
+{
+    newValue = juce::jlimit(minValue, maxValue, newValue);
+    if (newValue == value)
+        return;
+
+    if (onDragStart)
+        onDragStart();
+    setValue(newValue);
+    if (onDragEnd)
+        onDragEnd();
+}
+
+bool Knob::keyPressed(const juce::KeyPress& key)
+{
+    const int code = key.getKeyCode();
+    double normalized = getNormalizedValue();
+
+    if (code == juce::KeyPress::upKey || code == juce::KeyPress::rightKey)
+        normalized += 0.01;
+    else if (code == juce::KeyPress::downKey || code == juce::KeyPress::leftKey)
+        normalized -= 0.01;
+    else if (code == juce::KeyPress::homeKey)
+        normalized = 0.0;
+    else if (code == juce::KeyPress::endKey)
+        normalized = 1.0;
+    else
+        return false;
+
+    setValueAsCompleteGesture(normalizedToValue(normalized));
+    return true;
+}
+
+void Knob::focusGained(juce::Component::FocusChangeType cause)
+{
+    juce::ignoreUnused(cause);
+    repaint();
+}
+
+void Knob::focusLost(juce::Component::FocusChangeType cause)
+{
+    juce::ignoreUnused(cause);
+    repaint();
+}
+
+class Knob::AccessibilityValue final : public juce::AccessibilityValueInterface
+{
+public:
+    explicit AccessibilityValue(Knob& owner) : knob(owner) {}
+
+    bool isReadOnly() const override { return false; }
+    double getCurrentValue() const override { return knob.getValue(); }
+    juce::String getCurrentValueAsString() const override { return knob.formatValue(); }
+    void setValue(double newValue) override { knob.setValueAsCompleteGesture(newValue); }
+    void setValueAsString(const juce::String& newValue) override
+    {
+        const auto text = newValue.trim().toLowerCase();
+        const bool panPrefix = text.startsWithChar('l') || text.startsWithChar('r');
+        const double parsed = (panPrefix ? text.substring(1) : text).getDoubleValue();
+
+        switch (knob.displayMode)
+        {
+            case KnobDisplayMode::NormalizedPercent:
+                setValue(knob.normalizedToValue(parsed / 100.0));
+                break;
+            case KnobDisplayMode::Percent:
+                setValue(parsed / 100.0);
+                break;
+            case KnobDisplayMode::Hertz:
+                setValue(text.contains("khz") ? parsed * 1000.0 : parsed);
+                break;
+            case KnobDisplayMode::Seconds:
+                setValue(text.contains("ms") ? parsed / 1000.0 : parsed);
+                break;
+            case KnobDisplayMode::Pan:
+                setValue(text.startsWithChar('l') ? -std::abs(parsed) / 100.0
+                         : text.startsWithChar('r') ?  std::abs(parsed) / 100.0
+                                                    : 0.0);
+                break;
+            case KnobDisplayMode::Decimal:
+            case KnobDisplayMode::Gain:
+                setValue(parsed);
+                break;
+        }
+    }
+
+    AccessibleValueRange getRange() const override
+    {
+        if (knob.maxValue <= knob.minValue)
+            return {};
+
+        return {{knob.minValue, knob.maxValue}, (knob.maxValue - knob.minValue) / 100.0};
+    }
+
+private:
+    Knob& knob;
+};
+
+std::unique_ptr<juce::AccessibilityHandler> Knob::createAccessibilityHandler()
+{
+    return std::make_unique<juce::AccessibilityHandler>(
+        *this,
+        juce::AccessibilityRole::slider,
+        juce::AccessibilityActions{},
+        juce::AccessibilityHandler::Interfaces{std::make_unique<AccessibilityValue>(*this)});
 }
 
 void Knob::mouseDown(const juce::MouseEvent& event)

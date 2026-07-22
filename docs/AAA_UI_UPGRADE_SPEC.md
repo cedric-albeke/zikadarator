@@ -337,3 +337,10 @@ All panels now use a 3-layer depth system:
 - Verify typography hierarchy
 - Final smoke test pass
 - Build and validate
+
+### Slice 9: Keyboard & Accessibility Correctness
+- Give every custom-drawn header and preset action a stable accessible name, help text, and focus order
+- Expose custom knobs as ranged slider values with visible focus and arrow/Home/End operation
+- Wrap keyboard and accessibility knob edits in complete host automation gestures
+- Announce the sequencer as one six-lane, sixteen-step keyboard group and exclude duplicate visual cell focus stops
+- Regression test semantic roles, names, value ranges, focus order, keyboard operation, and gesture balance

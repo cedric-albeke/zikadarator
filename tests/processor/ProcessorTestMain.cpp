@@ -6,6 +6,8 @@
 #include "ui/components/StepCell.h"
 #include "ui/components/WaveformDisplay.h"
 #include "ui/panels/HeaderPanel.h"
+#include "ui/panels/FooterPanel.h"
+#include "ui/panels/SidebarPanel.h"
 #include "ui/panels/WorkspacePanel.h"
 
 #include <cmath>
@@ -796,6 +798,202 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         juce::MessageManager::getInstance()->runDispatchLoopUntil(150);
         if (animationFrames < 2)
             throw std::runtime_error("CRT monitor did not produce autonomous animation frames");
+    }});
+
+    tests.push_back({"custom-drawn header actions expose stable accessible names and focus order", []
+    {
+        HeaderPanel header;
+        header.setSize(1200, 60);
+        header.setUndoEnabled(true);
+        header.setRedoEnabled(true);
+        header.setPresetStepEnabled(true, true);
+        int buttonCount = 0;
+
+        for (int childIndex = 0; childIndex < header.getNumChildComponents(); ++childIndex)
+        {
+            auto* button = dynamic_cast<juce::Button*>(header.getChildComponent(childIndex));
+            if (button == nullptr)
+                continue;
+
+            ++buttonCount;
+            if (button->getTitle().isEmpty())
+                throw std::runtime_error("custom-drawn header button has no accessible name");
+            if (button->getHelpText().isEmpty() && button->getTooltip().isEmpty())
+                throw std::runtime_error("custom-drawn header button has no accessible help");
+            if (button->isEnabled() && !button->getWantsKeyboardFocus())
+                throw std::runtime_error("custom-drawn header button cannot receive keyboard focus");
+            if (button->getExplicitFocusOrder() <= 0)
+                throw std::runtime_error("custom-drawn header button has no deterministic focus order");
+        }
+
+        if (buttonCount != 8)
+            throw std::runtime_error("header accessibility test did not inspect every action");
+
+        juce::Component root;
+        root.setSize(1300, 100);
+        root.addAndMakeVisible(header);
+        KeyboardTextButton trailingAction("TRAILING");
+        trailingAction.setTitle("Trailing action");
+        trailingAction.setBounds(1210, 10, 80, 30);
+        root.addAndMakeVisible(trailingAction);
+
+        juce::KeyboardFocusTraverser traverser;
+        const auto focusables = traverser.getAllComponents(&root);
+        int reachableHeaderActions = 0;
+        bool trailingActionReachable = false;
+        for (auto* component : focusables)
+        {
+            if (component == &trailingAction)
+                trailingActionReachable = true;
+            else if (component != nullptr && component->getParentComponent() == &header)
+                ++reachableHeaderActions;
+        }
+        if (reachableHeaderActions != 8 || !trailingActionReachable)
+            throw std::runtime_error("global Tab traversal cannot enter and leave all header actions");
+
+        int pageSelections = 0;
+        header.onPageSelected = [&pageSelections](HeaderPanel::Page) { ++pageSelections; };
+        for (int childIndex = 0; childIndex < header.getNumChildComponents(); ++childIndex)
+        {
+            auto* button = dynamic_cast<juce::Button*>(header.getChildComponent(childIndex));
+            if (button == nullptr || button->getTitle() != "Presets")
+                continue;
+
+            juce::Component& control = *button;
+            if (!control.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)))
+                throw std::runtime_error("header action did not handle Space");
+            juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+        }
+        if (pageSelections != 1)
+            throw std::runtime_error("header Space activation invoked "
+                                     + std::to_string(pageSelections) + " commands instead of one");
+    }});
+
+    tests.push_back({"preset palette exposes named keyboard actions", []
+    {
+        SidebarPanel sidebar;
+        sidebar.setSize(280, 600);
+        StepData selected;
+        selected.active = true;
+        selected.presetIndex = 5;
+        sidebar.setSelectedStep(0, 0, selected);
+
+        int buttonCount = 0;
+        for (int childIndex = 0; childIndex < sidebar.getNumChildComponents(); ++childIndex)
+        {
+            auto* button = dynamic_cast<juce::Button*>(sidebar.getChildComponent(childIndex));
+            if (button == nullptr)
+                continue;
+
+            ++buttonCount;
+            if (button->getTitle().isEmpty())
+                throw std::runtime_error("preset button has no accessible name");
+            if (button->getDescription().isEmpty())
+                throw std::runtime_error("preset button has no accessible description");
+            if (button->getExplicitFocusOrder() <= 0)
+                throw std::runtime_error("preset button has no deterministic focus order");
+        }
+
+        if (buttonCount != 20)
+            throw std::runtime_error("preset accessibility test did not inspect the full palette");
+
+        int assignedPreset = -1;
+        sidebar.onPresetAssigned = [&assignedPreset](int, int, int preset) { assignedPreset = preset; };
+        if (!sidebar.keyPressed(juce::KeyPress(juce::KeyPress::rightKey))
+            || !sidebar.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)))
+            throw std::runtime_error("preset palette did not support arrow then Space activation");
+        if (assignedPreset != 6)
+            throw std::runtime_error("preset palette activated the old focus target after arrow navigation");
+    }});
+
+    tests.push_back({"knob exposes a ranged accessible value and complete keyboard gestures", []
+    {
+        Knob knob;
+        knob.setLabel("MIX");
+        knob.setRange(0.0, 100.0);
+        knob.setValue(50.0);
+
+        auto handler = knob.createAccessibilityHandler();
+        if (handler == nullptr || handler->getRole() != juce::AccessibilityRole::slider)
+            throw std::runtime_error("knob does not expose the slider accessibility role");
+        if (handler->getTitle() != "MIX")
+            throw std::runtime_error("knob accessible name does not match its visible label");
+
+        auto* valueInterface = handler->getValueInterface();
+        if (valueInterface == nullptr)
+            throw std::runtime_error("knob has no accessibility value interface");
+        const auto range = valueInterface->getRange();
+        if (!range.isValid() || range.getMinimumValue() != 0.0 || range.getMaximumValue() != 100.0)
+            throw std::runtime_error("knob accessibility range does not match the control range");
+
+        int gestureStarts = 0;
+        int gestureEnds = 0;
+        knob.onDragStart = [&gestureStarts] { ++gestureStarts; };
+        knob.onDragEnd = [&gestureEnds] { ++gestureEnds; };
+
+        if (!knob.keyPressed(juce::KeyPress(juce::KeyPress::upKey)))
+            throw std::runtime_error("knob did not handle the up arrow");
+        requireNear(static_cast<float>(knob.getValue()), 51.0f, 0.001f,
+                    "knob keyboard increment was not one percent of its range");
+
+        valueInterface->setValue(75.0);
+        requireNear(static_cast<float>(knob.getValue()), 75.0f, 0.001f,
+                    "knob accessibility setter did not update the value");
+        knob.setRange(0.0, 1.0);
+        knob.setDisplayMode(KnobDisplayMode::Percent);
+        valueInterface->setValueAsString("25%");
+        requireNear(static_cast<float>(knob.getValue()), 0.25f, 0.001f,
+                    "knob accessibility text setter ignored displayed percent units");
+        if (gestureStarts != 3 || gestureEnds != 3)
+            throw std::runtime_error("knob keyboard/accessibility changes emitted incomplete gestures");
+    }});
+
+    tests.push_back({"sequencer grid exposes its keyboard interaction model", []
+    {
+        PluginProcessor processor;
+        StepGrid grid(processor.getPluginState().getValueTreeState(), processor.getSequencerState());
+        auto handler = grid.createAccessibilityHandler();
+
+        if (handler == nullptr || handler->getRole() != juce::AccessibilityRole::group)
+            throw std::runtime_error("sequencer grid does not expose a grouped accessibility role");
+        if (handler->getTitle().isEmpty() || handler->getDescription().isEmpty()
+            || handler->getHelp().isEmpty())
+            throw std::runtime_error("sequencer grid accessibility guidance is incomplete");
+
+        grid.setSelectedStep(0, 0);
+        const auto before = processor.getSequencerState().getStepData(0, 0);
+        if (grid.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)))
+            throw std::runtime_error("sequencer handled a child-bubbled key without owning focus");
+        const auto after = processor.getSequencerState().getStepData(0, 0);
+        if (after.active != before.active || after.presetIndex != before.presetIndex)
+            throw std::runtime_error("child-bubbled key modified the selected sequencer step");
+    }});
+
+    tests.push_back({"visible footer controls expose purpose-specific accessible names", []
+    {
+        PluginProcessor processor;
+        FooterPanel footer(processor.getPluginState().getValueTreeState());
+        footer.setSize(1200, 150);
+        footer.setSelectedSlot(0, 0, UserSlotData{}, "Slice");
+
+        int interactiveControls = 0;
+        for (int childIndex = 0; childIndex < footer.getNumChildComponents(); ++childIndex)
+        {
+            auto* child = footer.getChildComponent(childIndex);
+            if (child == nullptr || !child->isVisible())
+                continue;
+            if (dynamic_cast<juce::Button*>(child) == nullptr
+                && dynamic_cast<juce::Slider*>(child) == nullptr
+                && dynamic_cast<Knob*>(child) == nullptr)
+                continue;
+
+            ++interactiveControls;
+            if (child->getTitle().isEmpty())
+                throw std::runtime_error("visible footer control has no accessible name");
+        }
+
+        if (interactiveControls < 11)
+            throw std::runtime_error("footer accessibility test did not inspect the expected controls");
     }});
 
     tests.push_back({"step chain badge stays inside the painted cell", []

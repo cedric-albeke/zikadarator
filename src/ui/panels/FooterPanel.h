@@ -2,6 +2,7 @@
 
 #include "../ZikadaLookAndFeel.h"
 #include "../components/Knob.h"
+#include "../components/KeyboardTextButton.h"
 #include "../../state/UserSlotData.h"
 #include "../../state/ParameterIDs.h"
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -26,7 +27,7 @@ public:
 private:
     juce::AudioProcessorValueTreeState& apvts;
     juce::Slider     dryWetSlider;
-    juce::TextButton bypassButton  { "BYPASS" };
+    KeyboardTextButton bypassButton  { "BYPASS" };
     juce::Label      mixModeLabel;
     juce::Label      outputGainLabel;
 
@@ -40,7 +41,7 @@ private:
 
     juce::Label    stepResLabel;
     juce::ComboBox stepResolutionBox;
-    juce::TextButton stepResolutionButton{"1/8"};
+    KeyboardTextButton stepResolutionButton{"1/8"};
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
         stepResolutionAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
@@ -50,10 +51,10 @@ private:
 
     std::array<std::unique_ptr<Knob>, 7> stepKnobs;
 
-    juce::TextButton modModeButton { "MOD" };
+    KeyboardTextButton modModeButton { "MOD" };
     static constexpr int kNumModSlots = 3;
-    std::array<std::unique_ptr<juce::TextButton>, kNumModSlots> modTargetButtons;
-    std::array<std::unique_ptr<juce::TextButton>, kNumModSlots> modSourceButtons;
+    std::array<std::unique_ptr<KeyboardTextButton>, kNumModSlots> modTargetButtons;
+    std::array<std::unique_ptr<KeyboardTextButton>, kNumModSlots> modSourceButtons;
     std::array<std::unique_ptr<juce::Slider>, kNumModSlots> modAmountSliders;
     std::array<std::unique_ptr<juce::Slider>, kNumModSlots> modParamSliders;
     std::array<std::unique_ptr<juce::Label>, kNumModSlots> modParamLabels;

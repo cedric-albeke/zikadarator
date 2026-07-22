@@ -55,6 +55,9 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     dryWetSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
     dryWetSlider.setRange(0.0, 100.0, 1.0);
     dryWetSlider.setValue(100.0);
+    dryWetSlider.setTitle("Dry / wet mix");
+    dryWetSlider.setDescription("Blend the original and processed signal.");
+    dryWetSlider.setExplicitFocusOrder(400);
     dryWetSlider.onValueChange = [this] { repaint(); };
     addAndMakeVisible(dryWetSlider);
     dryWetAttachment = std::make_unique<
@@ -74,6 +77,9 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     addAndMakeVisible(outputGainLabel);
 
     bypassButton.setClickingTogglesState(true);
+    bypassButton.setTitle("Effect bypass");
+    bypassButton.setDescription("Bypass all ZIKADARATOR processing.");
+    bypassButton.setExplicitFocusOrder(410);
     bypassButton.setColour(juce::TextButton::buttonColourId,   Colours::bgSurface);
     bypassButton.setColour(juce::TextButton::buttonOnColourId,  Colours::neonGreen);
     bypassButton.setColour(juce::TextButton::textColourOffId,   Colours::white50);
@@ -96,9 +102,13 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     stepResolutionBox.setColour(juce::ComboBox::arrowColourId,          Colours::white50);
     stepResolutionBox.setColour(juce::ComboBox::focusedOutlineColourId, Colours::neonGreen);
     stepResolutionBox.onChange = [this] { syncInlineControlState(); };
+    stepResolutionBox.setAccessible(false);
     addChildComponent(stepResolutionBox);
 
     stepResolutionButton.setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
+    stepResolutionButton.setTitle("Step resolution");
+    stepResolutionButton.setDescription("Cycle the sequencer step resolution.");
+    stepResolutionButton.setExplicitFocusOrder(409);
     stepResolutionButton.setColour(juce::TextButton::buttonOnColourId, Colours::bgHover.brighter(0.06f));
     stepResolutionButton.setColour(juce::TextButton::textColourOffId, Colours::white50);
     stepResolutionButton.setColour(juce::TextButton::textColourOnId, Colours::white);
@@ -117,6 +127,7 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
         knob->setValue(kKnobDef[i]);
         knob->setLabel(kKnobLabel[i]);
         knob->setColour(Colours::neonGreen);
+        knob->setExplicitFocusOrder(401 + i);
         knob->onValueChange = [this] { notifySlotDataChanged(); };
         addChildComponent(knob.get());
         stepKnobs[i] = std::move(knob);
@@ -124,6 +135,9 @@ FooterPanel::FooterPanel(juce::AudioProcessorValueTreeState& valueTreeState)
     applyKnobConfigForLane(0);
 
     modModeButton.setClickingTogglesState(true);
+    modModeButton.setTitle("Step modulation mode");
+    modModeButton.setDescription("Show modulation controls for the selected step.");
+    modModeButton.setExplicitFocusOrder(408);
     modModeButton.setColour(juce::TextButton::buttonColourId,   Colours::bgSurface);
     modModeButton.setColour(juce::TextButton::buttonOnColourId, Colours::neonGreen);
     modModeButton.setColour(juce::TextButton::textColourOffId,  Colours::white50);
@@ -216,14 +230,20 @@ void FooterPanel::setupModulationControls()
 {
     for (int i = 0; i < kNumModSlots; ++i)
     {
-        auto targetBtn = std::make_unique<juce::TextButton>("OFF");
+        auto targetBtn = std::make_unique<KeyboardTextButton>("OFF");
+        targetBtn->setTitle("Modulation slot " + juce::String(i + 1) + " target");
+        targetBtn->setDescription("Cycle the destination controlled by this modulation slot.");
+        targetBtn->setExplicitFocusOrder(411 + i * 4);
         targetBtn->onClick = [this, i] { cycleModTarget(i); };
         targetBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface.withAlpha(0.50f));
         targetBtn->setColour(juce::TextButton::textColourOffId, Colours::white50);
         addChildComponent(targetBtn.get());
         modTargetButtons[i] = std::move(targetBtn);
 
-        auto sourceBtn = std::make_unique<juce::TextButton>("STATIC");
+        auto sourceBtn = std::make_unique<KeyboardTextButton>("STATIC");
+        sourceBtn->setTitle("Modulation slot " + juce::String(i + 1) + " source");
+        sourceBtn->setDescription("Cycle the modulation source for this slot.");
+        sourceBtn->setExplicitFocusOrder(412 + i * 4);
         sourceBtn->onClick = [this, i] { cycleModSource(i); };
         sourceBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface.withAlpha(0.50f));
         sourceBtn->setColour(juce::TextButton::textColourOffId, Colours::white50);
@@ -235,6 +255,9 @@ void FooterPanel::setupModulationControls()
         amountSlider->setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         amountSlider->setRange(0.0, 100.0, 1.0);
         amountSlider->setValue(0.0);
+        amountSlider->setTitle("Modulation slot " + juce::String(i + 1) + " amount");
+        amountSlider->setDescription("Set the modulation depth in percent.");
+        amountSlider->setExplicitFocusOrder(413 + i * 4);
         amountSlider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
         amountSlider->setColour(juce::Slider::trackColourId, Colours::white50);
         amountSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface.withAlpha(0.50f));
@@ -247,6 +270,9 @@ void FooterPanel::setupModulationControls()
         paramSlider->setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         paramSlider->setRange(0.0, 7.0, 1.0);
         paramSlider->setValue(0.0);
+        paramSlider->setTitle("Modulation slot " + juce::String(i + 1) + " parameter");
+        paramSlider->setDescription("Adjust the selected modulation source parameter.");
+        paramSlider->setExplicitFocusOrder(414 + i * 4);
         paramSlider->setColour(juce::Slider::thumbColourId, Colours::neonGreen);
         paramSlider->setColour(juce::Slider::trackColourId, Colours::white50);
         paramSlider->setColour(juce::Slider::backgroundColourId, Colours::bgSurface.withAlpha(0.50f));

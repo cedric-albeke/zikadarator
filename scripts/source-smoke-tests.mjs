@@ -54,6 +54,8 @@ const stepCellHeader = read("src/ui/components/StepCell.h");
 const stepCell = read("src/ui/components/StepCell.cpp");
 const knobHeader = read("src/ui/components/Knob.h");
 const knob = read("src/ui/components/Knob.cpp");
+const keyboardTextButton = read("src/ui/components/KeyboardTextButton.h");
+const lookAndFeel = read("src/ui/ZikadaLookAndFeel.cpp");
 const presetManager = read("src/state/PresetManager.cpp");
 const parameterIDs = read("src/state/ParameterIDs.h");
 const sequencerState = read("src/state/SequencerState.h");
@@ -303,6 +305,13 @@ assertContains(headerPanel, "repaint(fxDisplayBounds.expanded", "CRT timer must 
 assertContains(headerPanel, "FX MON", "CRT FX monitor must be labeled as a live FX monitor");
 assertContains(headerPanel, "scanLineY", "CRT FX monitor must include scanline motion");
 assertContains(headerPanel, "phosphorPath", "CRT FX monitor must include a triggered phosphor waveform");
+assertContains(headerPanel, "configureAccessibility", "custom-drawn header actions must share one accessibility configuration path");
+assertContains(headerPanel, "setExplicitFocusOrder", "custom-drawn header actions must have deterministic keyboard order");
+assertContains(headerPanel, "\"Preset menu\"", "custom-drawn preset menu action must expose an accessible name");
+if (headerPanel.includes("FocusContainerType::keyboardFocusContainer")) {
+  fail("header must remain part of the global Tab traversal rather than trapping focus in a local container");
+}
+assertContains(keyboardTextButton, "juce::KeyPress::spaceKey", "custom text buttons must support Space activation");
 assertContains(editor, "headerPanel.setFxDisplayState", "editor must update the CRT display from selected step state");
 assertContains(editor, "headerPanel.setFxDisplayPlayhead", "editor must pulse the CRT display from the playhead");
 assertContains(sidebar, "selectedPresetIndex", "sidebar must track selected preset details separately from hover");
@@ -318,6 +327,10 @@ assertContains(sidebar, "focusedPresetButtonIndex", "sidebar preset browser must
 assertContains(sidebar, "moveFocusedPresetBy", "sidebar preset browser must support arrow-key focus movement");
 assertContains(sidebar, "activateFocusedPreset", "sidebar preset browser must activate focused presets from keyboard");
 assertContains(sidebar, "juce::KeyPress::spaceKey", "sidebar preset browser must handle space/return activation");
+assertContains(sidebar, "btn->setTitle(presets[i].tooltip)", "preset buttons must expose descriptive accessible names");
+assertContains(sidebar, "btn->setDescription(presets[i].infoText)", "preset buttons must expose their effect descriptions");
+assertContains(sidebar, "btn->setExplicitFocusOrder", "preset buttons must have deterministic keyboard order");
+assertContains(sidebar, "targetButton->grabKeyboardFocus()", "preset arrow navigation must move actual focus to the painted target");
 assertContains(sidebar, "kInfoH = 84", "sidebar detail panel must reserve enough room for title and body copy");
 assertContains(read("src/ui/panels/SidebarPanel.h"), "infoTitleLabel", "sidebar detail panel must split title from body copy");
 assertContains(read("src/ui/panels/SidebarPanel.h"), "infoDetailLabel", "sidebar detail panel must split detail body from title");
@@ -338,6 +351,11 @@ assertContains(stepGridHeader, "keyPressed", "step grid must handle keyboard nav
 assertContains(stepGrid, "moveSelectionBy", "step grid must expose arrow-key selection movement");
 assertContains(stepGrid, "toggleSelectedStep", "step grid must expose keyboard activation for the selected step");
 assertContains(stepGrid, "drawKeyboardFocusRing", "step grid must draw a visible keyboard focus ring");
+assertContains(stepGridHeader, "createAccessibilityHandler", "step grid must expose an explicit accessibility role");
+assertContains(stepGrid, "AccessibilityRole::group", "step grid must be announced as one keyboard-navigable group");
+assertContains(stepGrid, "cell->setAccessible(false)", "visual step children must not create a duplicate accessibility focus tree");
+assertContains(stepGrid, "if (!hasKeyboardFocus(false))", "step grid must reject key events bubbled from child controls");
+assertContains(stepGrid, "if (! hasKeyboardFocus(false)", "step grid focus ring must not highlight a cell while a child control owns focus");
 assertContains(stepGrid, "drawPlayheadRail", "step grid must draw a column-wide playhead rail");
 assertContains(stepGridHeader, "paintSourceData", "step grid must retain a complete source step for drag-copy painting");
 assertContains(stepGrid, "applyPaintSourceToCell", "step grid must copy sequencer and APVTS state through a dedicated paint path");
@@ -358,6 +376,15 @@ assertContains(stepGrid, "getStepColumnBounds", "step grid must compute bounded 
 assertContains(stepGrid, "repaint(getStepColumnBounds(previousPlayingStep)", "step grid must repaint the old playhead column only");
 assertContains(stepGrid, "repaint(getStepColumnBounds(lastPlayingStep)", "step grid must repaint the new playhead column only");
 assertContains(stepGrid, "namespace StepGridMetrics", "step grid layout metrics must be centralized instead of repeated across paint/resized/hit-test");
+assertContains(knobHeader, "createAccessibilityHandler", "custom knobs must expose a native accessibility handler");
+assertContains(knob, "AccessibilityRole::slider", "custom knobs must expose the slider accessibility role");
+assertContains(knob, "AccessibilityValueInterface", "custom knobs must expose a ranged accessibility value");
+assertContains(knob, "setValueAsCompleteGesture", "keyboard and accessibility knob edits must emit complete host gestures");
+assertContains(knobHeader, "keyPressed", "custom knobs must support keyboard value changes");
+assertContains(lookAndFeel, "button.hasKeyboardFocus(false)", "standard buttons must expose a visible keyboard focus ring");
+assertContains(footer, "dryWetSlider.setTitle", "dry/wet slider must expose an accessible name");
+assertContains(footer, "stepResolutionButton.setTitle", "step resolution proxy button must expose its purpose");
+assertContains(footer, "modulation slot", "modulation controls must expose slot-specific accessible names");
 assertContains(stepGrid, "kBeatGroupSize = 4", "step grid must explicitly model four-step beat groups");
 assertContains(stepGrid, "drawBeatGroupBackgrounds", "step grid must draw subtle beat-group backplates so the sequencer reads musically");
 assertContains(stepGrid, "beatGroupBounds", "step grid beat-group drawing must use stable group bounds instead of ad hoc separator lines only");

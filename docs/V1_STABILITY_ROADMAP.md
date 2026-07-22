@@ -60,10 +60,11 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - Lane mix knobs now use a bidirectional JUCE parameter attachment, follow synchronous/asynchronous automation and preset restore, and keep host gestures balanced across drag, click, double-click reset, and destruction during an active drag.
 - StepGrid drag-to-paint now interpolates across skipped mouse events, copies active presets, erases from inactive sources, synchronizes APVTS gates with complete host gestures, clears overwritten chains, and creates one undo boundary per gesture. Host-enabled blank sources normalize to preset 1, Shift+Drag is reserved for tie drawing, and click-only selection remains non-destructive.
 - Hidden waveform consumers now discard queued tap samples and clear retained display history in both page/visibility directions; 16,384-sample fixed UI buffers keep draining bounded at high sample rates. Lock-free operation guards and tap generations make reprepare safe against concurrent audio/UI access and invalidate old-rate display history. The CRT monitor now owns a region-limited 30 Hz animation timer.
+- Custom-drawn header and preset actions now expose stable accessible names, help, deterministic global focus order, and Space/Enter parity. Knobs expose native slider roles, ranged values, visible focus, keyboard operation, and complete host gestures. StepGrid is one named keyboard-navigable group without 96 duplicate child focus stops; child keys cannot trigger grid edits, and Footer controls have purpose-specific names.
 
 ## Open V1 Gates
 
-1. Fix the remaining UI correctness issues in keyboard and accessibility coverage.
+1. Add discoverable keyboard commands for advanced StepGrid tie-chain editing and preset cycling.
 2. Fix the remaining DSP/state defects: possible audio-thread scratch growth, absolute host loop/seek retrigger identity, loop-history limits, and any DSP labels that still overstate implemented behavior.
 3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.

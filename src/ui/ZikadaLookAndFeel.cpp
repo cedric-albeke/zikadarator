@@ -82,6 +82,12 @@ void ZikadaLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
         g.setColour(Colours::white.withAlpha(0.08f));
         g.drawRoundedRectangle(bounds, corner, 1.0f);
     }
+
+    if (button.hasKeyboardFocus(false))
+    {
+        g.setColour(Colours::neonGreen.withAlpha(0.95f));
+        g.drawRoundedRectangle(bounds.reduced(0.5f), corner, 1.5f);
+    }
 }
 
 void ZikadaLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,

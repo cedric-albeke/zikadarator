@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ZikadaLookAndFeel.h"
+#include "../components/KeyboardTextButton.h"
 #include "../../state/StepData.h"
 #include <vector>
 #include <memory>
@@ -45,7 +46,7 @@ private:
 
     juce::Label infoTitleLabel;
     juce::Label infoDetailLabel;
-    std::vector<std::unique_ptr<juce::TextButton>> presetButtons;
+    std::vector<std::unique_ptr<KeyboardTextButton>> presetButtons;
 
     std::vector<LanePresetDef> getPresetsForLane(int lane) const;
     void buildPresetGrid();
@@ -56,6 +57,7 @@ private:
     void updateInfoForHover(int presetIndex);
     void moveFocusedPresetBy(int columnDelta, int rowDelta);
     void activateFocusedPreset();
+    void updateAccessiblePresetDescription(int buttonIndex);
     int findPresetButtonIndex(int presetIndex) const;
 };
 

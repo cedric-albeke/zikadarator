@@ -43,6 +43,10 @@ StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& se
 {
     setWantsKeyboardFocus(true);
     setMouseClickGrabsKeyboardFocus(true);
+    setExplicitFocusOrder(200);
+    setTitle("Sequencer grid");
+    setHelpText("Use arrow keys to select a step, then Space or Enter to toggle it.");
+    updateAccessibilityDescription();
     setupGrid();
 }
 
@@ -138,6 +142,8 @@ void StepGrid::setupGrid()
             };
 
             cell->setInterceptsMouseClicks(false, false);
+            cell->setWantsKeyboardFocus(false);
+            cell->setAccessible(false);
 
             cells[lane][step] = std::move(cell);
         }
@@ -147,6 +153,8 @@ void StepGrid::setupGrid()
         knob->setDefaultValue(100.0);
         knob->setColour(laneInfos[lane].colour);
         knob->setLabel("MIX");
+        knob->setTitle(juce::String(laneInfos[lane].name) + " lane mix");
+        knob->setExplicitFocusOrder(201 + lane * 3);
 
         auto mixParamID = getLaneMixID(lane);
         auto* mixParam = apvts.getParameter(mixParamID);
@@ -156,7 +164,10 @@ void StepGrid::setupGrid()
         if (mixParam != nullptr)
             mixAttachments[lane] = std::make_unique<KnobParameterAttachment>(*mixParam, *mixKnobs[lane]);
 
-        auto muteBtn = std::make_unique<juce::TextButton>("M");
+        auto muteBtn = std::make_unique<KeyboardTextButton>("M");
+        muteBtn->setTitle(juce::String(laneInfos[lane].name) + " lane mute");
+        muteBtn->setTooltip("Mute " + juce::String(laneInfos[lane].name) + " lane");
+        muteBtn->setExplicitFocusOrder(202 + lane * 3);
         muteBtn->setClickingTogglesState(true);
         muteBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
         muteBtn->setColour(juce::TextButton::buttonOnColourId, Colours::warning);
@@ -168,7 +179,10 @@ void StepGrid::setupGrid()
         addAndMakeVisible(muteBtn.get());
         muteButtons[lane] = std::move(muteBtn);
 
-        auto soloBtn = std::make_unique<juce::TextButton>("S");
+        auto soloBtn = std::make_unique<KeyboardTextButton>("S");
+        soloBtn->setTitle(juce::String(laneInfos[lane].name) + " lane solo");
+        soloBtn->setTooltip("Solo " + juce::String(laneInfos[lane].name) + " lane");
+        soloBtn->setExplicitFocusOrder(203 + lane * 3);
         soloBtn->setClickingTogglesState(true);
         soloBtn->setColour(juce::TextButton::buttonColourId, Colours::bgSurface);
         soloBtn->setColour(juce::TextButton::buttonOnColourId, Colours::neonGreen);
@@ -542,7 +556,35 @@ void StepGrid::setSelectedStep(int lane, int step)
         && selectedLane < numLanes && selectedStep < numSteps)
         cells[selectedLane][selectedStep]->setSelected(true);
 
+    updateAccessibilityDescription();
     repaint();
+}
+
+void StepGrid::updateAccessibilityDescription()
+{
+    if (selectedLane < 0 || selectedLane >= numLanes || selectedStep < 0 || selectedStep >= numSteps)
+    {
+        setTitle("Sequencer grid");
+        setDescription("Six effect lanes with sixteen steps each; no step is selected.");
+        return;
+    }
+
+    const auto& data = sequencerState.getStepData(selectedLane, selectedStep);
+    auto description = juce::String(laneInfos[selectedLane].name)
+                     + " lane, step " + juce::String(selectedStep + 1);
+    description += data.active ? ", active" : ", inactive";
+    if (data.active && data.presetIndex > 0)
+        description += ", preset " + juce::String(data.presetIndex);
+    setTitle("Sequencer grid: " + description);
+    setDescription(description + ".");
+
+    if (auto* handler = getAccessibilityHandler())
+        handler->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
+}
+
+std::unique_ptr<juce::AccessibilityHandler> StepGrid::createAccessibilityHandler()
+{
+    return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
 }
 
 std::pair<int, int> StepGrid::hitTestCell(juce::Point<int> pos) const
@@ -729,7 +771,7 @@ bool StepGrid::toggleSelectedStep()
 
 void StepGrid::drawKeyboardFocusRing(juce::Graphics& g)
 {
-    if (! hasKeyboardFocus(true)
+    if (! hasKeyboardFocus(false)
         || selectedLane < 0 || selectedLane >= numLanes
         || selectedStep < 0 || selectedStep >= numSteps)
         return;
@@ -1018,6 +1060,9 @@ void StepGrid::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelD
 
 bool StepGrid::keyPressed(const juce::KeyPress& key)
 {
+    if (!hasKeyboardFocus(false))
+        return false;
+
     const int code = key.getKeyCode();
     if (code == juce::KeyPress::leftKey)   return moveSelectionBy(0, -1);
     if (code == juce::KeyPress::rightKey)  return moveSelectionBy(0, 1);

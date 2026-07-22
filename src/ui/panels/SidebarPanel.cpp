@@ -34,6 +34,10 @@ namespace {
 SidebarPanel::SidebarPanel()
 {
     setWantsKeyboardFocus(true);
+    setMouseClickGrabsKeyboardFocus(true);
+    setTitle("Lane preset palette");
+    setDescription("Preset effects for the selected sequencer step.");
+    setHelpText("Use arrow keys to move through presets, then Space or Enter to assign one.");
 
     infoTitleLabel.setJustificationType(juce::Justification::centredLeft);
     infoTitleLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
@@ -203,12 +207,26 @@ void SidebarPanel::buildPresetGrid()
 
     for (size_t i = 0; i < presets.size(); ++i)
     {
-        auto btn = std::make_unique<juce::TextButton>("");
+        auto btn = std::make_unique<KeyboardTextButton>("");
         btn->setTooltip(presets[i].tooltip);
+        btn->setTitle(presets[i].tooltip);
+        btn->setDescription(presets[i].infoText);
+        btn->setHelpText("Assign " + presets[i].tooltip + " to the selected step.");
+        btn->setExplicitFocusOrder(300 + static_cast<int>(i));
         int pidx = presets[i].presetIndex;
+        const int buttonIndex = static_cast<int>(i);
+        btn->onKeyboardFocus = [safePanel = juce::Component::SafePointer<SidebarPanel>(this),
+                                buttonIndex]
+        {
+            if (safePanel == nullptr)
+                return;
+
+            safePanel->focusedPresetButtonIndex = buttonIndex;
+            safePanel->updateAccessiblePresetDescription(buttonIndex);
+            safePanel->repaint();
+        };
         btn->onClick = [this, pidx]
         {
-            grabKeyboardFocus();
             notifyPresetAssigned(pidx);
             selectedPresetIndex = pidx;
             focusedPresetButtonIndex = findPresetButtonIndex(pidx);
@@ -562,10 +580,29 @@ void SidebarPanel::moveFocusedPresetBy(int columnDelta, int rowDelta)
     target = juce::jlimit(0, static_cast<int>(presetButtons.size()) - 1, target);
     focusedPresetButtonIndex = target;
 
+    if (auto* targetButton = presetButtons[static_cast<size_t>(focusedPresetButtonIndex)].get())
+        targetButton->grabKeyboardFocus();
+
     auto presets = getPresetsForLane(currentLane);
     if (static_cast<size_t>(focusedPresetButtonIndex) < presets.size())
         updateInfoForHover(presets[static_cast<size_t>(focusedPresetButtonIndex)].presetIndex);
+    updateAccessiblePresetDescription(focusedPresetButtonIndex);
     repaint();
+}
+
+void SidebarPanel::updateAccessiblePresetDescription(int buttonIndex)
+{
+    const auto presets = getPresetsForLane(currentLane);
+    if (buttonIndex < 0 || static_cast<size_t>(buttonIndex) >= presets.size())
+        return;
+
+    const auto& preset = presets[static_cast<size_t>(buttonIndex)];
+    setTitle("Lane preset palette: " + preset.tooltip);
+    setDescription("Focused preset " + preset.tooltip + ". " + preset.infoText);
+    updateInfoForHover(preset.presetIndex);
+
+    if (auto* handler = getAccessibilityHandler())
+        handler->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
 }
 
 void SidebarPanel::activateFocusedPreset()

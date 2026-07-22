@@ -29,6 +29,10 @@ public:
     
     void paint(juce::Graphics& g) override;
     void resized() override;
+    bool keyPressed(const juce::KeyPress& key) override;
+    void focusGained(juce::Component::FocusChangeType cause) override;
+    void focusLost(juce::Component::FocusChangeType cause) override;
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
     
     void setValue(double newValue);
     double getValue() const { return value; }
@@ -47,6 +51,8 @@ public:
     std::function<void(double)> onDefaultValueRequested;
 
 private:
+    class AccessibilityValue;
+
     double value{0.5};
     double minValue{0.0};
     double maxValue{1.0};
@@ -60,6 +66,7 @@ private:
     double valueToNormalized(double rawValue) const;
     double normalizedToValue(double normalizedValue) const;
     juce::String formatValue() const;
+    void setValueAsCompleteGesture(double newValue);
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseUp(const juce::MouseEvent& event) override;
