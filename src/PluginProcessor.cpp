@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 namespace zikada {
@@ -130,6 +131,31 @@ float getLoopSlotSmooth(const UserSlotData& slotData)
         return 0.45f;
 
     return juce::jlimit(0.0f, 1.0f, slotData.delayFeedback);
+}
+
+std::int64_t saturatingAddSamples(std::int64_t position, int numSamples)
+{
+    const auto increment = static_cast<std::int64_t>(juce::jmax(0, numSamples));
+    const auto maximum = std::numeric_limits<std::int64_t>::max();
+    return position > maximum - increment ? maximum : position + increment;
+}
+
+double advancePpqSafely(double ppq, double ppqDelta)
+{
+    const auto advanced = ppq + ppqDelta;
+    return std::isfinite(advanced) ? advanced : ppq;
+}
+
+double sanitizeAudioSampleRate(double requestedSampleRate)
+{
+    constexpr double fallbackSampleRate = 44100.0;
+    constexpr double minimumSampleRate = 10.0;
+    constexpr double maximumSampleRate = 768000.0;
+    return std::isfinite(requestedSampleRate)
+        && requestedSampleRate >= minimumSampleRate
+        && requestedSampleRate <= maximumSampleRate
+         ? requestedSampleRate
+         : fallbackSampleRate;
 }
 
 double getPpqPerStepForResolution(int resolutionIndex)
@@ -737,27 +763,32 @@ void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
 {
     constexpr int minimumPreparedBlockSize = 64;
     const int preparedBlockSize = juce::jmax(minimumPreparedBlockSize, samplesPerBlock);
-    sampleRate = newSampleRate;
-    sequencerEngine.prepare(newSampleRate, preparedBlockSize);
-    sliceEngine.prepare(newSampleRate, preparedBlockSize);
-    loopEngine.prepare(newSampleRate, preparedBlockSize);
-    filterEngine.prepare(newSampleRate, preparedBlockSize);
-    fx1DelayEngine.prepare(newSampleRate, preparedBlockSize);
-    fx1ReverbEngine.prepare(newSampleRate, preparedBlockSize);
-    fx1BitcrushEngine.prepare(newSampleRate, preparedBlockSize);
-    fx1PitchEngine.prepare(newSampleRate, preparedBlockSize);
-    fx1ToneFilter.prepare(newSampleRate, preparedBlockSize);
-    fx2DelayEngine.prepare(newSampleRate, preparedBlockSize);
-    fx2ReverbEngine.prepare(newSampleRate, preparedBlockSize);
-    fx2BitcrushEngine.prepare(newSampleRate, preparedBlockSize);
-    fx2PitchEngine.prepare(newSampleRate, preparedBlockSize);
-    fx2ToneFilter.prepare(newSampleRate, preparedBlockSize);
-    modulationEngine.prepare(newSampleRate);
-    gainPanEngine.prepare(newSampleRate, preparedBlockSize);
-    waveformTap.prepare(static_cast<int>(newSampleRate * 2.0));
-    processedWaveformTap.prepare(static_cast<int>(newSampleRate * 2.0));
+    const double preparedSampleRate = sanitizeAudioSampleRate(newSampleRate);
+    sampleRate = preparedSampleRate;
+    sequencerEngine.prepare(preparedSampleRate, preparedBlockSize);
+    sliceEngine.prepare(preparedSampleRate, preparedBlockSize);
+    loopEngine.prepare(preparedSampleRate, preparedBlockSize);
+    filterEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx1DelayEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx1ReverbEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx1BitcrushEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx1PitchEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx1ToneFilter.prepare(preparedSampleRate, preparedBlockSize);
+    fx2DelayEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx2ReverbEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx2BitcrushEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx2PitchEngine.prepare(preparedSampleRate, preparedBlockSize);
+    fx2ToneFilter.prepare(preparedSampleRate, preparedBlockSize);
+    modulationEngine.prepare(preparedSampleRate);
+    gainPanEngine.prepare(preparedSampleRate, preparedBlockSize);
+    waveformTap.prepare(static_cast<int>(preparedSampleRate * 2.0));
+    processedWaveformTap.prepare(static_cast<int>(preparedSampleRate * 2.0));
     prepareScratchBuffers(preparedBlockSize);
-    lastEffectiveSteps.fill(-1);
+    resetTransportTracking();
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    laneOnsetCountsForTesting.fill(0);
+    processedSequencerSamplesForTesting = 0;
+#endif
 }
 
 void PluginProcessor::prepareScratchBuffers(int maxSamples)
@@ -778,6 +809,93 @@ void PluginProcessor::prepareScratchBuffers(int maxSamples)
     prepare(sliceRightBuffer);
     prepare(laneInputLeftBuffer);
     prepare(laneInputRightBuffer);
+}
+
+void PluginProcessor::resetTransportTracking()
+{
+    lastTriggerIdentities = {};
+    transportGeneration = 0;
+    transportTrackingInitialized = false;
+    previousUseFreeClock = false;
+    previousHostPlaying = false;
+    previousStepResolutionIndex = 1;
+    expectedHostSamplePositionValid = false;
+    expectedHostSamplePosition = 0;
+    expectedHostPpqPositionValid = false;
+    expectedHostPpqPosition = 0.0;
+    expectedHostPpqTolerance = 0.0;
+    triggerIdentityInvalidationRequested.store(false, std::memory_order_relaxed);
+}
+
+void PluginProcessor::updateTransportForBlock(bool useFreeClock,
+                                              bool playing,
+                                              bool hasHostSamplePosition,
+                                              std::int64_t hostSamplePosition,
+                                              bool hasHostPpqPosition,
+                                              double hostPpqPosition,
+                                              double ppqPerSample,
+                                              int numSamples,
+                                              int stepResolutionIndex)
+{
+    const bool sourceChanged = !transportTrackingInitialized || useFreeClock != previousUseFreeClock;
+    const bool resolutionChanged = transportTrackingInitialized
+                                && stepResolutionIndex != previousStepResolutionIndex;
+    bool startsNewTransportGeneration = sourceChanged || resolutionChanged;
+
+    if (!useFreeClock && playing)
+    {
+        if (!previousHostPlaying)
+        {
+            startsNewTransportGeneration = true;
+        }
+        else if (!sourceChanged)
+        {
+            if (hasHostSamplePosition && expectedHostSamplePositionValid)
+            {
+                constexpr long double sampleTolerance = 2.0L;
+                const auto positionError = static_cast<long double>(hostSamplePosition)
+                                         - static_cast<long double>(expectedHostSamplePosition);
+                if (std::abs(positionError) > sampleTolerance)
+                    startsNewTransportGeneration = true;
+            }
+
+            if (hasHostPpqPosition && expectedHostPpqPositionValid)
+            {
+                const double currentTolerance = std::abs(ppqPerSample) * 2.0 + 1.0e-7;
+                const double tolerance = juce::jmax(expectedHostPpqTolerance, currentTolerance);
+                if (std::abs(hostPpqPosition - expectedHostPpqPosition) > tolerance)
+                    startsNewTransportGeneration = true;
+            }
+        }
+    }
+
+    if (startsNewTransportGeneration)
+        ++transportGeneration;
+
+    if (!useFreeClock && playing)
+    {
+        expectedHostSamplePositionValid = hasHostSamplePosition;
+        if (hasHostSamplePosition)
+            expectedHostSamplePosition = saturatingAddSamples(hostSamplePosition, numSamples);
+
+        expectedHostPpqPositionValid = hasHostPpqPosition;
+        if (hasHostPpqPosition)
+        {
+            expectedHostPpqPosition = advancePpqSafely(hostPpqPosition,
+                                                       ppqPerSample * static_cast<double>(numSamples));
+            expectedHostPpqTolerance = std::abs(ppqPerSample) * 2.0 + 1.0e-7;
+        }
+    }
+    else
+    {
+        expectedHostSamplePositionValid = false;
+        expectedHostPpqPositionValid = false;
+    }
+
+    previousUseFreeClock = useFreeClock;
+    previousHostPlaying = !useFreeClock && playing;
+    previousStepResolutionIndex = stepResolutionIndex;
+    transportTrackingInitialized = true;
 }
 
 void PluginProcessor::releaseResources() {}
@@ -810,6 +928,12 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     if (scratchCapacitySamples <= 0)
         return;
 
+    if (triggerIdentityInvalidationRequested.exchange(false, std::memory_order_acq_rel))
+    {
+        lastTriggerIdentities = {};
+        ++transportGeneration;
+    }
+
     const auto loadParameter = [](const std::atomic<float>* parameter, float fallback)
     {
         return parameter != nullptr ? parameter->load() : fallback;
@@ -831,6 +955,9 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     bool useFreeClock = clockSource == 1;
     bool blockIsPlaying = false;
     double blockStartPpq = ppqPosition;
+    bool hasHostPpqPosition = false;
+    bool hasHostSamplePosition = false;
+    std::int64_t hostSamplePosition = 0;
 
     if (auto currentPlayHead = getPlayHead(); currentPlayHead != nullptr && !useFreeClock)
     {
@@ -839,13 +966,20 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             blockIsPlaying = posInfo->getIsPlaying();
             isPlayingFlag = blockIsPlaying;
 
-            if (const auto hostBpm = posInfo->getBpm(); hostBpm && *hostBpm > 0.0)
+            if (const auto hostBpm = posInfo->getBpm(); hostBpm && std::isfinite(*hostBpm) && *hostBpm > 0.0)
                 bpm = *hostBpm;
 
-            if (const auto hostPpq = posInfo->getPpqPosition(); hostPpq && *hostPpq >= 0.0)
+            if (const auto hostPpq = posInfo->getPpqPosition(); hostPpq && std::isfinite(*hostPpq))
             {
                 blockStartPpq = *hostPpq;
                 ppqPosition = blockStartPpq;
+                hasHostPpqPosition = true;
+            }
+
+            if (const auto hostSamples = posInfo->getTimeInSamples())
+            {
+                hostSamplePosition = *hostSamples;
+                hasHostSamplePosition = true;
             }
         }
         else
@@ -893,12 +1027,50 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     }
 
     const bool hasRightChannel = buffer.getNumChannels() > 1;
-    const double safeSampleRate = sampleRate > 0.0 ? sampleRate : 44100.0;
+    const double safeSampleRate = std::isfinite(sampleRate) && sampleRate > 0.0 ? sampleRate : 44100.0;
     const double ppqPerSample = (bpm / 60.0) / safeSampleRate;
 
-    for (int blockOffset = 0; blockOffset < numSamples; blockOffset += scratchCapacitySamples)
+    if (!useFreeClock && !hasHostPpqPosition && hasHostSamplePosition)
     {
-        const int chunkSamples = juce::jmin(scratchCapacitySamples, numSamples - blockOffset);
+        constexpr long double sampleTolerance = 2.0L;
+        const auto sampleError = static_cast<long double>(hostSamplePosition)
+                               - static_cast<long double>(expectedHostSamplePosition);
+        const bool samplePositionIsContinuous = transportTrackingInitialized
+                                             && !previousUseFreeClock
+                                             && previousHostPlaying
+                                             && expectedHostSamplePositionValid
+                                             && std::abs(sampleError) <= sampleTolerance;
+
+        blockStartPpq = samplePositionIsContinuous && expectedHostPpqPositionValid
+                      ? expectedHostPpqPosition
+                      : static_cast<double>(hostSamplePosition) * ppqPerSample;
+        ppqPosition = blockStartPpq;
+        hasHostPpqPosition = true;
+    }
+
+    updateTransportForBlock(useFreeClock,
+                            blockIsPlaying,
+                            hasHostSamplePosition,
+                            hostSamplePosition,
+                            hasHostPpqPosition,
+                            blockStartPpq,
+                            ppqPerSample,
+                            numSamples,
+                            stepResolutionIndex);
+
+    constexpr int maximumSchedulerSegments = 64;
+    const int schedulerChunkCapacity = stepScheduler.getMaximumSafeBlockSize({safeSampleRate,
+                                                                               bpm,
+                                                                               blockPpqPerStep,
+                                                                               blockStartPpq,
+                                                                               numSamples,
+                                                                               blockIsPlaying},
+                                                                              scratchCapacitySamples,
+                                                                              maximumSchedulerSegments);
+
+    for (int blockOffset = 0; blockOffset < numSamples;)
+    {
+        const int chunkSamples = juce::jmin(schedulerChunkCapacity, numSamples - blockOffset);
         auto* leftChannel = buffer.getWritePointer(0, blockOffset);
         auto* rightChannel = hasRightChannel ? buffer.getWritePointer(1, blockOffset)
                                              : monoRightBuffer.data();
@@ -914,8 +1086,9 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         ++lastProcessChunkCountForTesting;
 #endif
 
-        const double chunkStartPpq = blockStartPpq + static_cast<double>(blockOffset) * ppqPerSample;
-        StepScheduler::Segment segments[64]{};
+        const double chunkStartPpq = advancePpqSafely(blockStartPpq,
+                                                      static_cast<double>(blockOffset) * ppqPerSample);
+        StepScheduler::Segment segments[maximumSchedulerSegments]{};
         const int segmentCount = stepScheduler.makeHostSegments({safeSampleRate,
                                                                  bpm,
                                                                  blockPpqPerStep,
@@ -923,7 +1096,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
                                                                  chunkSamples,
                                                                  blockIsPlaying},
                                                                 segments,
-                                                                static_cast<int>(std::size(segments)));
+                                                                maximumSchedulerSegments);
 
         if (segmentCount > 0)
             currentStep = segments[segmentCount - 1].stepIndex;
@@ -933,6 +1106,9 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             for (int i = 0; i < segmentCount; ++i)
             {
                 const auto& segment = segments[i];
+                if (!segment.playing)
+                    continue;
+
                 processSegment(leftChannel + segment.startSample,
                                rightChannel + segment.startSample,
                                dryLeftBuffer.data() + segment.startSample,
@@ -953,11 +1129,23 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             }
         }
 
+        if (!bypassed && !useFreeClock && !blockIsPlaying)
+        {
+            for (int sample = 0; sample < chunkSamples; ++sample)
+            {
+                leftChannel[sample] = dryLeftBuffer[static_cast<size_t>(sample)] * outputGain;
+                if (hasRightChannel)
+                    rightChannel[sample] = dryRightBuffer[static_cast<size_t>(sample)] * outputGain;
+            }
+        }
+
         processedWaveformTap.pushFromAudioThread(leftChannel, chunkSamples);
+        blockOffset += chunkSamples;
     }
 
-    if (useFreeClock)
-        ppqPosition = blockStartPpq + ppqPerSample * static_cast<double>(numSamples);
+    if (useFreeClock || blockIsPlaying)
+        ppqPosition = advancePpqSafely(blockStartPpq,
+                                       ppqPerSample * static_cast<double>(numSamples));
 }
 
 void PluginProcessor::processSegment(float* leftChannel,
@@ -980,6 +1168,10 @@ void PluginProcessor::processSegment(float* leftChannel,
 {
     if (numSamples <= 0)
         return;
+
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    processedSequencerSamplesForTesting += static_cast<std::uint64_t>(numSamples);
+#endif
 
     const int sequencerStep = segment.stepIndex;
     const double stepPhaseStart = segment.phaseStart;
@@ -1007,6 +1199,36 @@ void PluginProcessor::processSegment(float* leftChannel,
     const int effFilterStep   = getEffectiveStep(kFilterLane,   sequencerStep);
     const int effFx2Step      = getEffectiveStep(kFX2Lane,      sequencerStep);
 
+    auto effectiveAbsoluteStep = [&](int effectiveStep) -> std::int64_t
+    {
+        return segment.absoluteStepIndex - static_cast<std::int64_t>(sequencerStep - effectiveStep);
+    };
+
+    auto clearTriggerIdentity = [&](int lane)
+    {
+        lastTriggerIdentities[static_cast<size_t>(lane)].valid = false;
+    };
+
+    auto beginsNewOnset = [&](int lane,
+                              std::int64_t absoluteStep,
+                              int rootGridStep,
+                              int presetIndex) -> bool
+    {
+        auto& identity = lastTriggerIdentities[static_cast<size_t>(lane)];
+        if (identity.valid
+            && identity.transportGeneration == transportGeneration
+            && identity.absoluteStep == absoluteStep
+            && identity.rootGridStep == rootGridStep
+            && identity.presetIndex == presetIndex)
+            return false;
+
+        identity = {transportGeneration, absoluteStep, rootGridStep, presetIndex, true};
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+        ++laneOnsetCountsForTesting[static_cast<size_t>(lane)];
+#endif
+        return true;
+    };
+
     const auto& sliceStep    = sequencerSnapshot.getStepData(kSliceLane,    effSliceStep);
     const auto& loopStep     = sequencerSnapshot.getStepData(kLoopLane,     effLoopStep);
     const auto& envelopeStep = sequencerSnapshot.getStepData(kEnvelopeLane, effEnvelopeStep);
@@ -1032,11 +1254,13 @@ void PluginProcessor::processSegment(float* leftChannel,
 
     if (!sliceStep.active || sliceStep.presetIndex <= 0)
     {
-        lastEffectiveSteps[kSliceLane] = -1;
+        clearTriggerIdentity(kSliceLane);
     }
-    else if (effSliceStep != lastEffectiveSteps[kSliceLane])
+    else if (beginsNewOnset(kSliceLane,
+                            effectiveAbsoluteStep(effSliceStep),
+                            effSliceStep,
+                            sliceStep.presetIndex))
     {
-        lastEffectiveSteps[kSliceLane] = effSliceStep;
         const auto sliceConfig = getSliceConfigForPreset(sliceStep.presetIndex, effSliceStep);
         sliceEngine.setPlaybackMode(sliceConfig.mode, sliceConfig.repeats);
         sliceEngine.triggerSlice(sliceConfig.sliceIndex);
@@ -1044,23 +1268,27 @@ void PluginProcessor::processSegment(float* leftChannel,
 
     if (!loopStep.active || loopStep.presetIndex <= 0)
     {
-        lastEffectiveSteps[kLoopLane] = -1;
+        clearTriggerIdentity(kLoopLane);
         loopEngine.setEnabled(false);
     }
-    else if (effLoopStep != lastEffectiveSteps[kLoopLane])
+    else if (beginsNewOnset(kLoopLane,
+                            effectiveAbsoluteStep(effLoopStep),
+                            effLoopStep,
+                            loopStep.presetIndex))
     {
-        lastEffectiveSteps[kLoopLane] = effLoopStep;
         configureLoopEngineForPreset(loopEngine, loopStep.presetIndex, loopSlot, beatSeconds);
         loopEngine.trigger();
     }
 
     if (!filterStep.active || filterStep.presetIndex <= 0)
     {
-        lastEffectiveSteps[kFilterLane] = -1;
+        clearTriggerIdentity(kFilterLane);
     }
-    else if (effFilterStep != lastEffectiveSteps[kFilterLane])
+    else if (beginsNewOnset(kFilterLane,
+                            effectiveAbsoluteStep(effFilterStep),
+                            effFilterStep,
+                            filterStep.presetIndex))
     {
-        lastEffectiveSteps[kFilterLane] = effFilterStep;
         configureFilterForStep(filterEngine, filterStep.presetIndex, filterSlot);
         modulationEngine.setStepData(filterSlot.modulation, bpm, stepDurationSeconds);
     }
@@ -1352,7 +1580,7 @@ void PluginProcessor::applyFullState(const juce::ValueTree& stateTree)
 
     synchronizeSequencerActiveStateFromParameters();
 
-    lastEffectiveSteps.fill(-1);
+    triggerIdentityInvalidationRequested.store(true, std::memory_order_release);
 }
 
 void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)

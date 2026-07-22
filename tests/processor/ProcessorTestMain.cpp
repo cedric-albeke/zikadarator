@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdio>
 #include <functional>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -149,11 +150,15 @@ public:
 class TestPlayHead final : public juce::AudioPlayHead
 {
 public:
-    void setPosition(double newBpm, double newPpqPosition, bool playing)
+    void setPosition(double newBpm,
+                     double newPpqPosition,
+                     bool playing,
+                     juce::Optional<int64_t> newTimeInSamples = juce::nullopt)
     {
         bpm = newBpm;
         ppqPosition = newPpqPosition;
         isPlaying = playing;
+        timeInSamples = newTimeInSamples;
     }
 
     juce::Optional<PositionInfo> getPosition() const override
@@ -162,6 +167,7 @@ public:
         position.setBpm(bpm);
         position.setPpqPosition(ppqPosition);
         position.setIsPlaying(isPlaying);
+        position.setTimeInSamples(timeInSamples);
         return position;
     }
 
@@ -169,7 +175,37 @@ private:
     double bpm{120.0};
     double ppqPosition{0.0};
     bool isPlaying{true};
+    juce::Optional<int64_t> timeInSamples;
 };
+
+void configureHostSliceStep(zikada::PluginProcessor& processor, int stepIndex, int chainLength = 1)
+{
+    setParameter(processor, zikada::ParameterIDs::clockSource, 0.0f);
+    setParameter(processor, zikada::ParameterIDs::stepResolution, 1.0f);
+    setParameter(processor, zikada::ParameterIDs::dryWet, 100.0f);
+
+    zikada::StepData step;
+    step.active = true;
+    step.presetIndex = 5;
+    step.chainLength = chainLength;
+    processor.getSequencerState().setStepData(0, stepIndex, step);
+    setParameter(processor, zikada::getStepActiveID(0, stepIndex), 1.0f);
+}
+
+void processHostBlock(zikada::PluginProcessor& processor,
+                      TestPlayHead& playHead,
+                      double bpm,
+                      double ppq,
+                      bool playing,
+                      juce::Optional<int64_t> timeInSamples = juce::nullopt,
+                      int blockSize = 64)
+{
+    playHead.setPosition(bpm, ppq, playing, timeInSamples);
+    juce::AudioBuffer<float> buffer(2, blockSize);
+    fillBuffer(buffer, 0.25f);
+    juce::MidiBuffer midi;
+    processor.processBlock(buffer, midi);
+}
 
 int countRenderedSliceSamples(float tempo, bool automatedStepActive = true)
 {
@@ -297,6 +333,421 @@ namespace zikada::tests {
 
 void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>>& tests)
 {
+    tests.push_back({"continuous host blocks trigger once before a same-step sample-position loop", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        constexpr double ppqPerSample = 2.0 / sampleRate;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        processHostBlock(processor, playHead, 120.0, blockSize * ppqPerSample, true, int64_t{blockSize});
+        if (processor.getLaneOnsetCountForTesting(0) != 1)
+            throw std::runtime_error("continuous sample-position blocks retriggered the same step");
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("same-step sample-position loop did not retrigger");
+    }});
+
+    tests.push_back({"PPQ fallback tolerates continuity and detects same-step loops", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        constexpr double ppqPerSample = 2.0 / sampleRate;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true);
+        processHostBlock(processor, playHead, 90.0, blockSize * ppqPerSample, true);
+        if (processor.getLaneOnsetCountForTesting(0) != 1)
+            throw std::runtime_error("continuous PPQ blocks or a boundary tempo change caused a false retrigger");
+
+        processHostBlock(processor, playHead, 90.0, 0.0, true);
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("same-step PPQ loop did not retrigger");
+    }});
+
+    tests.push_back({"PPQ loops retrigger even when host sample time stays monotonic", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{blockSize});
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("PPQ loop was hidden by monotonic host sample time");
+    }});
+
+    tests.push_back({"large tempo changes cannot hide short PPQ loops", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int longBlockSize = 4096;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, longBlockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0}, longBlockSize);
+        processHostBlock(processor, playHead, 300.0, 0.1, true, int64_t{longBlockSize});
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("tempo allowance masked a short backward PPQ loop");
+    }});
+
+    tests.push_back({"complete-pattern host seeks retrigger the same modulo step", []
+    {
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(48000.0, 64);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        processHostBlock(processor, playHead, 120.0, 8.0, true, int64_t{192000});
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("16-step host seek did not retrigger modulo step zero");
+    }});
+
+    tests.push_back({"transport epochs retrigger every onset-driven lane", []
+    {
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(48000.0, 64);
+        setParameter(processor, ParameterIDs::clockSource, 0.0f);
+        setParameter(processor, ParameterIDs::stepResolution, 1.0f);
+
+        for (const int lane : {0, 1, 4})
+        {
+            StepData step;
+            step.active = true;
+            step.presetIndex = 5;
+            processor.getSequencerState().setStepData(lane, 0, step);
+            setParameter(processor, getStepActiveID(lane, 0), 1.0f);
+        }
+
+        auto requireCounts = [&](std::uint64_t expected, const char* context)
+        {
+            for (const int lane : {0, 1, 4})
+                if (processor.getLaneOnsetCountForTesting(lane) != expected)
+                    throw std::runtime_error(std::string(context) + " lane " + std::to_string(lane));
+        };
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        requireCounts(1, "initial transport onset missing for");
+
+        processHostBlock(processor, playHead, 120.0, 0.0, false, int64_t{0});
+        requireCounts(1, "stopped transport consumed onset for");
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        requireCounts(2, "transport restart did not retrigger");
+
+        processHostBlock(processor, playHead, 120.0, 8.0, true, int64_t{192000});
+        requireCounts(3, "complete-pattern seek did not retrigger");
+    }});
+
+    tests.push_back({"stopped host blocks neither process nor consume onsets", []
+    {
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(48000.0, 64);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, false, int64_t{0});
+        if (processor.getLaneOnsetCountForTesting(0) != 0
+            || processor.getProcessedSequencerSampleCountForTesting() != 0)
+            throw std::runtime_error("stopped callback consumed sequencer onset or playback state");
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        if (processor.getLaneOnsetCountForTesting(0) != 1
+            || processor.getProcessedSequencerSampleCountForTesting() != 64)
+            throw std::runtime_error("play start did not trigger and process the selected step");
+
+        processHostBlock(processor, playHead, 120.0, 0.0, false, int64_t{0});
+        if (processor.getProcessedSequencerSampleCountForTesting() != 64)
+            throw std::runtime_error("stopped callback advanced an active sequencer effect");
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("restart at identical host position did not retrigger");
+    }});
+
+    tests.push_back({"stopped host keeps output gain and bypass contracts", []
+    {
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(48000.0, 64);
+        setParameter(processor, ParameterIDs::clockSource, 0.0f);
+        setParameter(processor, ParameterIDs::outputGain, 6.0206f);
+
+        playHead.setPosition(120.0, 0.0, false, int64_t{0});
+        juce::AudioBuffer<float> gainedBuffer(2, 64);
+        fillBuffer(gainedBuffer, 0.25f);
+        juce::MidiBuffer midi;
+        processor.processBlock(gainedBuffer, midi);
+        requireNear(gainedBuffer.getSample(0, 0), 0.5f, 0.001f,
+                    "stopped host bypassed the global output gain stage");
+
+        setParameter(processor, ParameterIDs::bypass, 1.0f);
+        juce::AudioBuffer<float> bypassedBuffer(2, 64);
+        fillBuffer(bypassedBuffer, 0.25f);
+        processor.processBlock(bypassedBuffer, midi);
+        requireNear(bypassedBuffer.getSample(0, 0), 0.25f, 0.0001f,
+                    "plugin bypass changed stopped live-monitor audio");
+    }});
+
+    tests.push_back({"negative host PPQ triggers the normalized absolute step", []
+    {
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(48000.0, 64);
+        configureHostSliceStep(processor, 15);
+
+        processHostBlock(processor, playHead, 120.0, -0.25, true, int64_t{-6000});
+        if (processor.getCurrentStep() != 15 || processor.getLaneOnsetCountForTesting(0) != 1)
+            throw std::runtime_error("negative PPQ did not select and trigger sequencer step 15");
+    }});
+
+    tests.push_back({"continuous chained steps keep one absolute onset identity", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        constexpr int64_t startSample = 11968;
+        constexpr double ppqPerSample = 2.0 / sampleRate;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0, 2);
+
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         static_cast<double>(startSample) * ppqPerSample,
+                         true,
+                         startSample,
+                         blockSize);
+        if (processor.getCurrentStep() != 1 || processor.getLaneOnsetCountForTesting(0) != 1)
+            throw std::runtime_error("chain continuation retriggered instead of retaining its root onset");
+    }});
+
+    tests.push_back({"preset and resolution changes refresh onset identity in place", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        constexpr double ppqPerSample = 2.0 / sampleRate;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+
+        auto changedStep = processor.getSequencerState().getStepData(0, 0);
+        changedStep.presetIndex = 6;
+        processor.getSequencerState().setStepData(0, 0, changedStep);
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         blockSize * ppqPerSample,
+                         true,
+                         int64_t{blockSize});
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("in-place preset change did not refresh the onset");
+
+        setParameter(processor, ParameterIDs::stepResolution, 0.0f);
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         2.0 * blockSize * ppqPerSample,
+                         true,
+                         int64_t{2 * blockSize});
+        if (processor.getLaneOnsetCountForTesting(0) != 3)
+            throw std::runtime_error("in-place step-resolution change did not refresh the onset epoch");
+    }});
+
+    tests.push_back({"host and free clock switches refresh onset identity", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        constexpr double ppqPerSample = 2.0 / sampleRate;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        setParameter(processor, ParameterIDs::clockSource, 1.0f);
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         blockSize * ppqPerSample,
+                         true,
+                         int64_t{blockSize});
+        setParameter(processor, ParameterIDs::clockSource, 0.0f);
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         2.0 * blockSize * ppqPerSample,
+                         true,
+                         int64_t{2 * blockSize});
+
+        if (processor.getLaneOnsetCountForTesting(0) != 3)
+            throw std::runtime_error("host/free clock domain switches did not refresh onset identity");
+    }});
+
+    tests.push_back({"state restore requests realtime-safe onset invalidation", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        constexpr double ppqPerSample = 2.0 / sampleRate;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        const auto state = processor.exportFullState();
+        processor.applyFullState(state);
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         blockSize * ppqPerSample,
+                         true,
+                         int64_t{blockSize});
+
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("state restore did not invalidate onset identity on the audio thread");
+    }});
+
+    tests.push_back({"bypassed host seeks retrigger after bypass is released", []
+    {
+        constexpr double sampleRate = 48000.0;
+        constexpr int blockSize = 64;
+        constexpr double ppqPerSample = 2.0 / sampleRate;
+
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(sampleRate, blockSize);
+        configureHostSliceStep(processor, 0);
+
+        processHostBlock(processor, playHead, 120.0, 0.0, true, int64_t{0});
+        setParameter(processor, ParameterIDs::bypass, 1.0f);
+        processHostBlock(processor, playHead, 120.0, 8.0, true, int64_t{192000});
+        setParameter(processor, ParameterIDs::bypass, 0.0f);
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         8.0 + blockSize * ppqPerSample,
+                         true,
+                         int64_t{192000 + blockSize});
+
+        if (processor.getLaneOnsetCountForTesting(0) != 2)
+            throw std::runtime_error("bypassed host seek was not retained for the next active onset");
+    }});
+
+    tests.push_back({"extreme finite host positions remain bounded", []
+    {
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(48000.0, 64);
+        configureHostSliceStep(processor, 0);
+        setParameter(processor, ParameterIDs::dryWet, 0.0f);
+
+        processHostBlock(processor,
+                         playHead,
+                         120.0,
+                         std::numeric_limits<double>::max(),
+                         true,
+                         std::numeric_limits<int64_t>::max());
+        if (processor.getCurrentStep() < 0 || processor.getCurrentStep() >= 16)
+            throw std::runtime_error("extreme host position escaped the sequencer grid");
+    }});
+
+    tests.push_back({"invalid host sample rates are normalized before engine prepare", []
+    {
+        const double invalidRates[] = {
+            0.0,
+            1.0,
+            9.0,
+            std::numeric_limits<double>::quiet_NaN(),
+            std::numeric_limits<double>::infinity()
+        };
+
+        for (const double invalidRate : invalidRates)
+        {
+            PluginProcessor processor;
+            processor.prepareToPlay(invalidRate, 64);
+            if (processor.getCurrentSampleRate() != 44100.0)
+                throw std::runtime_error("invalid sample rate was not normalized before engine prepare");
+
+            setParameter(processor, ParameterIDs::clockSource, 1.0f);
+            setParameter(processor, ParameterIDs::dryWet, 100.0f);
+            StepData pitchStep;
+            pitchStep.active = true;
+            pitchStep.presetIndex = 7;
+            processor.getSequencerState().setStepData(5, 0, pitchStep);
+            setParameter(processor, getStepActiveID(5, 0), 1.0f);
+
+            juce::AudioBuffer<float> buffer(2, 64);
+            fillBuffer(buffer, 0.25f);
+            juce::MidiBuffer midi;
+            processor.processBlock(buffer, midi);
+            sumFiniteAbsoluteSamples(buffer, 0, "normalized sample-rate pitch render");
+        }
+
+        PluginProcessor validProcessor;
+        validProcessor.prepareToPlay(96000.0, 64);
+        if (validProcessor.getCurrentSampleRate() != 96000.0)
+            throw std::runtime_error("valid sample rate was unexpectedly replaced");
+    }});
+
+    tests.push_back({"host offline blocks preserve every pattern-cycle onset", []
+    {
+        constexpr int blockSize = 4097;
+        TestPlayHead playHead;
+        PluginProcessor processor;
+        processor.setPlayHead(&playHead);
+        processor.prepareToPlay(64.0, blockSize);
+        configureHostSliceStep(processor, 0);
+        setParameter(processor, ParameterIDs::stepResolution, 0.0f);
+        setParameter(processor, ParameterIDs::dryWet, 0.0f);
+
+        processHostBlock(processor, playHead, 300.0, 0.0, true, int64_t{0}, blockSize);
+        if (processor.getLaneOnsetCountForTesting(0) != 81)
+            throw std::runtime_error("scheduler segment cap collapsed offline pattern-cycle onsets: "
+                                     + std::to_string(processor.getLaneOnsetCountForTesting(0)));
+    }});
+
     tests.push_back({"slice duration follows resolved free-clock tempo", []
     {
         const int samplesAt60Bpm = countRenderedSliceSamples(60.0f);
@@ -1510,6 +1961,12 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         setParameter(processor, ParameterIDs::clockSource, 1.0f);
         setParameter(processor, ParameterIDs::dryWet, 0.0f);
 
+        StepData sliceStep;
+        sliceStep.active = true;
+        sliceStep.presetIndex = 5;
+        processor.getSequencerState().setStepData(0, 0, sliceStep);
+        setParameter(processor, getStepActiveID(0, 0), 1.0f);
+
         const auto preparedCapacity = processor.getScratchCapacityForTesting();
         if (preparedCapacity < 64)
             throw std::runtime_error("processor did not prepare its declared scratch capacity");
@@ -1530,6 +1987,8 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
                                  / static_cast<int>(preparedCapacity);
         if (processor.getLastProcessChunkCountForTesting() != expectedChunks)
             throw std::runtime_error("oversized host block was not split at the prepared scratch boundary");
+        if (processor.getLaneOnsetCountForTesting(0) != 1)
+            throw std::runtime_error("internal scratch chunks changed the single expected transport onset");
 
         for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
             for (int sample = 0; sample < buffer.getNumSamples(); ++sample)

@@ -111,7 +111,11 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 
 ### Processing Model
 - `PluginProcessor::processBlock` snapshots parameters once per block, builds fixed-stack scheduler segments, and calls `processSegment` for each step-owned sample range.
-- `StepScheduler` converts host/free-clock PPQ into sample offsets, step index, phase start, and phase delta.
+- `StepScheduler` converts host/free-clock PPQ into sample offsets, signed absolute and modulo-16 step indices, phase start, and phase delta.
+- Host transport continuity is evaluated once per external callback. Sample time and PPQ are checked independently with a two-sample tolerance; clock-domain changes, restart, seek/loop discontinuities, and resolution changes advance a transport generation. Slice, Loop, and Filter onsets use that generation plus absolute chain origin and preset identity.
+- State restore publishes an atomic onset-invalidation request which is consumed by the audio thread; message-thread restore never writes live trigger identities directly.
+- Stopped host segments do not enter sequenced engines or consume onset identity. Their effect state remains frozen until playback resumes, while output gain and bypass remain valid for live monitoring; free-clock mode remains continuously running.
+- Scheduler calls are bounded below the fixed 64-segment stack capacity. Offline or pathological blocks are split into additional allocation-free chunks instead of collapsing later step boundaries.
 - `SliceEngine` and `LoopEngine` capture input/history through `RealtimeRingBuffer`, allowing deterministic overwrite history and interpolated reads.
 - `LoopEngine::trigger()` creates a frozen loop snapshot from the history buffer. Playback reads the snapshot with interpolation and wrap smoothing.
 - `Envelope` processing applies per-step amplitude curves using scheduler phase.

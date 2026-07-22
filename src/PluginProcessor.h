@@ -18,6 +18,7 @@
 #include "engine/StepScheduler.h"
 
 #include <array>
+#include <cstdint>
 #include <vector>
 
 namespace zikada {
@@ -79,10 +80,39 @@ public:
 #if defined(ZIKADA_ENABLE_TEST_HOOKS)
     int getScratchCapacityForTesting() const { return scratchCapacitySamples; }
     int getLastProcessChunkCountForTesting() const { return lastProcessChunkCountForTesting; }
+    std::uint64_t getLaneOnsetCountForTesting(int lane) const
+    {
+        return lane >= 0 && lane < SequencerState::NumLanes
+             ? laneOnsetCountsForTesting[static_cast<size_t>(lane)]
+             : 0;
+    }
+    std::uint64_t getProcessedSequencerSampleCountForTesting() const
+    {
+        return processedSequencerSamplesForTesting;
+    }
 #endif
 
 private:
+    struct TriggerIdentity
+    {
+        std::uint64_t transportGeneration{0};
+        std::int64_t absoluteStep{0};
+        int rootGridStep{-1};
+        int presetIndex{0};
+        bool valid{false};
+    };
+
     void prepareScratchBuffers(int maxSamples);
+    void resetTransportTracking();
+    void updateTransportForBlock(bool useFreeClock,
+                                 bool playing,
+                                 bool hasHostSamplePosition,
+                                 std::int64_t hostSamplePosition,
+                                 bool hasHostPpqPosition,
+                                 double hostPpqPosition,
+                                 double ppqPerSample,
+                                 int numSamples,
+                                 int stepResolutionIndex);
     void processSegment(float* leftChannel,
                         float* rightChannel,
                         const float* dryLeft,
@@ -138,13 +168,26 @@ private:
     std::atomic<double> currentBPM{120.0};
     std::atomic<double> currentPpqPerStep{0.5};
     std::atomic<int> currentStep{0};
-    std::array<int, 6> lastEffectiveSteps{-1, -1, -1, -1, -1, -1};
+    std::array<TriggerIdentity, SequencerState::NumLanes> lastTriggerIdentities{};
+    std::atomic<bool> triggerIdentityInvalidationRequested{false};
+    std::uint64_t transportGeneration{0};
+    bool transportTrackingInitialized{false};
+    bool previousUseFreeClock{false};
+    bool previousHostPlaying{false};
+    int previousStepResolutionIndex{1};
+    bool expectedHostSamplePositionValid{false};
+    std::int64_t expectedHostSamplePosition{0};
+    bool expectedHostPpqPositionValid{false};
+    double expectedHostPpqPosition{0.0};
+    double expectedHostPpqTolerance{0.0};
     double sampleRate{44100.0};
     double ppqPosition{0.0};
     double ppqPerStep{0.5};
     int scratchCapacitySamples{0};
 #if defined(ZIKADA_ENABLE_TEST_HOOKS)
     int lastProcessChunkCountForTesting{0};
+    std::array<std::uint64_t, SequencerState::NumLanes> laneOnsetCountsForTesting{};
+    std::uint64_t processedSequencerSamplesForTesting{0};
 #endif
     std::vector<float> dryLeftBuffer;
     std::vector<float> dryRightBuffer;
