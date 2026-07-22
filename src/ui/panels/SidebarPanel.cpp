@@ -37,7 +37,7 @@ SidebarPanel::SidebarPanel()
     setMouseClickGrabsKeyboardFocus(true);
     setTitle("Lane preset palette");
     setDescription("Preset effects for the selected sequencer step.");
-    setHelpText("Use arrow keys to move through presets, then Space or Enter to assign one.");
+    setHelpText("Use arrow keys to move through presets, then Enter to assign one.");
 
     infoTitleLabel.setJustificationType(juce::Justification::centredLeft);
     infoTitleLabel.setFont(juce::Font(juce::FontOptions().withHeight(12.0f).withStyle("Bold")));
@@ -624,7 +624,7 @@ bool SidebarPanel::keyPressed(const juce::KeyPress& key)
     if (key == juce::KeyPress::rightKey) { moveFocusedPresetBy(1, 0); return true; }
     if (key == juce::KeyPress::upKey)    { moveFocusedPresetBy(0, -1); return true; }
     if (key == juce::KeyPress::downKey)  { moveFocusedPresetBy(0, 1); return true; }
-    if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey)
+    if (key == juce::KeyPress::returnKey)
     {
         activateFocusedPreset();
         return true;

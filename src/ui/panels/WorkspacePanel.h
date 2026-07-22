@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ZikadaLookAndFeel.h"
+#include "../components/KeyboardTextButton.h"
 #include "../../state/PresetManager.h"
 
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -77,19 +78,19 @@ private:
     juce::Label presetInfoTitleB;
     juce::Label presetInfoBodyB;
 
-    juce::TextEditor presetSearchEditor;
-    juce::ComboBox presetCategoryBox;
-    juce::TextButton presetCategoryButton{"ALL CATEGORIES"};
-    juce::ListBox presetList;
-    juce::TextEditor presetNameEditor;
-    juce::TextButton allFilterButton{"ALL"};
-    juce::TextButton factoryFilterButton{"FACTORY"};
-    juce::TextButton userFilterButton{"USER"};
-    juce::TextButton favoriteFilterButton{"FAV"};
-    juce::TextButton saveButton{"SAVE CURRENT"};
-    juce::TextButton loadButton{"LOAD PRESET"};
-    juce::TextButton deleteButton{"DELETE USER"};
-    juce::TextButton favoritePresetButton{"STAR"};
+    HostSafeTextEditor presetSearchEditor;
+    HostSafeComboBox presetCategoryBox;
+    KeyboardTextButton presetCategoryButton{"ALL CATEGORIES"};
+    HostSafeListBox presetList;
+    HostSafeTextEditor presetNameEditor;
+    KeyboardTextButton allFilterButton{"ALL"};
+    KeyboardTextButton factoryFilterButton{"FACTORY"};
+    KeyboardTextButton userFilterButton{"USER"};
+    KeyboardTextButton favoriteFilterButton{"FAV"};
+    KeyboardTextButton saveButton{"SAVE CURRENT"};
+    KeyboardTextButton loadButton{"LOAD PRESET"};
+    KeyboardTextButton deleteButton{"DELETE USER"};
+    KeyboardTextButton favoritePresetButton{"STAR"};
 
     juce::Label settingsLeadLabel;
     juce::Label settingsDeviceTitle;
@@ -103,17 +104,17 @@ private:
     juce::Label mixModeLabel;
     juce::Label clockSourceLabel;
     juce::Label stepResolutionLabel;
-    juce::ToggleButton standaloneMuteButton{"Mute audio input"};
-    juce::ToggleButton bypassToggle{"Bypass audio"};
-    juce::Slider dryWetSlider;
-    juce::Slider outputGainSlider;
-    juce::Slider tempoSlider;
-    juce::ComboBox mixModeBox;
-    juce::ComboBox clockSourceBox;
-    juce::ComboBox stepResolutionBox;
-    juce::TextButton mixModeButton{"LINEAR"};
-    juce::TextButton clockSourceButton{"HOST"};
-    juce::TextButton stepResolutionButton{"1/8"};
+    HostSafeToggleButton standaloneMuteButton{"Mute audio input"};
+    HostSafeToggleButton bypassToggle{"Bypass audio"};
+    HostSafeSlider dryWetSlider;
+    HostSafeSlider outputGainSlider;
+    HostSafeSlider tempoSlider;
+    HostSafeComboBox mixModeBox;
+    HostSafeComboBox clockSourceBox;
+    HostSafeComboBox stepResolutionBox;
+    KeyboardTextButton mixModeButton{"LINEAR"};
+    KeyboardTextButton clockSourceButton{"HOST"};
+    KeyboardTextButton stepResolutionButton{"1/8"};
     std::unique_ptr<juce::AudioDeviceSelectorComponent> standaloneDeviceSelector;
     juce::Viewport standaloneDeviceViewport;
     juce::Value muteInputValue;

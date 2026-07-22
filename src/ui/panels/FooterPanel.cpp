@@ -250,7 +250,7 @@ void FooterPanel::setupModulationControls()
         addChildComponent(sourceBtn.get());
         modSourceButtons[i] = std::move(sourceBtn);
 
-        auto amountSlider = std::make_unique<juce::Slider>();
+        auto amountSlider = std::make_unique<HostSafeSlider>();
         amountSlider->setSliderStyle(juce::Slider::LinearHorizontal);
         amountSlider->setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         amountSlider->setRange(0.0, 100.0, 1.0);
@@ -265,7 +265,7 @@ void FooterPanel::setupModulationControls()
         addChildComponent(amountSlider.get());
         modAmountSliders[i] = std::move(amountSlider);
 
-        auto paramSlider = std::make_unique<juce::Slider>();
+        auto paramSlider = std::make_unique<HostSafeSlider>();
         paramSlider->setSliderStyle(juce::Slider::LinearHorizontal);
         paramSlider->setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         paramSlider->setRange(0.0, 7.0, 1.0);

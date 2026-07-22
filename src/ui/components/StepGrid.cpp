@@ -45,7 +45,7 @@ StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& se
     setMouseClickGrabsKeyboardFocus(true);
     setExplicitFocusOrder(200);
     setTitle("Sequencer grid");
-    setHelpText("Arrow keys select a step. Space or Enter toggles it. Page Up or Page Down changes its preset. Shift+Left or Shift+Right resizes its tie.");
+    setHelpText("Arrow keys select a step. Enter toggles it. Page Up or Page Down changes its preset. Shift+Left or Shift+Right resizes its tie.");
     updateAccessibilityDescription();
     setupGrid();
 }
@@ -834,7 +834,7 @@ bool StepGrid::handleKeyCommand(const juce::KeyPress& key)
     if (code == juce::KeyPress::downKey)               return moveSelectionBy(1, 0);
     if (code == juce::KeyPress::homeKey)               return moveSelectionBy(0, -(selectedStep >= 0 ? selectedStep : 0));
     if (code == juce::KeyPress::endKey)                return moveSelectionBy(0, numSteps - 1 - (selectedStep >= 0 ? selectedStep : 0));
-    if (code == juce::KeyPress::spaceKey || code == juce::KeyPress::returnKey)
+    if (code == juce::KeyPress::returnKey)
         return toggleSelectedStep();
     return false;
 }

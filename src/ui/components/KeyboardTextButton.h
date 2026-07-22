@@ -5,6 +5,33 @@
 
 namespace zikada {
 
+inline bool isHostTransportKey(const juce::KeyPress& key)
+{
+    return key.getKeyCode() == juce::KeyPress::spaceKey;
+}
+
+template <typename Control>
+class HostTransportSafeControl : public Control
+{
+public:
+    using Control::Control;
+    HostTransportSafeControl() = default;
+
+    bool keyPressed(const juce::KeyPress& key) override
+    {
+        if (isHostTransportKey(key))
+            return false;
+
+        return Control::keyPressed(key);
+    }
+};
+
+using HostSafeToggleButton = HostTransportSafeControl<juce::ToggleButton>;
+using HostSafeTextEditor = HostTransportSafeControl<juce::TextEditor>;
+using HostSafeComboBox = HostTransportSafeControl<juce::ComboBox>;
+using HostSafeSlider = HostTransportSafeControl<juce::Slider>;
+using HostSafeListBox = HostTransportSafeControl<juce::ListBox>;
+
 class KeyboardTextButton : public juce::TextButton
 {
 public:
@@ -12,11 +39,8 @@ public:
 
     bool keyPressed(const juce::KeyPress& key) override
     {
-        if (key.getKeyCode() == juce::KeyPress::spaceKey && isEnabled())
-        {
-            internalClickCallback(juce::ModifierKeys::currentModifiers);
-            return true;
-        }
+        if (isHostTransportKey(key))
+            return false;
 
         return juce::TextButton::keyPressed(key);
     }

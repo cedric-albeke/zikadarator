@@ -26,7 +26,7 @@ public:
 
 private:
     juce::AudioProcessorValueTreeState& apvts;
-    juce::Slider     dryWetSlider;
+    HostSafeSlider   dryWetSlider;
     KeyboardTextButton bypassButton  { "BYPASS" };
     juce::Label      mixModeLabel;
     juce::Label      outputGainLabel;
@@ -40,7 +40,7 @@ private:
     juce::Rectangle<int> stepResHeaderRect;
 
     juce::Label    stepResLabel;
-    juce::ComboBox stepResolutionBox;
+    HostSafeComboBox stepResolutionBox;
     KeyboardTextButton stepResolutionButton{"1/8"};
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
         stepResolutionAttachment;
@@ -55,8 +55,8 @@ private:
     static constexpr int kNumModSlots = 3;
     std::array<std::unique_ptr<KeyboardTextButton>, kNumModSlots> modTargetButtons;
     std::array<std::unique_ptr<KeyboardTextButton>, kNumModSlots> modSourceButtons;
-    std::array<std::unique_ptr<juce::Slider>, kNumModSlots> modAmountSliders;
-    std::array<std::unique_ptr<juce::Slider>, kNumModSlots> modParamSliders;
+    std::array<std::unique_ptr<HostSafeSlider>, kNumModSlots> modAmountSliders;
+    std::array<std::unique_ptr<HostSafeSlider>, kNumModSlots> modParamSliders;
     std::array<std::unique_ptr<juce::Label>, kNumModSlots> modParamLabels;
 
     bool         hasSelection{false};

@@ -11,6 +11,7 @@
 #include "ui/panels/WorkspacePanel.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -1617,13 +1618,41 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
                 continue;
 
             juce::Component& control = *button;
-            if (!control.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)))
-                throw std::runtime_error("header action did not handle Space");
+            if (control.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)))
+                throw std::runtime_error("header action consumed the host transport key");
+            juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+            if (!control.keyPressed(juce::KeyPress(juce::KeyPress::returnKey)))
+                throw std::runtime_error("header action did not handle Enter");
             juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
         }
         if (pageSelections != 1)
-            throw std::runtime_error("header Space activation invoked "
+            throw std::runtime_error("header Enter activation invoked "
                                      + std::to_string(pageSelections) + " commands instead of one");
+    }});
+
+    tests.push_back({"interactive controls pass Space through to the host", []
+    {
+        KeyboardTextButton textButton{"BUTTON"};
+        HostSafeToggleButton toggleButton{"TOGGLE"};
+        HostSafeTextEditor textEditor;
+        HostSafeComboBox comboBox;
+        HostSafeSlider slider;
+        HostSafeListBox listBox;
+        std::array<juce::Component*, 6> controls{
+            &textButton, &toggleButton, &textEditor, &comboBox, &slider, &listBox
+        };
+
+        int clicks = 0;
+        textButton.onClick = [&clicks] { ++clicks; };
+        textEditor.setText("UNCHANGED", false);
+        const auto space = juce::KeyPress(juce::KeyPress::spaceKey);
+        for (auto* control : controls)
+            if (control->keyPressed(space))
+                throw std::runtime_error("plugin control consumed the host transport key");
+
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+        if (clicks != 0 || textEditor.getText() != "UNCHANGED")
+            throw std::runtime_error("Space changed plugin state instead of reaching the host");
     }});
 
     tests.push_back({"preset palette exposes named keyboard actions", []
@@ -1656,9 +1685,12 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
 
         int assignedPreset = -1;
         sidebar.onPresetAssigned = [&assignedPreset](int, int, int preset) { assignedPreset = preset; };
-        if (!sidebar.keyPressed(juce::KeyPress(juce::KeyPress::rightKey))
-            || !sidebar.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)))
-            throw std::runtime_error("preset palette did not support arrow then Space activation");
+        if (!sidebar.keyPressed(juce::KeyPress(juce::KeyPress::rightKey)))
+            throw std::runtime_error("preset palette did not support arrow navigation");
+        if (sidebar.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)) || assignedPreset != -1)
+            throw std::runtime_error("preset palette consumed Space or assigned a preset from it");
+        if (!sidebar.keyPressed(juce::KeyPress(juce::KeyPress::returnKey)))
+            throw std::runtime_error("preset palette did not support Enter activation");
         if (assignedPreset != 6)
             throw std::runtime_error("preset palette activated the old focus target after arrow navigation");
     }});
@@ -1726,6 +1758,15 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         const auto after = processor.getSequencerState().getStepData(0, 0);
         if (after.active != before.active || after.presetIndex != before.presetIndex)
             throw std::runtime_error("child-bubbled key modified the selected sequencer step");
+        if (grid.handleKeyCommandForTesting(juce::KeyPress(juce::KeyPress::spaceKey)))
+            throw std::runtime_error("sequencer consumed Space while owning keyboard focus");
+        const auto afterSpace = processor.getSequencerState().getStepData(0, 0);
+        if (afterSpace.active != before.active || afterSpace.presetIndex != before.presetIndex)
+            throw std::runtime_error("Space modified the selected sequencer step");
+        if (!grid.handleKeyCommandForTesting(juce::KeyPress(juce::KeyPress::returnKey)))
+            throw std::runtime_error("sequencer did not retain Enter activation");
+        if (processor.getSequencerState().getStepData(0, 0).active == before.active)
+            throw std::runtime_error("Enter did not toggle the selected sequencer step");
     }});
 
     tests.push_back({"sequencer grid keyboard commands cycle presets and resize ties", []

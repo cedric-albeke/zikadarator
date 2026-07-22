@@ -48,6 +48,7 @@ const editorHeader = read("src/PluginEditor.h");
 const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const footer = read("src/ui/panels/FooterPanel.cpp");
 const workspace = read("src/ui/panels/WorkspacePanel.cpp");
+const workspaceHeader = read("src/ui/panels/WorkspacePanel.h");
 const stepGridHeader = read("src/ui/components/StepGrid.h");
 const stepGrid = read("src/ui/components/StepGrid.cpp");
 const stepCellHeader = read("src/ui/components/StepCell.h");
@@ -403,7 +404,16 @@ assertContains(headerPanel, "\"Preset menu\"", "custom-drawn preset menu action 
 if (headerPanel.includes("FocusContainerType::keyboardFocusContainer")) {
   fail("header must remain part of the global Tab traversal rather than trapping focus in a local container");
 }
-assertContains(keyboardTextButton, "juce::KeyPress::spaceKey", "custom text buttons must support Space activation");
+assertContains(keyboardTextButton, "isHostTransportKey", "interactive controls must recognize the host transport key");
+assertContains(keyboardTextButton, "return false", "interactive controls must pass Space through to the host");
+assertContains(keyboardTextButton, "HostSafeTextEditor", "text editors must not capture the host transport key");
+assertContains(keyboardTextButton, "HostSafeToggleButton", "toggle buttons must not capture the host transport key");
+assertContains(keyboardTextButton, "HostSafeComboBox", "combo boxes must not capture the host transport key");
+assertContains(keyboardTextButton, "HostSafeSlider", "sliders must not capture the host transport key");
+assertContains(keyboardTextButton, "HostSafeListBox", "preset lists must not capture the host transport key");
+assertContains(workspaceHeader, "KeyboardTextButton", "workspace actions must use host-safe text buttons");
+assertContains(workspaceHeader, "HostSafeTextEditor", "workspace text fields must pass Space to the host");
+assertContains(workspaceHeader, "HostSafeToggleButton", "workspace toggles must pass Space to the host");
 assertContains(editor, "headerPanel.setFxDisplayState", "editor must update the CRT display from selected step state");
 assertContains(editor, "headerPanel.setFxDisplayPlayhead", "editor must pulse the CRT display from the playhead");
 assertContains(sidebar, "selectedPresetIndex", "sidebar must track selected preset details separately from hover");
@@ -418,7 +428,10 @@ assertContains(sidebar, "setWantsKeyboardFocus(true)", "sidebar preset browser m
 assertContains(sidebar, "focusedPresetButtonIndex", "sidebar preset browser must track keyboard focus separately from hover");
 assertContains(sidebar, "moveFocusedPresetBy", "sidebar preset browser must support arrow-key focus movement");
 assertContains(sidebar, "activateFocusedPreset", "sidebar preset browser must activate focused presets from keyboard");
-assertContains(sidebar, "juce::KeyPress::spaceKey", "sidebar preset browser must handle space/return activation");
+assertContains(sidebar, "juce::KeyPress::returnKey", "sidebar preset browser must retain Enter activation");
+if (sidebar.includes("juce::KeyPress::spaceKey")) {
+  fail("sidebar preset browser must never consume the host Space transport key");
+}
 assertContains(sidebar, "btn->setTitle(presets[i].tooltip)", "preset buttons must expose descriptive accessible names");
 assertContains(sidebar, "btn->setDescription(presets[i].infoText)", "preset buttons must expose their effect descriptions");
 assertContains(sidebar, "btn->setExplicitFocusOrder", "preset buttons must have deterministic keyboard order");
@@ -484,7 +497,10 @@ assertContains(stepGrid, "kBeatGroupSize = 4", "step grid must explicitly model 
 assertContains(stepGrid, "drawBeatGroupBackgrounds", "step grid must draw subtle beat-group backplates so the sequencer reads musically");
 assertContains(stepGrid, "beatGroupBounds", "step grid beat-group drawing must use stable group bounds instead of ad hoc separator lines only");
 assertContains(stepGrid, "juce::KeyPress::leftKey", "step grid must handle left/right arrow keys");
-assertContains(stepGrid, "juce::KeyPress::spaceKey", "step grid must handle space/return activation");
+assertContains(stepGrid, "juce::KeyPress::returnKey", "step grid must retain Enter activation");
+if (stepGrid.includes("juce::KeyPress::spaceKey")) {
+  fail("step grid must never consume the host Space transport key");
+}
 assertContains(stepGrid, "e.mods.isShiftDown()", "off-cell wheel preset cycling must require an explicit Shift gesture");
 if (stepGrid.includes("lane = hoverLane >= 0 ? hoverLane : selectedLane")) {
   fail("step grid wheel cycling must not silently fall back from off-cell wheel movement to hover/selection");
