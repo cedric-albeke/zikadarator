@@ -138,22 +138,39 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     workspacePanel.onSavePreset = [this](const juce::String& name)
     {
-        if (processorRef.getPresetManager().saveUserPreset(name, processorRef.exportFullState()))
+        const auto result = processorRef.getPresetManager().saveUserPreset(name, processorRef.exportFullState());
+        if (result == PresetManager::SaveResult::Saved || result == PresetManager::SaveResult::Updated)
         {
             refreshPresetBrowser();
-            const auto savedName = name.trim().toUpperCase();
+            const auto savedName = PresetManager::normalizeUserPresetName(name);
             const auto& items = processorRef.getPresetManager().getItems();
             for (int i = 0; i < static_cast<int>(items.size()); ++i)
             {
-                if (items[static_cast<size_t>(i)].name == savedName)
+                if (!items[static_cast<size_t>(i)].isFactory
+                    && PresetManager::normalizeUserPresetName(items[static_cast<size_t>(i)].file.getFileNameWithoutExtension()) == savedName)
                 {
                     setCurrentPresetIndex(i, false);
+                    workspacePanel.showPresetSaveResult(result == PresetManager::SaveResult::Updated
+                                                            ? "USER PRESET UPDATED: " + savedName
+                                                            : "USER PRESET SAVED: " + savedName,
+                                                        true);
                     return;
                 }
             }
 
             syncHeaderPresetDisplay();
+            workspacePanel.showPresetSaveResult("USER PRESET SAVED", true);
+            return;
         }
+
+        juce::String message = "COULD NOT SAVE PRESET";
+        if (result == PresetManager::SaveResult::InvalidName)
+            message = "ENTER A NAME WITH LETTERS OR NUMBERS";
+        else if (result == PresetManager::SaveResult::InvalidState)
+            message = "CURRENT STATE IS INCOMPLETE";
+        else if (result == PresetManager::SaveResult::NameConflict)
+            message = "NAME CONFLICT - CHOOSE ANOTHER NAME";
+        workspacePanel.showPresetSaveResult(message, false);
     };
 
     workspacePanel.onLoadPreset = [this](int index)
@@ -173,15 +190,12 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         if (index < 0 || index >= static_cast<int>(items.size()))
             return;
 
-        const auto presetName = items[static_cast<size_t>(index)].name;
-        processorRef.getPresetManager().toggleFavorite(presetName);
+        const auto& item = items[static_cast<size_t>(index)];
+        const auto metadataName = item.isFactory
+            ? item.name
+            : PresetManager::normalizeUserPresetName(item.file.getFileNameWithoutExtension());
+        processorRef.getPresetManager().toggleFavorite(metadataName);
         refreshPresetBrowser();
-        const auto& refreshedItems = processorRef.getPresetManager().getItems();
-        for (int i = 0; i < static_cast<int>(refreshedItems.size()); ++i)
-            if (refreshedItems[static_cast<size_t>(i)].name == presetName)
-                return setCurrentPresetIndex(i, currentPresetDirty);
-
-        syncHeaderPresetDisplay();
     };
 
     sequencerPanel.getStepGrid().onStepSelected = [this](int lane, int step)
@@ -528,6 +542,9 @@ void PluginEditor::refreshSequencerFromState()
 void PluginEditor::refreshPresetBrowser()
 {
     processorRef.getPresetManager().refresh();
+    currentPresetIndex = processorRef.getPresetManager().findItemIndexById(currentPresetId);
+    if (currentPresetIndex < 0)
+        currentPresetId.clear();
     workspacePanel.setPresetItems(processorRef.getPresetManager().getItems());
     syncHeaderPresetDisplay();
 }
@@ -637,7 +654,11 @@ void PluginEditor::loadPresetByIndex(int index, bool pushToHistory)
     if (index < 0 || index >= static_cast<int>(currentItems.size()))
         return;
 
-    const auto presetName = currentItems[static_cast<size_t>(index)].name;
+    const auto& presetItem = currentItems[static_cast<size_t>(index)];
+    const auto presetName = presetItem.isFactory
+        ? presetItem.name
+        : PresetManager::normalizeUserPresetName(presetItem.file.getFileNameWithoutExtension());
+    const auto presetId = presetItem.id;
     juce::ValueTree stateTree;
     if (!processorRef.getPresetManager().loadPreset(index, stateTree))
         return;
@@ -647,13 +668,9 @@ void PluginEditor::loadPresetByIndex(int index, bool pushToHistory)
 
     applyHistoryState(stateTree);
     processorRef.getPresetManager().markPresetUsed(presetName);
+    currentPresetId = presetId;
+    currentPresetDirty = false;
     refreshPresetBrowser();
-    const auto& refreshedItems = processorRef.getPresetManager().getItems();
-    for (int i = 0; i < static_cast<int>(refreshedItems.size()); ++i)
-        if (refreshedItems[static_cast<size_t>(i)].name == presetName)
-            return setCurrentPresetIndex(i, false);
-
-    syncHeaderPresetDisplay();
 }
 
 void PluginEditor::setCurrentPresetIndex(int index, bool dirty)
@@ -662,12 +679,14 @@ void PluginEditor::setCurrentPresetIndex(int index, bool dirty)
     if (index < 0 || index >= static_cast<int>(items.size()))
     {
         currentPresetIndex = -1;
+        currentPresetId.clear();
         currentPresetDirty = dirty;
         syncHeaderPresetDisplay();
         return;
     }
 
     currentPresetIndex = index;
+    currentPresetId = items[static_cast<size_t>(index)].id;
     currentPresetDirty = dirty;
     syncHeaderPresetDisplay();
 }

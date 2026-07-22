@@ -333,7 +333,24 @@ void WorkspacePanel::setMode(Mode newMode)
 
 void WorkspacePanel::setPresetItems(std::vector<PresetManager::PresetItem> newItems)
 {
+    juce::String previousSelectionId;
+    if (selectedPresetRow >= 0 && selectedPresetRow < static_cast<int>(presetItems.size()))
+        previousSelectionId = presetItems[static_cast<size_t>(selectedPresetRow)].id;
+
     presetItems = std::move(newItems);
+    selectedPresetRow = -1;
+    if (previousSelectionId.isNotEmpty())
+    {
+        for (int index = 0; index < static_cast<int>(presetItems.size()); ++index)
+        {
+            if (presetItems[static_cast<size_t>(index)].id == previousSelectionId)
+            {
+                selectedPresetRow = index;
+                break;
+            }
+        }
+    }
+
     debugWorkspaceLog("setPresetItems count=" + juce::String(static_cast<int>(presetItems.size())));
 
     const auto previousCategory = presetCategoryBox.getText();
@@ -365,6 +382,78 @@ void WorkspacePanel::setPresetItems(std::vector<PresetManager::PresetItem> newIt
     rebuildPresetFilter();
 }
 
+void WorkspacePanel::showPresetSaveResult(const juce::String& message, bool succeeded)
+{
+    presetHintLabel.setText(message, juce::dontSendNotification);
+    presetHintLabel.setColour(juce::Label::textColourId,
+                              succeeded ? Colours::neonGreen : Colours::warning);
+}
+
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+void WorkspacePanel::setPresetSearchForTesting(const juce::String& query)
+{
+    presetSearchEditor.setText(query, juce::dontSendNotification);
+    rebuildPresetFilter();
+}
+
+void WorkspacePanel::setPresetCategoryForTesting(const juce::String& category)
+{
+    int targetId = 1;
+    for (int index = 0; index < presetCategoryBox.getNumItems(); ++index)
+    {
+        if (presetCategoryBox.getItemText(index).equalsIgnoreCase(category))
+        {
+            targetId = presetCategoryBox.getItemId(index);
+            break;
+        }
+    }
+
+    presetCategoryBox.setSelectedId(targetId, juce::dontSendNotification);
+    syncInlineChoiceButtons();
+    rebuildPresetFilter();
+}
+
+void WorkspacePanel::setPresetSourceForTesting(const juce::String& source)
+{
+    if (source.equalsIgnoreCase("FACTORY"))
+        setPresetSourceFilter(PresetSourceFilter::Factory);
+    else if (source.equalsIgnoreCase("USER"))
+        setPresetSourceFilter(PresetSourceFilter::User);
+    else if (source.equalsIgnoreCase("FAVORITES"))
+        setPresetSourceFilter(PresetSourceFilter::Favorites);
+    else
+        setPresetSourceFilter(PresetSourceFilter::All);
+}
+
+void WorkspacePanel::selectPresetByIdForTesting(const juce::String& id)
+{
+    for (int itemIndex = 0; itemIndex < static_cast<int>(presetItems.size()); ++itemIndex)
+    {
+        if (presetItems[static_cast<size_t>(itemIndex)].id != id)
+            continue;
+
+        for (int filteredRow = 0; filteredRow < static_cast<int>(filteredPresetIndices.size()); ++filteredRow)
+        {
+            if (filteredPresetIndices[static_cast<size_t>(filteredRow)] == itemIndex)
+            {
+                presetList.selectRow(filteredRow, false, true);
+                selectedPresetRow = itemIndex;
+                updatePresetDetail();
+                updatePresetInfoPanels();
+                return;
+            }
+        }
+    }
+}
+
+juce::String WorkspacePanel::getSelectedPresetIdForTesting() const
+{
+    if (selectedPresetRow < 0 || selectedPresetRow >= static_cast<int>(presetItems.size()))
+        return {};
+    return presetItems[static_cast<size_t>(selectedPresetRow)].id;
+}
+#endif
+
 void WorkspacePanel::refreshCopy()
 {
     if (mode == Mode::Presets)
@@ -372,6 +461,7 @@ void WorkspacePanel::refreshCopy()
         titleLabel.setText("PRESET BROWSER", juce::dontSendNotification);
         bodyLabel.setText("Search, filter, load, and save full sequencer snapshots from a denser browser-first layout.", juce::dontSendNotification);
         presetHintLabel.setText("Filter the library, then load the selected snapshot or save the current state as a user preset.", juce::dontSendNotification);
+        presetHintLabel.setColour(juce::Label::textColourId, Colours::white50);
         presetSaveLabel.setText("SAVE CURRENT STATE", juce::dontSendNotification);
         presetInfoTitleA.setText("LIBRARY SNAPSHOT", juce::dontSendNotification);
         presetInfoTitleB.setText("USER STORAGE", juce::dontSendNotification);
@@ -568,6 +658,9 @@ void WorkspacePanel::rebuildPresetFilter()
     filteredPresetIndices.clear();
 
     const auto query = presetSearchEditor.getText().trim().toLowerCase();
+    juce::StringArray queryTokens;
+    queryTokens.addTokens(query, " \t\r\n", "");
+    queryTokens.removeEmptyStrings();
     const auto category = presetCategoryBox.getSelectedId() > 1 ? presetCategoryBox.getText() : juce::String();
     debugWorkspaceLog("rebuildPresetFilter query='" + query + "' category='" + category
                       + "' sourceFilter=" + juce::String(static_cast<int>(presetSourceFilter)));
@@ -586,7 +679,11 @@ void WorkspacePanel::rebuildPresetFilter()
             continue;
 
         const auto haystack = (item.name + " " + item.category + " " + item.subtitle).toLowerCase();
-        if (query.isNotEmpty() && !haystack.contains(query))
+        bool matchesQuery = true;
+        for (const auto& token : queryTokens)
+            if (!haystack.contains(token))
+                matchesQuery = false;
+        if (!matchesQuery)
             continue;
 
         filteredPresetIndices.push_back(i);

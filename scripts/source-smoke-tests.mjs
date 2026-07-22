@@ -81,6 +81,7 @@ const macosWorkflow = read(".github/workflows/build-macos-packages.yml");
 const macosValidationScript = read("scripts/validate-macos.sh");
 const windowsInstallerScript = read("packaging/windows/ZIKADARATOR.iss");
 const abletonLogScanScript = read("scripts/ableton-log-scan.ps1");
+const factoryPresetCatalog = read("docs/FACTORY_PRESET_CATALOG.md");
 const processBlock = extractFunction(
   processor,
   "void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)",
@@ -694,5 +695,11 @@ if (drawFx2PresetIcon.includes("drawIconVinyl") || drawFx2PresetIcon.includes("d
 ].forEach((presetName) => {
   if (!presetManager.includes(presetName)) fail(`missing alpha factory preset: ${presetName}`);
 });
+assertContains(presetManager, "std::array<FactoryPatternRecipe, 42>", "V1 must retain the 42 declarative additions to the eight original factory presets");
+assertContains(processorTests, "factoryPresetCount != 50", "processor tests must enforce the 50-preset V1 bank");
+assertContains(processorTests, "failed binary host-state roundtrip", "every factory preset must be covered by binary host-state roundtrip validation");
+assertContains(presetManager, "makeFactoryPresetId", "factory presets must expose stable identities across metadata refreshes");
+assertContains(workspace, "queryTokens.addTokens", "preset search must support independent query tokens");
+assertContains(factoryPresetCatalog, "Scratch and vinyl are not represented by substitute names", "factory catalog must keep deferred DSP claims explicit");
 
 if (!process.exitCode) console.log("source smoke tests passed");

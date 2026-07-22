@@ -75,6 +75,7 @@ private:
     std::vector<juce::ValueTree> redoStack;
     bool applyingHistory{false};
     int currentPresetIndex{-1};
+    juce::String currentPresetId;
     bool currentPresetDirty{false};
     double lastFooterHistoryMs{0.0};
     int lastFooterHistoryLane{-1};

@@ -10,6 +10,7 @@
 #include "ui/panels/SidebarPanel.h"
 #include "ui/panels/WorkspacePanel.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -17,10 +18,29 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace {
+
+struct ScopedPresetTestDirectory
+{
+    ScopedPresetTestDirectory()
+        : directory(juce::File::getSpecialLocation(juce::File::tempDirectory)
+                        .getChildFile("zikadarator-preset-tests-" + juce::Uuid().toString()))
+    {
+        if (directory.createDirectory().failed())
+            throw std::runtime_error("failed to create isolated preset test directory");
+    }
+
+    ~ScopedPresetTestDirectory()
+    {
+        directory.deleteRecursively(false);
+    }
+
+    juce::File directory;
+};
 
 void requireNear(float actual, float expected, float tolerance, const char* message)
 {
@@ -819,8 +839,32 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
     tests.push_back({"factory preset APVTS gates match their sequencer patterns", []
     {
         PluginProcessor processor;
+        PluginProcessor binaryRoundTripProcessor;
         const auto& presets = processor.getPresetManager().getItems();
+        int factoryPresetCount = 0;
+        int initPresetCount = 0;
         int patternedFactoryPresets = 0;
+        std::unordered_set<std::string> factoryNames;
+        std::unordered_set<std::string> factoryCategories;
+        std::unordered_set<std::string> serializedFactoryStates;
+        std::unordered_set<std::string> expectedParameterIds;
+        int processorParameterCount = 0;
+
+        const auto processorState = processor.getPluginState().getValueTreeState().copyState();
+        for (int childIndex = 0; childIndex < processorState.getNumChildren(); ++childIndex)
+        {
+            const auto child = processorState.getChild(childIndex);
+            if (child.hasType("PARAM"))
+            {
+                ++processorParameterCount;
+                if (!expectedParameterIds.insert(child.getProperty("id").toString().toStdString()).second)
+                    throw std::runtime_error("processor parameter schema contains duplicate ids");
+            }
+        }
+        if (processorParameterCount != 121 || expectedParameterIds.size() != 121)
+            throw std::runtime_error("processor parameter schema contains "
+                                     + std::to_string(expectedParameterIds.size())
+                                     + " ids, expected 121");
 
         for (int presetIndex = 0; presetIndex < static_cast<int>(presets.size()); ++presetIndex)
         {
@@ -828,13 +872,55 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
             if (!preset.isFactory)
                 continue;
 
+            ++factoryPresetCount;
+            if (preset.name.isEmpty() || preset.category.isEmpty() || preset.subtitle.isEmpty())
+                throw std::runtime_error("factory preset has incomplete browser metadata");
+            if (preset.name != preset.name.toUpperCase())
+                throw std::runtime_error("factory preset name is not normalized: " + preset.name.toStdString());
+            if (!factoryNames.insert(preset.name.toStdString()).second)
+                throw std::runtime_error("duplicate factory preset name: " + preset.name.toStdString());
+            factoryCategories.insert(preset.category.toStdString());
+
             juce::ValueTree loadedState;
             if (!processor.getPresetManager().loadPreset(presetIndex, loadedState))
                 throw std::runtime_error("factory preset could not be loaded: " + preset.name.toStdString());
+            if (!serializedFactoryStates.insert(loadedState.toXmlString().toStdString()).second)
+                throw std::runtime_error("factory preset duplicates another serialized state: "
+                                         + preset.name.toStdString());
+
+            std::unordered_set<std::string> loadedParameterIds;
+            int loadedParameterCount = 0;
+            int loadedSequencerCount = 0;
+            for (int childIndex = 0; childIndex < loadedState.getNumChildren(); ++childIndex)
+            {
+                const auto child = loadedState.getChild(childIndex);
+                if (child.hasType("PARAM"))
+                {
+                    ++loadedParameterCount;
+                    if (!loadedParameterIds.insert(child.getProperty("id").toString().toStdString()).second)
+                        throw std::runtime_error("factory preset has duplicate APVTS ids: "
+                                                 + preset.name.toStdString());
+                }
+                else if (child.hasType("SequencerState"))
+                {
+                    ++loadedSequencerCount;
+                }
+                else
+                {
+                    throw std::runtime_error("factory preset has an unexpected state child: "
+                                             + preset.name.toStdString());
+                }
+            }
+            if (loadedParameterCount != 121 || loadedParameterIds != expectedParameterIds
+                || loadedSequencerCount != 1 || loadedState.getNumChildren() != 122)
+                throw std::runtime_error("factory preset APVTS schema is incomplete: "
+                                         + preset.name.toStdString());
 
             const auto sequencer = loadedState.getChildWithName("SequencerState");
             if (!sequencer.isValid())
                 throw std::runtime_error("factory preset has no sequencer state: " + preset.name.toStdString());
+            if (sequencer.getNumChildren() != SequencerState::NumLanes)
+                throw std::runtime_error("factory preset has an invalid lane count: " + preset.name.toStdString());
 
             for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
             {
@@ -854,21 +940,80 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
             bool hasActiveStep = false;
             for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
             {
-                const auto steps = sequencer.getChild(lane).getChildWithName("Steps");
+                const auto laneTree = sequencer.getChild(lane);
+                if (!laneTree.hasType("Lane")
+                    || static_cast<int>(laneTree.getProperty("index", -1)) != lane)
+                    throw std::runtime_error("factory preset has an invalid lane index: "
+                                             + preset.name.toStdString() + " lane " + std::to_string(lane));
+                const auto steps = laneTree.getChildWithName("Steps");
+                const auto slots = laneTree.getChildWithName("UserSlots");
+                if (steps.getNumChildren() != SequencerState::NumSteps
+                    || slots.getNumChildren() != SequencerState::NumUserSlots)
+                    throw std::runtime_error("factory preset has an incomplete sequencer lane: "
+                                             + preset.name.toStdString() + " lane " + std::to_string(lane));
+
                 for (int step = 0; step < SequencerState::NumSteps; ++step)
                 {
-                    const bool sequencerActive = static_cast<bool>(steps.getChild(step).getProperty("active", false));
+                    const auto stepTree = steps.getChild(step);
+                    if (!stepTree.hasType("Step")
+                        || static_cast<int>(stepTree.getProperty("index", -1)) != step)
+                        throw std::runtime_error("factory preset has an invalid step index: "
+                                                 + preset.name.toStdString() + " lane "
+                                                 + std::to_string(lane) + " step " + std::to_string(step));
+                    const bool sequencerActive = static_cast<bool>(stepTree.getProperty("active", false));
+                    const int lanePresetIndex = static_cast<int>(stepTree.getProperty("presetIndex", 0));
+                    const int chainLength = static_cast<int>(stepTree.getProperty("chainLength", 1));
                     const bool parameterActive = getParameterStateValue(loadedState, getStepActiveID(lane, step)) > 0.5f;
                     if (sequencerActive != parameterActive)
                         throw std::runtime_error("factory preset has divergent step state: "
                                                  + preset.name.toStdString() + " lane "
                                                  + std::to_string(lane) + " step " + std::to_string(step));
+                    if (sequencerActive && (lanePresetIndex < 5 || lanePresetIndex > 20))
+                        throw std::runtime_error("factory preset uses an invalid lane preset index: "
+                                                 + preset.name.toStdString() + " lane "
+                                                 + std::to_string(lane) + " step " + std::to_string(step)
+                                                 + " preset " + std::to_string(lanePresetIndex));
+                    if (chainLength < 1 || chainLength > SequencerState::NumSteps - step)
+                        throw std::runtime_error("factory preset has an invalid step chain: "
+                                                 + preset.name.toStdString() + " lane "
+                                                 + std::to_string(lane) + " step " + std::to_string(step));
                     hasActiveStep = hasActiveStep || sequencerActive;
+                }
+
+                for (int slot = 0; slot < SequencerState::NumUserSlots; ++slot)
+                {
+                    const auto slotTree = slots.getChild(slot);
+                    if (!slotTree.hasType("UserSlot")
+                        || static_cast<int>(slotTree.getProperty("index", -1)) != slot)
+                        throw std::runtime_error("factory preset has an invalid user-slot index: "
+                                                 + preset.name.toStdString() + " lane "
+                                                 + std::to_string(lane) + " slot " + std::to_string(slot));
+                    const auto data = UserSlotData::fromValueTree(slotTree);
+                    if (!std::isfinite(data.filterCutoff) || data.filterCutoff < 20.0f || data.filterCutoff > 20000.0f
+                        || !std::isfinite(data.filterResonance) || data.filterResonance < 0.1f || data.filterResonance > 20.0f
+                        || !std::isfinite(data.delayTime) || data.delayTime < 0.0f || data.delayTime > 12.0f
+                        || !std::isfinite(data.delayFeedback) || data.delayFeedback < 0.0f || data.delayFeedback > 0.99f
+                        || !std::isfinite(data.delayMix) || data.delayMix < 0.0f || data.delayMix > 1.0f
+                        || !std::isfinite(data.volume) || data.volume < 0.0f || data.volume > 2.0f
+                        || !std::isfinite(data.pan) || data.pan < -1.0f || data.pan > 1.0f)
+                        throw std::runtime_error("factory preset has invalid user-slot data: "
+                                                 + preset.name.toStdString() + " lane "
+                                                 + std::to_string(lane) + " slot " + std::to_string(slot));
                 }
             }
 
             if (hasActiveStep)
                 ++patternedFactoryPresets;
+            if (preset.name == "INIT")
+            {
+                ++initPresetCount;
+                if (hasActiveStep)
+                    throw std::runtime_error("INIT factory preset must not contain active steps");
+            }
+            else if (!hasActiveStep)
+            {
+                throw std::runtime_error("factory preset has no active pattern: " + preset.name.toStdString());
+            }
 
             processor.applyFullState(loadedState);
             for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
@@ -898,10 +1043,166 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
                     throw std::runtime_error("factory preset retained lane solo: "
                                              + preset.name.toStdString() + " lane " + std::to_string(lane));
             }
+
+            const auto firstExport = processor.exportFullState();
+            processor.applyFullState(firstExport);
+            const auto secondExport = processor.exportFullState();
+            if (!firstExport.isEquivalentTo(secondExport))
+                throw std::runtime_error("factory preset failed full-state roundtrip: "
+                                         + preset.name.toStdString());
+
+            juce::MemoryBlock binaryState;
+            processor.getStateInformation(binaryState);
+            binaryRoundTripProcessor.setStateInformation(binaryState.getData(),
+                                                          static_cast<int>(binaryState.getSize()));
+            const auto binaryExport = binaryRoundTripProcessor.exportFullState();
+            if (!firstExport.isEquivalentTo(binaryExport))
+                throw std::runtime_error("factory preset failed binary host-state roundtrip: "
+                                         + preset.name.toStdString());
         }
 
-        if (patternedFactoryPresets == 0)
-            throw std::runtime_error("factory preset test found no patterned presets");
+        if (factoryPresetCount != 50)
+            throw std::runtime_error("factory preset count is " + std::to_string(factoryPresetCount)
+                                     + ", expected 50");
+        if (initPresetCount != 1)
+            throw std::runtime_error("factory bank must contain exactly one INIT preset");
+        if (patternedFactoryPresets != 49)
+            throw std::runtime_error("factory bank contains " + std::to_string(patternedFactoryPresets)
+                                     + " patterned presets, expected 49");
+        if (factoryCategories.size() < 8)
+            throw std::runtime_error("factory bank does not provide enough browser categories");
+    }});
+
+    tests.push_back({"preset library identity and browser selection remain stable", []
+    {
+        ScopedPresetTestDirectory storage;
+        PresetManager manager(storage.directory);
+
+        std::vector<juce::String> initialFactoryIds;
+        std::unordered_set<std::string> uniqueIds;
+        for (const auto& item : manager.getItems())
+        {
+            if (!item.isFactory)
+                continue;
+            if (item.id.isEmpty())
+                throw std::runtime_error("factory preset is missing a stable id");
+            if (!uniqueIds.insert(item.id.toStdString()).second)
+                throw std::runtime_error("factory preset id is not unique");
+            initialFactoryIds.push_back(item.id);
+        }
+        if (initialFactoryIds.size() != 50)
+            throw std::runtime_error("isolated preset library did not expose 50 factory presets");
+
+        manager.markPresetUsed("SPACE BLOOM");
+        manager.refresh();
+        manager.toggleFavorite("NEON GATE");
+
+        std::vector<juce::String> refreshedFactoryIds;
+        for (const auto& item : manager.getItems())
+            if (item.isFactory)
+                refreshedFactoryIds.push_back(item.id);
+        if (refreshedFactoryIds != initialFactoryIds)
+            throw std::runtime_error("recent/favorite metadata changed factory navigation order");
+
+        const int initIndex = manager.findItemIndexById("factory:INIT");
+        if (initIndex < 0)
+            throw std::runtime_error("stable factory id lookup failed");
+
+        juce::ValueTree initState;
+        if (!manager.loadPreset(initIndex, initState))
+            throw std::runtime_error("failed to load INIT for user-preset identity test");
+        if (manager.saveUserPreset("INIT", initState) != PresetManager::SaveResult::NameConflict)
+            throw std::runtime_error("user preset was allowed to collide with a factory name");
+        if (manager.saveUserPreset("A B", initState) != PresetManager::SaveResult::Saved)
+            throw std::runtime_error("valid isolated user preset could not be saved");
+        const auto updateResult = manager.saveUserPreset("A_B", initState);
+        if (updateResult != PresetManager::SaveResult::Updated)
+            throw std::runtime_error("existing user preset could not be deliberately updated, result="
+                                     + std::to_string(static_cast<int>(updateResult)));
+        if (manager.saveUserPreset("---", initState) != PresetManager::SaveResult::InvalidName)
+            throw std::runtime_error("delimiter-only user preset name was accepted");
+        if (manager.saveUserPreset("WRONG ROOT", juce::ValueTree("WrongRoot")) != PresetManager::SaveResult::InvalidState)
+            throw std::runtime_error("wrong-root user preset was accepted");
+
+        auto incompleteState = initState.createCopy();
+        incompleteState.removeChild(incompleteState.getChildWithName("SequencerState"), nullptr);
+        if (manager.saveUserPreset("INCOMPLETE", incompleteState) != PresetManager::SaveResult::InvalidState)
+            throw std::runtime_error("incomplete correct-root user preset was accepted");
+
+        auto outOfRangeState = initState.createCopy();
+        setParameterStateValue(outOfRangeState, ParameterIDs::tempo, 999.0f);
+        if (manager.saveUserPreset("BAD TEMPO", outOfRangeState) != PresetManager::SaveResult::InvalidState)
+            throw std::runtime_error("out-of-range user preset parameter was accepted");
+
+        auto duplicateParameterState = initState.createCopy();
+        duplicateParameterState.addChild(findParameterState(duplicateParameterState, ParameterIDs::tempo).createCopy(),
+                                         -1, nullptr);
+        if (manager.saveUserPreset("DUPLICATE PARAM", duplicateParameterState) != PresetManager::SaveResult::InvalidState)
+            throw std::runtime_error("duplicate user preset parameter was accepted");
+
+        const auto legacyCollisionFile = storage.directory.getChildFile("WOBBLE_BUS.xml");
+        const auto legacyXml = initState.createXml();
+        if (legacyXml == nullptr || !legacyXml->writeTo(legacyCollisionFile))
+            throw std::runtime_error("failed to create legacy collision fixture");
+        manager.refresh();
+
+        bool foundLegacyCollision = false;
+        uniqueIds.clear();
+        for (const auto& item : manager.getItems())
+        {
+            if (!uniqueIds.insert(item.id.toStdString()).second)
+                throw std::runtime_error("preset library contains duplicate stable ids");
+            if (!item.isFactory && item.file == legacyCollisionFile)
+            {
+                foundLegacyCollision = item.name == "WOBBLE BUS (USER)"
+                    && item.id == "user-file:WOBBLE_BUS.XML";
+            }
+        }
+        if (!foundLegacyCollision)
+            throw std::runtime_error("legacy user preset colliding with a factory name was hidden");
+
+        WorkspacePanel browser;
+        std::vector<PresetManager::PresetItem> factoryItems;
+        for (const auto& item : manager.getItems())
+            if (item.isFactory)
+                factoryItems.push_back(item);
+        browser.setPresetItems(factoryItems);
+        if (browser.getVisiblePresetCountForTesting() != 50)
+            throw std::runtime_error("browser did not expose the complete factory bank");
+
+        browser.setPresetCategoryForTesting("Filter");
+        if (browser.getVisiblePresetCountForTesting() != 8)
+            throw std::runtime_error("Filter category did not expose the expected eight presets");
+        browser.setPresetCategoryForTesting("ALL CATEGORIES");
+        browser.setPresetSearchForTesting("wobble");
+        if (browser.getVisiblePresetCountForTesting() != 1)
+            throw std::runtime_error("case-insensitive preset search did not isolate WOBBLE BUS");
+        browser.setPresetSearchForTesting("wobble motion");
+        if (browser.getVisiblePresetCountForTesting() != 1)
+            throw std::runtime_error("multi-token preset search did not combine name and category");
+
+        browser.setPresetSearchForTesting({});
+        browser.selectPresetByIdForTesting("factory:SPACE BLOOM");
+        if (browser.getSelectedPresetIdForTesting() != "factory:SPACE BLOOM")
+            throw std::runtime_error("browser could not select a preset by stable id");
+        std::rotate(factoryItems.begin(), factoryItems.begin() + 7, factoryItems.end());
+        browser.setPresetItems(factoryItems);
+        if (browser.getSelectedPresetIdForTesting() != "factory:SPACE BLOOM")
+            throw std::runtime_error("browser selection changed after library reorder");
+
+        WorkspacePanel completeBrowser;
+        completeBrowser.setPresetItems(manager.getItems());
+        if (completeBrowser.getVisiblePresetCountForTesting() != 52)
+            throw std::runtime_error("browser all-source filter omitted presets");
+        completeBrowser.setPresetSourceForTesting("FACTORY");
+        if (completeBrowser.getVisiblePresetCountForTesting() != 50)
+            throw std::runtime_error("browser factory filter returned the wrong count");
+        completeBrowser.setPresetSourceForTesting("USER");
+        if (completeBrowser.getVisiblePresetCountForTesting() != 2)
+            throw std::runtime_error("browser user filter returned the wrong count");
+        completeBrowser.setPresetSourceForTesting("FAVORITES");
+        if (completeBrowser.getVisiblePresetCountForTesting() != 1)
+            throw std::runtime_error("browser favorites filter returned the wrong count");
     }});
 
     tests.push_back({"legacy sequencer patterns survive APVTS state migration", []

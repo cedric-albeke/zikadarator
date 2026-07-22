@@ -10,6 +10,16 @@ namespace zikada {
 class PresetManager
 {
 public:
+    enum class SaveResult
+    {
+        Saved,
+        Updated,
+        InvalidName,
+        InvalidState,
+        NameConflict,
+        WriteFailed
+    };
+
     struct PresetItem
     {
         juce::String name;
@@ -20,19 +30,22 @@ public:
         int recentRank{-1};
         juce::File file;
         juce::ValueTree state;
+        juce::String id;
     };
 
-    PresetManager();
+    explicit PresetManager(juce::File presetDirectoryOverride = {});
 
     void refresh();
     const std::vector<PresetItem>& getItems() const { return items; }
 
-    bool saveUserPreset(const juce::String& name, const juce::ValueTree& state);
+    SaveResult saveUserPreset(const juce::String& name, const juce::ValueTree& state);
     bool loadPreset(int index, juce::ValueTree& outState) const;
     bool deleteUserPreset(int index);
     bool toggleFavorite(const juce::String& name);
     bool isFavorite(const juce::String& name) const;
     void markPresetUsed(const juce::String& name);
+    int findItemIndexById(const juce::String& id) const;
+    static juce::String normalizeUserPresetName(const juce::String& name);
 
 private:
     juce::File presetDirectory;

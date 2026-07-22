@@ -71,13 +71,13 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - StepGrid advanced keyboard parity is complete: Page Up/Down cycles the selected effect preset, Shift+Left/Right resizes ties from either their root or a consumed step, active-step collisions are protected, and the full command set is exposed through accessibility help.
 - The macOS CI release order now signs and verifies VST3/AU/Standalone bundles before staging, verifies the copied payload, signs and optionally notarizes the final installer, then creates verified ZIP/PKG checksums and signed/notarized status metadata before upload.
 - The unsigned macOS tester path is proven on macOS 14 by Actions run `29888007903` at commit `e6d454f`: CTest, VST3/AU pluginval level 5, exact `aumf/Zkfx/Zika` system `auval`, staging, ZIP/PKG creation, metadata, checksum verification, and all artifact uploads passed.
+- The product-spec factory bank is complete at exactly 50 embedded presets: the original eight states remain unchanged, 42 declarative patterns cover nine useful browser categories, and executable contracts enforce unique names/states, complete APVTS/sequencer schemas, valid lane indices, host binary roundtrips, refresh-stable navigation IDs, validated atomic user saves, legacy collision recovery, multi-token search, and browser selection preservation.
 
 ## Open V1 Gates
 
 1. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 2. Configure Apple signing/notarization secrets and retain a credential-backed run proving bundle signatures, final PKG signature, notarization, stapling, and ticket validation. The unsigned tester path is complete.
-3. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.
-4. Move product/plugin/package metadata from `0.1.0` to `1.0.0` only after the gates above pass, then publish signed artifacts where credentials are available.
+3. Move product/plugin/package metadata from `0.1.0` to `1.0.0` only after the gates above pass, then publish signed artifacts where credentials are available.
 
 ## Release Hardening
 

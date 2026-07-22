@@ -32,11 +32,21 @@ public:
     void setMode(Mode newMode);
     void setPresetItems(std::vector<PresetManager::PresetItem> newItems);
     void bindToParameters(juce::AudioProcessorValueTreeState& apvts);
+    void showPresetSaveResult(const juce::String& message, bool succeeded);
 
     std::function<void(const juce::String&)> onSavePreset;
     std::function<void(int)> onLoadPreset;
     std::function<void(int)> onDeletePreset;
     std::function<void(int)> onToggleFavoritePreset;
+
+   #if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    void setPresetSearchForTesting(const juce::String& query);
+    void setPresetCategoryForTesting(const juce::String& category);
+    void setPresetSourceForTesting(const juce::String& source);
+    void selectPresetByIdForTesting(const juce::String& id);
+    int getVisiblePresetCountForTesting() const { return static_cast<int>(filteredPresetIndices.size()); }
+    juce::String getSelectedPresetIdForTesting() const;
+   #endif
 
 private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
