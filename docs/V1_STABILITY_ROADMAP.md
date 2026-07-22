@@ -70,17 +70,19 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - LOOP now prepares 12 seconds of history, covering four user-controlled beats at the supported 20 BPM floor. The maximum tail explicitly documents its 12-second cap. Runtime FX labels and icons now match implemented Comb/Notch, Delay, Filter, Pitch Color, Bitcrush, Ring Mod, and Space paths; alternate FILTER slots have distinct bounded tunings.
 - StepGrid advanced keyboard parity is complete: Page Up/Down cycles the selected effect preset, Shift+Left/Right resizes ties from either their root or a consumed step, active-step collisions are protected, and the full command set is exposed through accessibility help.
 - The macOS CI release order now signs and verifies VST3/AU/Standalone bundles before staging, verifies the copied payload, signs and optionally notarizes the final installer, then creates verified ZIP/PKG checksums and signed/notarized status metadata before upload.
+- The unsigned macOS tester path is proven on macOS 14 by Actions run `29888007903` at commit `e6d454f`: CTest, VST3/AU pluginval level 5, exact `aumf/Zkfx/Zika` system `auval`, staging, ZIP/PKG creation, metadata, checksum verification, and all artifact uploads passed.
 
 ## Open V1 Gates
 
 1. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
-2. Run the corrected macOS validation/sign/package workflow on a real macOS runner and retain evidence for unsigned tester and credential-backed signed/notarized paths.
+2. Configure Apple signing/notarization secrets and retain a credential-backed run proving bundle signatures, final PKG signature, notarization, stapling, and ticket validation. The unsigned tester path is complete.
 3. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.
 4. Move product/plugin/package metadata from `0.1.0` to `1.0.0` only after the gates above pass, then publish signed artifacts where credentials are available.
 
 ## Release Hardening
 
 1. Make Steinberg VST3 validator availability mandatory for public-release jobs while retaining optional discovery for local tester builds.
-2. Require a successful real-runner macOS package check proving the staged bundles, ZIP, final PKG signature, notarization ticket, manifest, and SHA-256 files match the intended release path.
+2. Require a credential-backed macOS package check proving staged bundle signatures, final PKG signature, notarization ticket, manifest, and SHA-256 files match the intended public-release path.
 3. Add a tag-driven GitHub Release workflow with one authoritative version source and explicit signed/unsigned artifact labels.
 4. Keep unsigned outputs labeled as tester builds until signing credentials and public-release gates are present.
+5. Update `actions/checkout` and `actions/upload-artifact` when Node 24-native releases are available; the macOS runner currently warns while forcing their Node 20 actions onto Node 24.
