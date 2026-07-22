@@ -63,6 +63,9 @@ function Write-PackageChecksums {
         @{ Label = "verify-checksums.bat"; Path = Join-Path $PackagePath "verify-checksums.bat" },
         @{ Label = "verify-checksums.ps1"; Path = Join-Path $PackagePath "verify-checksums.ps1" },
         @{ Label = "installer/ZIKADARATOR-Setup.iss"; Path = Join-Path $PackagePath "installer/ZIKADARATOR-Setup.iss" },
+        @{ Label = "installer/assets/setup-icon.ico"; Path = Join-Path $PackagePath "installer/assets/setup-icon.ico" },
+        @{ Label = "installer/assets/wizard-large.bmp"; Path = Join-Path $PackagePath "installer/assets/wizard-large.bmp" },
+        @{ Label = "installer/assets/wizard-small.bmp"; Path = Join-Path $PackagePath "installer/assets/wizard-small.bmp" },
         @{ Label = "README.txt"; Path = Join-Path $PackagePath "README.txt" }
     )
 
@@ -211,6 +214,14 @@ $installerDir = Join-Path $packagePath "installer"
 New-Item -ItemType Directory -Force -Path $installerDir | Out-Null
 Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/ZIKADARATOR.iss") `
           -Destination (Join-Path $installerDir "ZIKADARATOR-Setup.iss") -Force
+$installerAssetsDir = Join-Path $installerDir "assets"
+New-Item -ItemType Directory -Force -Path $installerAssetsDir | Out-Null
+Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/assets/setup-icon.ico") `
+          -Destination $installerAssetsDir -Force
+Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/assets/wizard-large.bmp") `
+          -Destination $installerAssetsDir -Force
+Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/assets/wizard-small.bmp") `
+          -Destination $installerAssetsDir -Force
 
 @"
 @echo off
@@ -297,6 +308,7 @@ Contents:
 - install.bat: copies the VST3 bundle into the common VST3 folder
 - verify-checksums.bat: validates extracted package files against SHA256SUMS.txt
 - installer/ZIKADARATOR-Setup.iss: Inno Setup script for building an installer
+- installer/assets: ZIKADARATOR icon and branded Inno Setup wizard artwork
 
 If Windows Application Control blocks JUCE's VST3 helper, this package script restores
 a tracked moduleinfo.json fallback before packaging so the bundle is not left with a
@@ -306,7 +318,7 @@ BUILD_INFO.txt records the git commit, branch, tracked tree state, build directo
 and configuration used to create this tester package.
 
 SHA256SUMS.txt lists checksums for the standalone, VST3 binary, moduleinfo, installer
-helper, verifier scripts, build info, and this README so tester downloads can be verified after transfer.
+source and artwork, verifier scripts, build info, and this README so tester downloads can be verified after transfer.
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "README.txt") -Encoding ASCII
 
 Write-BuildInfo -PackagePath $packagePath -BuildDir $BuildDir -Configuration $Configuration -SigningStatus $SigningStatus

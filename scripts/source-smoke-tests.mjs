@@ -250,7 +250,12 @@ assertContains(windowsPackageScript, "rev-parse", "Windows package build metadat
 assertContains(windowsPackageScript, "verify-checksums.ps1", "Windows package must include an extracted-package checksum verifier");
 assertContains(windowsPackageScript, "All ZIKADARATOR package checksums verified.", "Windows package checksum verifier must report success clearly");
 assertContains(windowsPackageScript, "installer/ZIKADARATOR-Setup.iss", "Windows package checksums must cover the included installer source");
+assertContains(windowsPackageScript, "installer/assets/setup-icon.ico", "Windows package checksums must cover the branded installer icon");
+assertContains(windowsPackageScript, "installer/assets/wizard-large.bmp", "Windows package checksums must cover branded wizard artwork");
 assertContains(windowsPackageScript, "Signing status:", "Windows package build metadata must identify signed versus unsigned tester artifacts");
+assertContains(windowsInstallerScript, "SetupIconFile={#SourcePath}\\assets\\setup-icon.ico", "Windows installer must use the ZIKADARATOR setup icon");
+assertContains(windowsInstallerScript, "WizardImageFile={#SourcePath}\\assets\\wizard-large.bmp", "Windows installer must use branded wizard artwork");
+assertContains(windowsInstallerScript, "WizardSmallImageFile={#SourcePath}\\assets\\wizard-small.bmp", "Windows installer must use branded header artwork");
 assertContains(windowsWorkflow, ".\\scripts\\package-windows-release.ps1", "Windows CI must use the same tested package builder as local releases");
 assertContains(windowsWorkflow, "$vst3Binary", "Windows CI signing must target the VST3 binary inside the bundle");
 assertContains(windowsWorkflow, "$standaloneExe", "Windows CI signing must cover the standalone binary before packaging");

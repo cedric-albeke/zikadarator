@@ -19,16 +19,28 @@ AppId={{2C333E6D-28C0-48DE-A4B8-03679C7A6D5E}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher=Zikada
+AppPublisherURL=https://github.com/cedric-albeke/zikadarator
+AppSupportURL=https://github.com/cedric-albeke/zikadarator/issues
+AppUpdatesURL=https://github.com/cedric-albeke/zikadarator/releases
+AppComments=Sequence the signal.
 DefaultDirName={autopf}\ZIKADARATOR
 DefaultGroupName=ZIKADARATOR
 ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+WizardImageFile={#SourcePath}\assets\wizard-large.bmp
+WizardSmallImageFile={#SourcePath}\assets\wizard-small.bmp
+SetupIconFile={#SourcePath}\assets\setup-icon.ico
 OutputDir={#MyOutputDir}
 OutputBaseFilename=ZIKADARATOR-Setup
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\ZIKADARATOR.exe
+VersionInfoCompany=Zikada
+VersionInfoDescription=ZIKADARATOR VST3 and standalone installer
+VersionInfoProductName=ZIKADARATOR
+VersionInfoProductVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppVersion}
 
 [Types]
 Name: "full"; Description: "Full installation"
