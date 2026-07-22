@@ -314,6 +314,7 @@ assertContains(macosWorkflow, "xcrun stapler validate", "macOS CI must validate 
 assertContains(macosWorkflow, "NOTARIZATION_STATUS", "macOS release metadata must distinguish signing from notarization");
 assertContains(macosWorkflow, "shasum -a 256 -c SHA256SUMS.txt", "macOS CI must verify final package checksums before upload");
 assertContains(macosValidationScript, 'rm -rf "$HOME/Library/Caches/AudioUnitCache"', "macOS validation must invalidate the user AU registry cache after installation");
+assertContains(macosValidationScript, 'AUVAL_TYPE="${AUVAL_TYPE:-aumf}"', "macOS validation must target the AU component type emitted by the JUCE build");
 assertContains(macosValidationScript, 'au_registry="$(auval -a 2>&1 || true)"', "macOS validation must force AU registry discovery before targeted auval");
 assertContains(macosValidationScript, '$1 == type && $2 == subtype && $3 == manufacturer', "macOS validation must require the exact AU identity in the registry");
 assertContains(macosValidationScript, "for attempt in 1 2 3", "macOS validation must tolerate bounded AU registrar startup races");
