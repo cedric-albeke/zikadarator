@@ -65,6 +65,7 @@ const stepScheduler = read("src/engine/StepScheduler.h");
 const sliceEngine = read("src/engine/SliceEngine.cpp");
 const envelopeShape = read("src/engine/EnvelopeShape.cpp");
 const envFollower = read("src/engine/EnvFollowerEngine.cpp");
+const filterEngine = read("src/engine/FilterEngine.cpp");
 const loopEngine = read("src/engine/LoopEngine.cpp");
 const loopEngineHeader = read("src/engine/LoopEngine.h");
 const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
@@ -108,6 +109,7 @@ const servicePendingLoopCapture = extractFunction(
   loopEngine,
   "void LoopEngine::servicePendingCapture()",
 );
+const resetCombDelay = extractFunction(filterEngine, "void FilterEngine::CombDelay::reset()");
 const stepGridTimer = extractFunction(
   stepGrid,
   "void StepGrid::timerCallback()",
@@ -302,6 +304,13 @@ assertContains(processSegment, "ModulationTarget::FilterResonance", "filter lane
 assertContains(processSegment, "ModulationTarget::Volume", "filter lane modulation must apply volume target");
 assertContains(processSegment, "ModulationTarget::Pan", "filter lane modulation must apply pan target");
 assertContains(processor, "applyGainPanSample", "processor must support per-sample gain/pan modulation for filter lane targets");
+assertContains(processor, "filterEngine.setParameters(modCutoff, modResonance)", "filter modulation must combine cutoff and resonance coefficient updates");
+if (processor.includes(".setCutoff(") || processor.includes(".setResonance(")) {
+  fail("processor filter paths must use combined parameter updates instead of rebuilding coefficients twice");
+}
+if (resetCombDelay.includes("std::fill") || resetCombDelay.includes(".assign(") || resetCombDelay.includes("for (")) {
+  fail("CombDelay reset must remain constant-time on the audio thread");
+}
 assertContains(processorTests, "invalid host state is ignored without corrupting current state", "processor tests must guard invalid host state restore safety");
 assertContains(processorTests, "malformed binary host state is ignored without corrupting current state", "processor tests must guard malformed binary host state restore safety");
 assertContains(footer, "getSupportedModTargetsForLane", "footer MOD target picker must use lane-supported targets");

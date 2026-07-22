@@ -332,8 +332,7 @@ void configureFilterForStep(FilterEngine& filterEngine, int presetIndex, const U
         default: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
     }
 
-    filterEngine.setCutoff(slotData.filterCutoff);
-    filterEngine.setResonance(slotData.filterResonance);
+    filterEngine.setParameters(slotData.filterCutoff, slotData.filterResonance);
     filterEngine.setEnabled(true);
 }
 
@@ -404,8 +403,8 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 {
                     float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i, 1.0));
                     toneFilter.setFilterType(FilterEngine::FilterType::Comb);
-                    toneFilter.setCutoff(juce::jlimit(200.0f, 4000.0f, 800.0f + 1200.0f * std::sin(modPhase * 3.14159265f)));
-                    toneFilter.setResonance(juce::jlimit(2.0f, 10.0f, 4.0f + slotData.filterResonance));
+                    toneFilter.setParameters(juce::jlimit(200.0f, 4000.0f, 800.0f + 1200.0f * std::sin(modPhase * 3.14159265f)),
+                                             juce::jlimit(2.0f, 10.0f, 4.0f + slotData.filterResonance));
                     toneFilter.setEnabled(true);
                     left[i] = toneFilter.processSampleLeft(left[i]);
                     right[i] = toneFilter.processSampleRight(right[i]);
@@ -416,8 +415,8 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 {
                     float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i * 2.0, 1.0));
                     toneFilter.setFilterType(FilterEngine::FilterType::Comb);
-                    toneFilter.setCutoff(juce::jlimit(200.0f, 6000.0f, 1000.0f + 2000.0f * std::sin(modPhase * 6.2831853f)));
-                    toneFilter.setResonance(juce::jlimit(2.0f, 10.0f, 4.0f + slotData.filterResonance));
+                    toneFilter.setParameters(juce::jlimit(200.0f, 6000.0f, 1000.0f + 2000.0f * std::sin(modPhase * 6.2831853f)),
+                                             juce::jlimit(2.0f, 10.0f, 4.0f + slotData.filterResonance));
                     toneFilter.setEnabled(true);
                     left[i] = toneFilter.processSampleLeft(left[i]);
                     right[i] = toneFilter.processSampleRight(right[i]);
@@ -428,8 +427,8 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 {
                     float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i, 1.0));
                     toneFilter.setFilterType(FilterEngine::FilterType::BandReject);
-                    toneFilter.setCutoff(juce::jlimit(300.0f, 3000.0f, 600.0f + 1200.0f * std::sin(modPhase * 3.14159265f)));
-                    toneFilter.setResonance(juce::jlimit(1.0f, 6.0f, 2.0f + slotData.filterResonance * 0.3f));
+                    toneFilter.setParameters(juce::jlimit(300.0f, 3000.0f, 600.0f + 1200.0f * std::sin(modPhase * 3.14159265f)),
+                                             juce::jlimit(1.0f, 6.0f, 2.0f + slotData.filterResonance * 0.3f));
                     toneFilter.setEnabled(true);
                     left[i] = toneFilter.processSampleLeft(left[i]);
                     right[i] = toneFilter.processSampleRight(right[i]);
@@ -440,8 +439,8 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 {
                     float modPhase = static_cast<float>(std::fmod(phaseStart + phaseDelta * i * 1.5, 1.0));
                     toneFilter.setFilterType(FilterEngine::FilterType::BandReject);
-                    toneFilter.setCutoff(juce::jlimit(200.0f, 5000.0f, 800.0f + 2000.0f * std::sin(modPhase * 6.2831853f)));
-                    toneFilter.setResonance(juce::jlimit(3.0f, 12.0f, 5.0f + slotData.filterResonance));
+                    toneFilter.setParameters(juce::jlimit(200.0f, 5000.0f, 800.0f + 2000.0f * std::sin(modPhase * 6.2831853f)),
+                                             juce::jlimit(3.0f, 12.0f, 5.0f + slotData.filterResonance));
                     toneFilter.setEnabled(true);
                     left[i] = toneFilter.processSampleLeft(left[i]);
                     right[i] = toneFilter.processSampleRight(right[i]);
@@ -528,8 +527,7 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 pitchEngine.setEnabled(true);
                 pitchEngine.process(left, right, numSamples);
                 toneFilter.setFilterType(FilterEngine::FilterType::LowPass12);
-                toneFilter.setCutoff(800.0f);
-                toneFilter.setResonance(1.5f);
+                toneFilter.setParameters(800.0f, 1.5f);
                 toneFilter.setEnabled(true);
                 toneFilter.process(left, right, numSamples);
                 break;
@@ -556,8 +554,7 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 break;
             case 13:
                 toneFilter.setFilterType(FilterEngine::FilterType::Comb);
-                toneFilter.setCutoff(3000.0f);
-                toneFilter.setResonance(juce::jlimit(4.0f, 14.0f, 8.0f + slotData.filterResonance));
+                toneFilter.setParameters(3000.0f, juce::jlimit(4.0f, 14.0f, 8.0f + slotData.filterResonance));
                 toneFilter.setEnabled(true);
                 for (int i = 0; i < numSamples; ++i)
                 {
@@ -574,8 +571,7 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 bitcrushEngine.setEnabled(true);
                 bitcrushEngine.process(left, right, numSamples);
                 toneFilter.setFilterType(FilterEngine::FilterType::Comb);
-                toneFilter.setCutoff(2500.0f);
-                toneFilter.setResonance(12.0f);
+                toneFilter.setParameters(2500.0f, 12.0f);
                 toneFilter.setEnabled(true);
                 for (int i = 0; i < numSamples; ++i)
                 {
@@ -588,15 +584,15 @@ void processFxLane(float* left, float* right, int numSamples, int lane, int pres
                 break;
             case 15:
                 toneFilter.setFilterType(FilterEngine::FilterType::BandPass);
-                toneFilter.setCutoff(juce::jlimit(800.0f, 8000.0f, slotData.filterCutoff));
-                toneFilter.setResonance(juce::jlimit(2.0f, 10.0f, slotData.filterResonance));
+                toneFilter.setParameters(juce::jlimit(800.0f, 8000.0f, slotData.filterCutoff),
+                                         juce::jlimit(2.0f, 10.0f, slotData.filterResonance));
                 toneFilter.setEnabled(true);
                 toneFilter.process(left, right, numSamples);
                 break;
             case 16:
                 toneFilter.setFilterType(FilterEngine::FilterType::LowPass12);
-                toneFilter.setCutoff(juce::jlimit(100.0f, 2000.0f, slotData.filterCutoff * 0.5f));
-                toneFilter.setResonance(juce::jlimit(1.0f, 8.0f, slotData.filterResonance));
+                toneFilter.setParameters(juce::jlimit(100.0f, 2000.0f, slotData.filterCutoff * 0.5f),
+                                         juce::jlimit(1.0f, 8.0f, slotData.filterResonance));
                 toneFilter.setEnabled(true);
                 toneFilter.process(left, right, numSamples);
                 break;
@@ -1383,8 +1379,7 @@ void PluginProcessor::processSegment(float* leftChannel,
             const float modResonance = juce::jlimit(0.1f, 10.0f, filterSlot.filterResonance * std::pow(2.0f, resonanceMod * 1.5f));
             const float modVolume = juce::jlimit(0.0f, 2.0f, filterSlot.volume * (1.0f + volumeMod));
             const float modPan = juce::jlimit(-1.0f, 1.0f, filterSlot.pan + panMod);
-            filterEngine.setCutoff(modCutoff);
-            filterEngine.setResonance(modResonance);
+            filterEngine.setParameters(modCutoff, modResonance);
 
             wetLeft[i] = filterEngine.processSampleLeft(wetLeft[i]);
             wetRight[i] = filterEngine.processSampleRight(wetRight[i]);

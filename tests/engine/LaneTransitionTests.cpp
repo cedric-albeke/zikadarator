@@ -275,6 +275,40 @@ void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<voi
 
         require(rms(out24) < rms(out12) * 0.55f, "lowpass 24 should be a steeper cascaded filter");
     }});
+
+    tests.push_back({"FilterEngine combines and deduplicates parameter updates", []
+    {
+        FilterEngine filter;
+        filter.prepare(48000.0, 128);
+        const auto initialUpdates = filter.getParameterUpdateCountForTesting();
+
+        filter.setParameters(1200.0f, 2.0f);
+        require(filter.getParameterUpdateCountForTesting() == initialUpdates + 1,
+                "cutoff and resonance should share one coefficient update");
+
+        filter.setParameters(1200.0f, 2.0f);
+        require(filter.getParameterUpdateCountForTesting() == initialUpdates + 1,
+                "unchanged filter parameters should not rebuild coefficients");
+    }});
+
+    tests.push_back({"FilterEngine comb reset does not expose stale delay history", []
+    {
+        FilterEngine filter;
+        filter.prepare(1000.0, 32);
+        filter.setFilterType(FilterEngine::FilterType::Comb);
+        filter.setParameters(100.0f, 2.0f);
+
+        filter.processSampleLeft(1.0f);
+        for (int i = 0; i < 10; ++i)
+            filter.processSampleLeft(0.0f);
+
+        filter.setFilterType(FilterEngine::FilterType::LowPass12);
+        filter.setFilterType(FilterEngine::FilterType::Comb);
+
+        for (int i = 0; i < 16; ++i)
+            requireNear(filter.processSampleLeft(0.0f), 0.0f, 0.0001f,
+                        "logical comb reset should hide samples from the previous generation");
+    }});
 }
 
 } // namespace zikada::tests

@@ -121,6 +121,7 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 - `Envelope` processing applies per-step amplitude curves using scheduler phase.
 - FX1 and FX2 host delay, reverb, bitcrush, pitch-color, and tone-filter paths.
 - `FilterEngine` is used both as the dedicated FILTER lane and as an internal tone shaper for FX presets.
+- Filter cutoff/resonance changes are submitted as one deduplicated update. Filter-type coefficients stay outside the per-sample modulation path, and Comb history uses generation-tagged preallocated storage for constant-time logical resets.
 - Final global mixing applies dry/wet, mix mode, and output gain after lane processing.
 - Input waveform samples are pushed into `waveformTap`; processed output samples are pushed into `processedWaveformTap`. `PluginEditor::timerCallback` pops both streams and feeds `WaveformDisplay` as two stacked waveform lanes while the Sequencer is visible.
 - Hidden editors and non-Sequencer pages discard queued tap samples on the UI consumer side, and leaving the Sequencer clears retained display history. Returning therefore starts from current audio instead of replaying a stale FIFO backlog.
