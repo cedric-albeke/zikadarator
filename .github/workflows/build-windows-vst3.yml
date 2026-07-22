@@ -68,9 +68,13 @@ jobs:
 
           if (Test-Path -LiteralPath $innoExe) {
             Add-Content -Path $env:GITHUB_PATH -Value $innoDir
-            & $innoExe /?
+            Write-Host "Using Inno Setup compiler: $innoExe"
           } else {
-            iscc.exe /?
+            $pathInno = Get-Command iscc.exe -ErrorAction SilentlyContinue
+            if (-not $pathInno) {
+              throw "Inno Setup compiler was not found after installation"
+            }
+            Write-Host "Using Inno Setup compiler: $($pathInno.Source)"
           }
 
       - name: Sign Windows plugin binaries (if certificate available)
