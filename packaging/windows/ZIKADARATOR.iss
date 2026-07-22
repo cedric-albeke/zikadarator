@@ -28,7 +28,7 @@ DefaultGroupName=ZIKADARATOR
 ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma
 SolidCompression=yes
-WizardStyle=modern dynamic
+WizardStyle=modern
 WizardBackColor=#06110F
 WizardBackColorDynamicDark=#06110F
 WizardImageFile={#SourcePath}\assets\wizard-large.bmp
@@ -63,6 +63,7 @@ Source: "{#SourcePath}\assets\button-install.bmp"; Flags: dontcopy noencryption
 Source: "{#SourcePath}\assets\button-finish.bmp"; Flags: dontcopy noencryption
 Source: "{#SourcePath}\assets\button-cancel.bmp"; Flags: dontcopy noencryption
 Source: "{#SourcePath}\assets\button-browse.bmp"; Flags: dontcopy noencryption
+Source: "{#SourcePath}\assets\brand-logo.bmp"; Flags: dontcopy noencryption
 
 [Icons]
 Name: "{autoprograms}\ZIKADARATOR"; Filename: "{app}\ZIKADARATOR.exe"; Components: standalone
@@ -83,12 +84,12 @@ var
   SliceCyan, LoopMagenta, FilterLime, TextStrong, TextMuted: TColor;
   SidebarPanel, HeaderPanel, BodyPanel, NavPanel: TPanel;
   WelcomePanel, OptionsPanel, ReviewPanel, TransferPanel, FinishedPanel: TPanel;
-  PageTitle, PageDescription, TransferStatus, TransferFile: TNewStaticText;
-  ReviewVST3, ReviewStandalone, ReviewDesktop, ReviewPath: TNewStaticText;
+  PageTitle, PageDescription, TransferStatus, TransferFile: TLabel;
+  ReviewVST3, ReviewStandalone, ReviewDesktop, ReviewPath: TLabel;
   StandaloneToggle, DesktopToggle, LaunchToggle: TNewCheckBox;
   InstallPathEdit: TNewEdit;
   BackButton, NextButton, CancelButton, BrowseButton: TBitmapButton;
-  StageLabels: array [0..3] of TNewStaticText;
+  StageLabels: array [0..3] of TLabel;
   StageMarks: array [0..3] of TPanel;
   ProgressCells: array [0..15] of TPanel;
   OptionsPage, ReviewPage: TWizardPage;
@@ -98,6 +99,7 @@ begin
   Result := TPanel.Create(WizardForm);
   Result.Parent := Parent;
   Result.Caption := '';
+  Result.StyleElements := Result.StyleElements - [seFont, seClient, seBorder];
   Result.Color := Color;
   Result.ParentBackground := False;
   Result.BevelOuter := bvNone;
@@ -105,15 +107,15 @@ begin
 end;
 
 function NewText(Parent: TWinControl; Caption: String; X, Y, W, H, Size: Integer;
-  Color: TColor; Bold, Mono: Boolean): TNewStaticText;
+  Color: TColor; Bold, Mono: Boolean): TLabel;
 begin
-  Result := TNewStaticText.Create(WizardForm);
+  Result := TLabel.Create(WizardForm);
   Result.Parent := Parent;
   Result.AutoSize := False;
   Result.WordWrap := True;
+  Result.Transparent := True;
   Result.Caption := Caption;
   Result.SetBounds(ScaleX(X), ScaleY(Y), ScaleX(W), ScaleY(H));
-  Result.Color := TPanel(Parent).Color;
   Result.Font.Color := Color;
   Result.Font.Size := Size;
   if Bold then
@@ -122,7 +124,21 @@ begin
     Result.Font.Name := 'Consolas'
   else
     Result.Font.Name := 'Segoe UI';
-  Result.StyleElements := Result.StyleElements - [seFont, seClient];
+end;
+
+function NewDisplay(Parent: TWinControl; AccentColor: TColor;
+  X, Y, W, H: Integer): TPanel;
+var
+  Frame, TopRail, BottomRail: TPanel;
+begin
+  Frame := NewPanel(Parent, AccentColor);
+  Frame.SetBounds(ScaleX(X), ScaleY(Y), ScaleX(W), ScaleY(H));
+  Result := NewPanel(Frame, SignalBlack);
+  Result.SetBounds(ScaleX(2), ScaleY(2), Frame.Width - ScaleX(4), Frame.Height - ScaleY(4));
+  TopRail := NewPanel(Result, PanelSurface);
+  TopRail.SetBounds(0, 0, Result.ClientWidth, ScaleY(4));
+  BottomRail := NewPanel(Result, RackSurface);
+  BottomRail.SetBounds(0, Result.ClientHeight - ScaleY(7), Result.ClientWidth, ScaleY(7));
 end;
 
 procedure AddLane(Name: String; LaneColor: TColor; Y: Integer);
@@ -130,11 +146,11 @@ var
   Lane, Accent: TPanel;
 begin
   Lane := NewPanel(SidebarPanel, PanelSurface);
-  Lane.SetBounds(ScaleX(18), ScaleY(Y), ScaleX(184), ScaleY(30));
+  Lane.SetBounds(ScaleX(14), ScaleY(Y), ScaleX(168), ScaleY(27));
   Accent := NewPanel(Lane, LaneColor);
   Accent.SetBounds(0, 0, ScaleX(3), Lane.Height);
-  NewText(Lane, Name, 14, 6, 110, 18, 9, LaneColor, True, True);
-  NewText(Lane, 'READY', 127, 6, 44, 18, 7, TextMuted, False, True).Alignment := taRightJustify;
+  NewText(Lane, Name, 13, 5, 100, 17, 8, LaneColor, True, True);
+  NewText(Lane, 'ONLINE', 111, 5, 43, 17, 6, TextMuted, False, True).Alignment := taRightJustify;
 end;
 
 procedure LoadButtonBitmap(Button: TBitmapButton; FileName: String; W: Integer);
@@ -292,159 +308,172 @@ var
 begin
   Logo := TBitmapImage.Create(WizardForm);
   Logo.Parent := SidebarPanel;
-  Logo.Bitmap := WizardForm.WizardSmallBitmapImage.Bitmap;
+  Logo.Bitmap.LoadFromFile(ExpandConstant('{tmp}\brand-logo.bmp'));
   Logo.Stretch := True;
-  Logo.SetBounds(ScaleX(18), ScaleY(20), ScaleX(58), ScaleY(58));
+  Logo.SetBounds(ScaleX(14), ScaleY(14), ScaleX(48), ScaleY(48));
 
-  NewText(SidebarPanel, 'ZIKADARATOR', 86, 25, 120, 24, 13, TextStrong, True, False);
-  NewText(SidebarPanel, 'SEQUENCE THE SIGNAL', 86, 52, 120, 16, 6, PhosphorGreen, False, True);
+  NewText(SidebarPanel, 'ZIKADARATOR', 72, 16, 110, 22, 11, TextStrong, True, False);
+  NewText(SidebarPanel, 'SEQUENCE THE SIGNAL', 72, 40, 110, 14, 6, PhosphorGreen, False, True);
 
-  AddLane('SLICE', SliceCyan, 104);
-  AddLane('LOOP', LoopMagenta, 138);
-  AddLane('ENVELOPE', StrToColor('#9258FF'), 172);
-  AddLane('FX1', PhosphorGreen, 206);
-  AddLane('FILTER', FilterLime, 240);
-  AddLane('FX2', StrToColor('#21D8C3'), 274);
+  AddLane('SLICE', SliceCyan, 78);
+  AddLane('LOOP', LoopMagenta, 108);
+  AddLane('ENVELOPE', StrToColor('#9258FF'), 138);
+  AddLane('FX1', PhosphorGreen, 168);
+  AddLane('FILTER', FilterLime, 198);
+  AddLane('FX2', StrToColor('#21D8C3'), 228);
 
-  NewText(SidebarPanel, 'DEPLOYMENT CHAIN', 18, 334, 184, 18, 7, TextMuted, True, True);
+  NewText(SidebarPanel, 'SIGNAL ROUTE', 14, 278, 168, 16, 7, TextMuted, True, True);
   StageNames[0] := '01  START';
   StageNames[1] := '02  TARGETS';
   StageNames[2] := '03  REVIEW';
   StageNames[3] := '04  TRANSFER';
   for I := 0 to 3 do begin
     StageMarks[I] := NewPanel(SidebarPanel, PanelSurface);
-    StageMarks[I].SetBounds(ScaleX(18), ScaleY(362 + (I * 28)), ScaleX(4), ScaleY(18));
-    StageLabels[I] := NewText(SidebarPanel, StageNames[I], 32, 360 + (I * 28), 160, 20, 8, TextMuted, False, True);
+    StageMarks[I].SetBounds(ScaleX(14), ScaleY(302 + (I * 24)), ScaleX(3), ScaleY(16));
+    StageLabels[I] := NewText(SidebarPanel, StageNames[I], 26, 300 + (I * 24), 150, 18, 7, TextMuted, False, True);
   end;
 
-  NewText(SidebarPanel, 'V1 / WINDOWS X64 / TEST CHANNEL', 18, 486, 184, 18, 6, TextMuted, False, True);
+  NewText(SidebarPanel, 'V1  /  WINDOWS X64  /  TEST', 14, 432, 168, 16, 6, TextMuted, False, True);
 end;
 
 procedure BuildWelcomePage;
+var
+  Display: TPanel;
 begin
-  NewText(WelcomePanel, 'V1 TEST BUILD', 28, 22, 130, 18, 7, PhosphorGreen, True, True);
-  NewText(WelcomePanel, 'SEQUENCE'#13#10'THE SIGNAL.', 28, 55, 450, 82, 25, TextStrong, True, False);
-  NewText(WelcomePanel,
+  Display := NewDisplay(WelcomePanel, PhosphorGreen, 22, 14, 480, 236);
+  NewText(Display, 'INPUT  //  V1 TEST BUILD', 18, 14, 210, 16, 7, PhosphorGreen, True, True);
+  NewText(Display, 'SEQUENCE THE SIGNAL.', 18, 43, 438, 38, 20, TextStrong, True, False);
+  NewText(Display,
     'Deploy the ZIKADARATOR multi-FX sequencer as a 64-bit VST3 plugin and optional standalone instrument.',
-    28, 151, 452, 52, 10, TextMuted, False, False);
-  NewText(WelcomePanel, '50 FACTORY PATTERNS', 28, 229, 150, 20, 8, SliceCyan, True, True);
-  NewText(WelcomePanel, '6 FX LANES', 192, 229, 100, 20, 8, LoopMagenta, True, True);
-  NewText(WelcomePanel, '16 STEPS', 306, 229, 90, 20, 8, FilterLime, True, True);
+    18, 86, 438, 42, 9, TextMuted, False, False);
+  NewText(Display, '50 PATTERNS', 18, 148, 116, 18, 7, SliceCyan, True, True);
+  NewText(Display, '6 FX LANES', 156, 148, 104, 18, 7, LoopMagenta, True, True);
+  NewText(Display, '16 STEPS', 282, 148, 90, 18, 7, FilterLime, True, True);
+  NewText(Display, 'STATUS  READY FOR ROUTING', 18, 195, 300, 18, 7, TextStrong, False, True);
   NewText(WelcomePanel,
-    'This build is unsigned and intended for hands-on testing before the public V1 release.',
-    28, 274, 452, 36, 8, TextMuted, False, True);
+    'Unsigned tester build. Windows may request confirmation before setup starts.',
+    24, 268, 476, 24, 7, TextMuted, False, False);
 end;
 
 procedure BuildOptionsPage;
 var
-  Card, Accent: TPanel;
+  Display, Card, Accent: TPanel;
 begin
-  Card := NewPanel(OptionsPanel, PanelSurface);
-  Card.SetBounds(ScaleX(28), ScaleY(18), ScaleX(484), ScaleY(66));
+  Display := NewDisplay(OptionsPanel, SliceCyan, 22, 14, 480, 272);
+  Card := NewPanel(Display, PanelSurface);
+  Card.SetBounds(ScaleX(16), ScaleY(14), ScaleX(444), ScaleY(54));
   Accent := NewPanel(Card, SliceCyan);
   Accent.SetBounds(0, 0, ScaleX(4), Card.Height);
-  NewText(Card, 'VST3 PLUGIN', 18, 10, 220, 20, 10, TextStrong, True, True);
-  NewText(Card, 'Required  /  Common Files\VST3', 18, 35, 280, 18, 7, TextMuted, False, True);
-  NewText(Card, 'ALWAYS ON', 360, 22, 96, 18, 7, SliceCyan, True, True).Alignment := taRightJustify;
+  NewText(Card, 'VST3 PLUGIN', 16, 8, 200, 18, 9, TextStrong, True, True);
+  NewText(Card, 'Required  /  Common Files\VST3', 16, 29, 280, 16, 7, TextMuted, False, True);
+  NewText(Card, 'ALWAYS ON', 334, 18, 86, 16, 7, SliceCyan, True, True).Alignment := taRightJustify;
 
   StandaloneToggle := TNewCheckBox.Create(WizardForm);
-  StandaloneToggle.Parent := OptionsPanel;
-  StandaloneToggle.SetBounds(ScaleX(30), ScaleY(103), ScaleX(300), ScaleY(24));
+  StandaloneToggle.Parent := Display;
+  StandaloneToggle.SetBounds(ScaleX(18), ScaleY(82), ScaleX(300), ScaleY(22));
   StandaloneToggle.Caption := 'Install standalone application';
   StandaloneToggle.Checked := WizardIsComponentSelected('standalone');
-  StandaloneToggle.Color := RackSurface;
-  StandaloneToggle.Font.Name := 'Segoe UI';
-  StandaloneToggle.Font.Size := 10;
-  StandaloneToggle.Font.Color := TextStrong;
   StandaloneToggle.StyleElements := StandaloneToggle.StyleElements - [seFont, seClient];
+  StandaloneToggle.Color := SignalBlack;
+  StandaloneToggle.Font.Name := 'Segoe UI';
+  StandaloneToggle.Font.Size := 9;
+  StandaloneToggle.Font.Color := TextStrong;
   StandaloneToggle.OnClick := @StandaloneChanged;
 
   DesktopToggle := TNewCheckBox.Create(WizardForm);
-  DesktopToggle.Parent := OptionsPanel;
-  DesktopToggle.SetBounds(ScaleX(52), ScaleY(135), ScaleX(300), ScaleY(22));
+  DesktopToggle.Parent := Display;
+  DesktopToggle.SetBounds(ScaleX(40), ScaleY(110), ScaleX(300), ScaleY(20));
   DesktopToggle.Caption := 'Create desktop shortcut';
   DesktopToggle.Checked := WizardIsTaskSelected('desktopicon');
   DesktopToggle.Enabled := StandaloneToggle.Checked;
-  DesktopToggle.Color := RackSurface;
-  DesktopToggle.Font.Name := 'Segoe UI';
-  DesktopToggle.Font.Size := 9;
-  DesktopToggle.Font.Color := TextMuted;
   DesktopToggle.StyleElements := DesktopToggle.StyleElements - [seFont, seClient];
+  DesktopToggle.Color := SignalBlack;
+  DesktopToggle.Font.Name := 'Segoe UI';
+  DesktopToggle.Font.Size := 8;
+  DesktopToggle.Font.Color := TextMuted;
 
-  NewText(OptionsPanel, 'STANDALONE LOCATION', 28, 184, 300, 18, 7, TextMuted, True, True);
+  NewText(Display, 'STANDALONE LOCATION', 16, 147, 300, 16, 7, TextMuted, True, True);
   InstallPathEdit := TNewEdit.Create(WizardForm);
-  InstallPathEdit.Parent := OptionsPanel;
-  InstallPathEdit.SetBounds(ScaleX(28), ScaleY(208), ScaleX(368), ScaleY(30));
+  InstallPathEdit.Parent := Display;
+  InstallPathEdit.SetBounds(ScaleX(16), ScaleY(168), ScaleX(334), ScaleY(28));
   InstallPathEdit.Text := WizardForm.DirEdit.Text;
+  InstallPathEdit.StyleElements := InstallPathEdit.StyleElements - [seFont, seClient];
   InstallPathEdit.Color := SignalBlack;
   InstallPathEdit.Font.Name := 'Consolas';
   InstallPathEdit.Font.Size := 8;
   InstallPathEdit.Font.Color := TextStrong;
-  InstallPathEdit.StyleElements := InstallPathEdit.StyleElements - [seFont, seClient];
 
   BrowseButton := TBitmapButton.Create(WizardForm);
-  BrowseButton.Parent := OptionsPanel;
-  BrowseButton.Left := ScaleX(410);
-  BrowseButton.Top := ScaleY(205);
+  BrowseButton.Parent := Display;
+  BrowseButton.Left := ScaleX(364);
+  BrowseButton.Top := ScaleY(164);
   BrowseButton.Caption := 'Browse for standalone folder';
   BrowseButton.Hint := BrowseButton.Caption;
   BrowseButton.ShowHint := True;
   BrowseButton.OnClick := @BrowseInstallPath;
   LoadButtonBitmap(BrowseButton, 'button-browse.bmp', 92);
 
-  NewText(OptionsPanel,
+  NewText(Display,
     'The plugin is always installed system-wide. The standalone path only applies when the optional app is selected.',
-    28, 258, 472, 38, 8, TextMuted, False, False);
+    16, 218, 444, 32, 7, TextMuted, False, False);
 end;
 
 procedure BuildReviewPage;
+var
+  Display: TPanel;
 begin
-  NewText(ReviewPanel, 'SIGNAL ROUTE', 28, 18, 180, 18, 7, PhosphorGreen, True, True);
-  ReviewVST3 := NewText(ReviewPanel, '', 28, 50, 470, 48, 8, TextStrong, True, True);
-  ReviewStandalone := NewText(ReviewPanel, '', 28, 106, 470, 48, 8, TextStrong, True, True);
-  ReviewDesktop := NewText(ReviewPanel, '', 28, 162, 220, 48, 8, TextStrong, True, True);
-  ReviewPath := NewText(ReviewPanel, '', 270, 162, 228, 48, 8, TextStrong, True, True);
-  NewText(ReviewPanel,
+  Display := NewDisplay(ReviewPanel, LoopMagenta, 22, 14, 480, 272);
+  NewText(Display, 'SIGNAL ROUTE  //  CONFIRM', 16, 14, 260, 16, 7, LoopMagenta, True, True);
+  ReviewVST3 := NewText(Display, '', 16, 43, 444, 40, 8, TextStrong, True, True);
+  ReviewStandalone := NewText(Display, '', 16, 88, 444, 40, 8, TextStrong, True, True);
+  ReviewDesktop := NewText(Display, '', 16, 137, 210, 40, 8, TextStrong, True, True);
+  ReviewPath := NewText(Display, '', 244, 137, 216, 40, 8, TextStrong, True, True);
+  NewText(Display,
     'INSTALL writes the selected binaries and replaces an existing ZIKADARATOR VST3 bundle if present.',
-    28, 245, 470, 38, 8, TextMuted, False, False);
+    16, 208, 444, 34, 7, TextMuted, False, False);
 end;
 
 procedure BuildTransferPage;
 var
+  Display: TPanel;
   I: Integer;
 begin
-  TransferStatus := NewText(TransferPanel, 'PREPARING SIGNAL CHAIN', 28, 30, 470, 28, 10, PhosphorGreen, True, True);
-  TransferFile := NewText(TransferPanel, '', 28, 68, 470, 28, 8, TextMuted, False, True);
-  NewText(TransferPanel, '16-STEP DEPLOYMENT SEQUENCE', 28, 128, 470, 18, 7, TextMuted, True, True);
+  Display := NewDisplay(TransferPanel, PhosphorGreen, 22, 14, 480, 272);
+  TransferStatus := NewText(Display, 'PREPARING SIGNAL CHAIN', 16, 18, 444, 24, 10, PhosphorGreen, True, True);
+  TransferFile := NewText(Display, '', 16, 51, 444, 24, 7, TextMuted, False, True);
+  NewText(Display, '16-STEP DEPLOYMENT SEQUENCE', 16, 102, 444, 16, 7, TextMuted, True, True);
   for I := 0 to 15 do begin
-    ProgressCells[I] := NewPanel(TransferPanel, PanelSurface);
-    ProgressCells[I].SetBounds(ScaleX(28 + (I * 29)), ScaleY(158), ScaleX(22), ScaleY(54));
-    NewText(ProgressCells[I], IntToStr(I + 1), 0, 18, 22, 16, 6, TextMuted, False, True).Alignment := taCenter;
+    ProgressCells[I] := NewPanel(Display, PanelSurface);
+    ProgressCells[I].SetBounds(ScaleX(16 + (I * 27)), ScaleY(130), ScaleX(20), ScaleY(48));
+    NewText(ProgressCells[I], IntToStr(I + 1), 0, 16, 20, 14, 6, TextMuted, False, True).Alignment := taCenter;
   end;
-  NewText(TransferPanel,
+  NewText(Display,
     'Keep this window open while the plugin bundle and standalone binary are transferred.',
-    28, 248, 470, 38, 8, TextMuted, False, False);
+    16, 208, 444, 32, 7, TextMuted, False, False);
 end;
 
 procedure BuildFinishedPage;
+var
+  Display: TPanel;
 begin
-  NewText(FinishedPanel, 'TRANSFER COMPLETE', 28, 24, 260, 18, 7, PhosphorGreen, True, True);
-  NewText(FinishedPanel, 'SIGNAL'#13#10'ROUTED.', 28, 57, 450, 82, 25, TextStrong, True, False);
-  NewText(FinishedPanel,
+  Display := NewDisplay(FinishedPanel, PhosphorGreen, 22, 14, 480, 272);
+  NewText(Display, 'OUTPUT  //  TRANSFER COMPLETE', 16, 16, 300, 16, 7, PhosphorGreen, True, True);
+  NewText(Display, 'SIGNAL ROUTED.', 16, 46, 438, 38, 20, TextStrong, True, False);
+  NewText(Display,
     'ZIKADARATOR is installed. Rescan VST3 plugins in your DAW before loading the first pattern.',
-    28, 151, 460, 48, 10, TextMuted, False, False);
+    16, 92, 438, 42, 9, TextMuted, False, False);
 
   LaunchToggle := TNewCheckBox.Create(WizardForm);
-  LaunchToggle.Parent := FinishedPanel;
-  LaunchToggle.SetBounds(ScaleX(28), ScaleY(229), ScaleX(360), ScaleY(24));
+  LaunchToggle.Parent := Display;
+  LaunchToggle.SetBounds(ScaleX(18), ScaleY(158), ScaleX(360), ScaleY(22));
   LaunchToggle.Caption := 'Launch the standalone application';
   LaunchToggle.Checked := True;
-  LaunchToggle.Color := RackSurface;
-  LaunchToggle.Font.Name := 'Segoe UI';
-  LaunchToggle.Font.Size := 10;
-  LaunchToggle.Font.Color := TextStrong;
   LaunchToggle.StyleElements := LaunchToggle.StyleElements - [seFont, seClient];
-  NewText(FinishedPanel, 'VST3  /  STANDALONE  /  50 FACTORY PATTERNS', 28, 278, 460, 20, 7, SliceCyan, True, True);
+  LaunchToggle.Color := SignalBlack;
+  LaunchToggle.Font.Name := 'Segoe UI';
+  LaunchToggle.Font.Size := 9;
+  LaunchToggle.Font.Color := TextStrong;
+  NewText(Display, 'VST3  /  STANDALONE  /  50 FACTORY PATTERNS', 16, 214, 438, 18, 7, SliceCyan, True, True);
 end;
 
 procedure InitializeWizard;
@@ -465,29 +494,30 @@ begin
   ExtractTemporaryFile('button-finish.bmp');
   ExtractTemporaryFile('button-cancel.bmp');
   ExtractTemporaryFile('button-browse.bmp');
+  ExtractTemporaryFile('brand-logo.bmp');
 
   OptionsPage := CreateCustomPage(wpWelcome, 'Targets', 'Choose the signal destinations');
   ReviewPage := CreateCustomPage(OptionsPage.ID, 'Review', 'Confirm the deployment chain');
 
   WizardForm.Caption := 'ZIKADARATOR / SIGNAL DEPLOYMENT';
-  WizardForm.ClientWidth := ScaleX(760);
-  WizardForm.ClientHeight := ScaleY(520);
+  WizardForm.ClientWidth := ScaleX(720);
+  WizardForm.ClientHeight := ScaleY(460);
   WizardForm.Color := SignalBlack;
   WizardForm.Font.Name := 'Segoe UI';
   WizardForm.Font.Color := TextStrong;
 
   SidebarPanel := NewPanel(WizardForm, SignalBlack);
-  SidebarPanel.SetBounds(0, 0, ScaleX(220), WizardForm.ClientHeight);
+  SidebarPanel.SetBounds(0, 0, ScaleX(196), WizardForm.ClientHeight);
   HeaderPanel := NewPanel(WizardForm, RackSurface);
-  HeaderPanel.SetBounds(ScaleX(220), 0, ScaleX(540), ScaleY(110));
+  HeaderPanel.SetBounds(ScaleX(196), 0, ScaleX(524), ScaleY(84));
   BodyPanel := NewPanel(WizardForm, RackSurface);
-  BodyPanel.SetBounds(ScaleX(220), ScaleY(110), ScaleX(540), ScaleY(330));
+  BodyPanel.SetBounds(ScaleX(196), ScaleY(84), ScaleX(524), ScaleY(312));
   NavPanel := NewPanel(WizardForm, SignalBlack);
-  NavPanel.SetBounds(ScaleX(220), ScaleY(440), ScaleX(540), ScaleY(80));
+  NavPanel.SetBounds(ScaleX(196), ScaleY(396), ScaleX(524), ScaleY(64));
 
-  NewText(HeaderPanel, 'ZIKADA DEPLOYMENT CONSOLE', 28, 18, 300, 18, 7, PhosphorGreen, True, True);
-  PageTitle := NewText(HeaderPanel, '', 28, 42, 470, 30, 17, TextStrong, True, False);
-  PageDescription := NewText(HeaderPanel, '', 28, 75, 470, 22, 8, TextMuted, False, False);
+  NewText(HeaderPanel, 'ZIKADA DEPLOYMENT CONSOLE', 22, 10, 300, 16, 6, PhosphorGreen, True, True);
+  PageTitle := NewText(HeaderPanel, '', 22, 29, 478, 25, 15, TextStrong, True, False);
+  PageDescription := NewText(HeaderPanel, '', 22, 57, 478, 18, 7, TextMuted, False, False);
 
   WelcomePanel := NewPanel(BodyPanel, RackSurface);
   WelcomePanel.Align := alClient;

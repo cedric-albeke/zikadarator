@@ -252,11 +252,14 @@ assertContains(windowsPackageScript, "All ZIKADARATOR package checksums verified
 assertContains(windowsPackageScript, "installer/ZIKADARATOR-Setup.iss", "Windows package checksums must cover the included installer source");
 assertContains(windowsPackageScript, "installer/assets/setup-icon.ico", "Windows package checksums must cover the branded installer icon");
 assertContains(windowsPackageScript, "installer/assets/wizard-large.bmp", "Windows package checksums must cover branded wizard artwork");
+assertContains(windowsPackageScript, "installer/assets/brand-logo.bmp", "Windows package checksums must cover the embedded custom-shell logo");
 assertContains(windowsPackageScript, "installer/assets/button-install.bmp", "Windows package checksums must cover custom installer controls");
 assertContains(windowsPackageScript, "Signing status:", "Windows package build metadata must identify signed versus unsigned tester artifacts");
 assertContains(windowsInstallerScript, "SetupIconFile={#SourcePath}\\assets\\setup-icon.ico", "Windows installer must use the ZIKADARATOR setup icon");
 assertContains(windowsInstallerScript, "WizardImageFile={#SourcePath}\\assets\\wizard-large.bmp", "Windows installer must use branded wizard artwork");
 assertContains(windowsInstallerScript, "WizardSmallImageFile={#SourcePath}\\assets\\wizard-small.bmp", "Windows installer must use branded header artwork");
+assertContains(windowsInstallerScript, 'ExtractTemporaryFile(\'brand-logo.bmp\')', "Windows installer must load the actual ZIKADARATOR logo into its custom shell");
+assertContains(windowsInstallerScript, "TLabel.Create(WizardForm)", "Windows installer text must bypass Windows theme color overrides");
 assertContains(windowsInstallerScript, "ZIKADA DEPLOYMENT CONSOLE", "Windows installer must render the custom ZIKADARATOR shell");
 assertContains(windowsInstallerScript, "16-STEP DEPLOYMENT SEQUENCE", "Windows installer must expose branded deployment progress");
 assertContains(windowsInstallerScript, "WizardForm.OuterNotebook.Visible := False", "Windows installer must replace the stock Inno wizard surface");

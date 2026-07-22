@@ -66,6 +66,7 @@ function Write-PackageChecksums {
         @{ Label = "installer/assets/setup-icon.ico"; Path = Join-Path $PackagePath "installer/assets/setup-icon.ico" },
         @{ Label = "installer/assets/wizard-large.bmp"; Path = Join-Path $PackagePath "installer/assets/wizard-large.bmp" },
         @{ Label = "installer/assets/wizard-small.bmp"; Path = Join-Path $PackagePath "installer/assets/wizard-small.bmp" },
+        @{ Label = "installer/assets/brand-logo.bmp"; Path = Join-Path $PackagePath "installer/assets/brand-logo.bmp" },
         @{ Label = "installer/assets/button-back.bmp"; Path = Join-Path $PackagePath "installer/assets/button-back.bmp" },
         @{ Label = "installer/assets/button-next.bmp"; Path = Join-Path $PackagePath "installer/assets/button-next.bmp" },
         @{ Label = "installer/assets/button-install.bmp"; Path = Join-Path $PackagePath "installer/assets/button-install.bmp" },

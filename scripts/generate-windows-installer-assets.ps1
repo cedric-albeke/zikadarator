@@ -104,6 +104,14 @@ $smallGraphics.DrawImage($logo, 4, 4, 47, 47)
 $smallGraphics.DrawRectangle($greenPen, 1, 1, 52, 52)
 Save-Bitmap -Bitmap $small -Name "wizard-small.bmp"
 
+$brandLogo = New-BrandBitmap -Width 64 -Height 64
+$brandLogoGraphics = New-BrandGraphics -Bitmap $brandLogo
+$brandLogoGraphics.Clear($background)
+$brandLogoGraphics.FillRectangle($surfaceBrush, 2, 2, 60, 60)
+$brandLogoGraphics.DrawImage($logo, 5, 5, 54, 54)
+$brandLogoGraphics.DrawRectangle($greenPen, 1, 1, 61, 61)
+Save-Bitmap -Bitmap $brandLogo -Name "brand-logo.bmp"
+
 function New-ButtonBitmap {
     param(
         [string] $Name,
@@ -178,6 +186,8 @@ $largeGraphics.Dispose()
 $large.Dispose()
 $smallGraphics.Dispose()
 $small.Dispose()
+$brandLogoGraphics.Dispose()
+$brandLogo.Dispose()
 $titleFont.Dispose()
 $sublineFont.Dispose()
 $metaFont.Dispose()
