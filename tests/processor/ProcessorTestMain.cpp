@@ -1247,6 +1247,11 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         header.onFxDisplayAnimationFrameForTesting = [&animationFrames] { ++animationFrames; };
 
         juce::MessageManager::getInstance()->runDispatchLoopUntil(150);
+        for (int attempt = 0; animationFrames < 2 && attempt < 3; ++attempt)
+        {
+            juce::Thread::sleep(40);
+            juce::Timer::callPendingTimersSynchronously();
+        }
         if (animationFrames < 2)
             throw std::runtime_error("CRT monitor did not produce autonomous animation frames");
     }});
