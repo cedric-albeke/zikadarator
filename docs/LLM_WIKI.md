@@ -37,7 +37,7 @@ node scripts\source-smoke-tests.mjs
 - `FilterEngine` has real 12/24 dB differences, a real band-reject path, and a comb path.
 - `PluginEditor` is resizable but constrained to a fixed 3:2 aspect ratio.
 - `stepResolution` choices are `1/16`, `1/8`, `1/4`, `1/2`; the APVTS default remains `1/8` at index 1.
-- LOOP lane presets 5-20 are implemented as forward/reverse note windows, speed variants, slow variants, reverse speed variants, and 4x/8x tails. Do not reintroduce placeholder "Loop Alt" labels.
+- LOOP lane presets 5-20 are implemented as forward/reverse note windows, speed variants, slow variants, reverse speed variants, Tail 4 Beat, and Tail Max. Prepared history is 12 seconds: four user-controlled beats fit at 20 BPM, while Tail Max documents its cap. Do not reintroduce placeholder "Loop Alt" labels.
 - LOOP lane U1-U4 slots are semantic: `filterCutoff` stores length in beats, `filterResonance` stores playback rate, `delayTime` stores reverse amount, `delayFeedback` stores fade/smoothing, and `delayMix` stores wet mix.
 - `LoopEngine` has frozen trigger snapshots, loop-wrap smoothing, trigger-edge smoothing, and rounded loop-duration sample counts. Keep the snapshot/discontinuity regression tests in `LaneTransitionTests.cpp` when changing playback.
 - `WaveformDisplay` has two stacked rolling min/max waveform lanes, a visible sample window synced to the current 16-step musical loop span, and display-only normalization through `displayGain`.
@@ -66,7 +66,7 @@ The source guard in `scripts/source-smoke-tests.mjs` checks the most important i
 
 ## Known Product/Code Gaps
 
-- Pitch, stretch, grain, vinyl, and chaos labels overpromise compared to the current `PitchEngine`.
+- Runtime preset labels and icons are aligned with the implemented DSP. Stretch, grain, vinyl/scratch, ChaosSynth, tonal quantization, and true phaser remain product-roadmap terms only and must not be added to the runtime UI without dedicated engines.
 - `PitchEngine` is a simple experimental ring-buffer pitch-color processor, not production time-stretch or granular DSP.
 - Dedicated lane processor classes are still deferred; orchestration still lives mostly in `PluginProcessor.cpp`.
 - Ableton Live 12 manual acceptance needs to be repeated after each installed VST3 build. If Live is open with an unsaved set, build and pluginval the artifact but do not force-replace the system VST3.

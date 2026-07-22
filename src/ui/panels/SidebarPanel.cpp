@@ -96,8 +96,8 @@ std::vector<LanePresetDef> SidebarPanel::getPresetsForLane(int lane) const
                 {"S4",   "Slow x1/4",      "Forward loop at quarter playback speed", 16},
                 {"RX2",  "Reverse x2",     "Reverse loop at double playback speed", 17},
                 {"RX4",  "Reverse x4",     "Reverse loop at quadruple playback speed", 18},
-                {"T4",   "Tail 4x",        "Long four-beat forward loop", 19},
-                {"T8",   "Tail 8x",        "Long eight-beat forward loop", 20},
+                {"T4",   "Tail 4 Beat",    "Four-beat forward loop, supported down to 20 BPM", 19},
+                {"MAX",  "Tail Max",       "Eight-beat forward loop, capped at 12 seconds", 20},
             };
             break;
         case 2:
@@ -122,7 +122,7 @@ std::vector<LanePresetDef> SidebarPanel::getPresetsForLane(int lane) const
             break;
         case 3:
             presets = {
-                {"DLY-I",  "Delay Mono",      "Clean mono delay", 5},
+                {"DLY-I",  "Delay Clean",     "Clean stereo delay", 5},
                 {"DLY-II", "Delay Mod",       "Modulated stereo delay", 6},
                 {"REV-I",  "Reverb Room",     "Small room reverb", 7},
                 {"REV-II", "Reverb Hall",     "Large hall reverb", 8},
@@ -130,8 +130,8 @@ std::vector<LanePresetDef> SidebarPanel::getPresetsForLane(int lane) const
                 {"CRS-II", "Chorus Deep",     "Heavy deep chorus", 10},
                 {"FLG-I",  "Flanger Slow",    "Slow sweeping flanger", 11},
                 {"FLG-II", "Flanger Fast",    "Fast resonant flanger", 12},
-                {"PHS-I",  "Phaser Light",    "Gentle 2-stage phaser", 13},
-                {"PHS-II", "Phaser Heavy",    "Intense 8-stage phaser", 14},
+                {"CMB-S",  "Comb Sweep",      "Step-synced resonant comb sweep", 13},
+                {"NCH-S",  "Notch Sweep",     "Step-synced resonant notch sweep", 14},
                 {"TRE-I",  "Tremolo Smooth",  "Smooth sine tremolo", 15},
                 {"TRE-II", "Tremolo Chop",    "Choppy square tremolo", 16},
                 {"DST-I",  "Distortion Warm", "Warm soft-clipping drive", 17},
@@ -172,8 +172,8 @@ std::vector<LanePresetDef> SidebarPanel::getPresetsForLane(int lane) const
                 {"DLY-X",  "Delay Dense",     "Dense long-delay texture", 12},
                 {"RNG-I",  "RingMod Subtle",  "Subtle ring modulation", 13},
                 {"RNG-II", "RingMod Extreme", "Extreme ring-mod distortion", 14},
-                {"TON-I",  "Tonalizer Bright","Bright tuned delay tails", 15},
-                {"TON-II", "Tonalizer Dark",  "Dark moody tonalizer", 16},
+                {"BND-I",  "Band Focus",      "Resonant band-pass tone focus", 15},
+                {"LOW-I",  "Dark Lowpass",    "Dark resonant low-pass tone", 16},
                 {"CRS-I",  "Crush Texture",   "Crushed digital texture", 17},
                 {"PSW-I",  "Pitch Sweep",     "Step-phase pitch-color sweep", 18},
                 {"SPC-I",  "Space Wash",      "Long washed-out reverb", 19},

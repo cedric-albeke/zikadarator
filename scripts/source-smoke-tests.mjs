@@ -66,8 +66,10 @@ const sliceEngine = read("src/engine/SliceEngine.cpp");
 const envelopeShape = read("src/engine/EnvelopeShape.cpp");
 const envFollower = read("src/engine/EnvFollowerEngine.cpp");
 const filterEngine = read("src/engine/FilterEngine.cpp");
+const filterPresetTuning = read("src/engine/FilterPresetTuning.h");
 const loopEngine = read("src/engine/LoopEngine.cpp");
 const loopEngineHeader = read("src/engine/LoopEngine.h");
+const presetIcons = read("src/ui/components/PresetIcons.h");
 const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
 const waveformDisplay = read("src/ui/components/WaveformDisplay.cpp");
 const waveformTap = read("src/engine/WaveformTap.h");
@@ -110,6 +112,8 @@ const servicePendingLoopCapture = extractFunction(
   "void LoopEngine::servicePendingCapture()",
 );
 const resetCombDelay = extractFunction(filterEngine, "void FilterEngine::CombDelay::reset()");
+const drawFx1PresetIcon = extractFunction(presetIcons, "static void drawFx1PresetIcon");
+const drawFx2PresetIcon = extractFunction(presetIcons, "static void drawFx2PresetIcon");
 const stepGridTimer = extractFunction(
   stepGrid,
   "void StepGrid::timerCallback()",
@@ -583,6 +587,8 @@ assertContains(stepGrid, "getChainBadgeBounds()", "StepGrid chain extension hit 
   ["Formant", "sidebar must not advertise formant DSP until it exists"],
   ["Vowel", "sidebar must not advertise vowel filter DSP until it exists"],
   ["Talk", "sidebar must not advertise talk-box DSP until it exists"],
+  ["Phaser", "sidebar must not advertise phaser DSP for comb/notch sweep presets"],
+  ["Tonalizer", "sidebar must not advertise tonalizer DSP for plain filter presets"],
 ].forEach(([needle, message]) => {
   if (sidebar.includes(needle)) fail(message);
 });
@@ -603,7 +609,7 @@ if (sidebar.includes("Loop Alt")) {
   "Forward 1/16",
   "Reverse 1/16",
   "Speed x4",
-  "Tail 8x",
+  "Tail Max",
 ].forEach((presetName) => {
   if (!sidebar.includes(presetName)) fail(`missing loop lane preset: ${presetName}`);
 });
@@ -612,12 +618,22 @@ assertContains(loopPresetMapping, "case 20:", "loop engine preset mapping must c
 assertContains(loopPresetMapping, "beatSeconds * 0.25", "loop engine preset mapping must include 1/16 note windows");
 assertContains(loopPresetMapping, "presetIndex >= 1 && presetIndex <= 4", "loop user slots must configure real loop parameters instead of falling through to dry defaults");
 assertContains(loopEngineHeader, "loopBufferL", "LoopEngine must keep a frozen snapshot buffer for triggered loop playback");
+assertContains(loopEngineHeader, "MaximumLoopSeconds = 12.0", "LoopEngine must retain four user-slot beats at the 20 BPM floor");
 assertContains(loopEngine, "captureStartAbsolute", "LoopEngine must pin frozen loop history on trigger");
 assertContains(loopEngine, "captureBudgetFrames - captureFramesThisChunk", "LoopEngine must bound snapshot work per process chunk");
 assertContains(sliceEngine, "captureBudgetFrames - captureFramesThisChunk", "SliceEngine must bound snapshot work per process chunk");
 assertContains(loopEngine, "std::round(loopLengthSeconds * sampleRate)", "LoopEngine must round loop durations to sample counts instead of truncating");
 assertContains(footer, '"LEN"', "loop footer controls must use loop-specific labels");
 assertContains(footer, '"RATE"', "loop footer controls must use loop-specific labels");
+assertContains(filterPresetTuning, "case 12:", "alternate filter presets must have real parameter tuning");
+assertContains(filterPresetTuning, "case 20:", "all advertised filter variants must have real parameter tuning");
+assertContains(processSegment, "filterTuning.cutoff", "filter modulation must preserve preset-specific cutoff tuning");
+if (drawFx1PresetIcon.includes("drawIconGrain") || drawFx1PresetIcon.includes("drawIconPhaser")) {
+  fail("FX1 preset icons must depict the implemented pitch/filter paths");
+}
+if (drawFx2PresetIcon.includes("drawIconVinyl") || drawFx2PresetIcon.includes("drawIconStretch") || drawFx2PresetIcon.includes("drawIconChaos")) {
+  fail("FX2 preset icons must not depict unimplemented vinyl/stretch/chaos DSP");
+}
 
 [
   "DELAY PULSE",

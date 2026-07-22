@@ -30,7 +30,7 @@ As of 2026-04-29, the Windows-native engine rebuild has completed the first real
 - The step-grid chain animation avoids full-grid timer repaint; UI timers should repaint only the components whose visual state changed.
 - Regression coverage lives in `ZikadaEngineTests` plus `scripts/source-smoke-tests.mjs`.
 
-Known limitation: advanced pitch/time/grain/vinyl labels still need to be aligned with implemented DSP or replaced by a real time-stretch/pitch library.
+Visible V1 preset names and icons are aligned with their implemented delay, filter, pitch-color, bitcrush, modulation, and space paths. Dedicated scratch, vinyl, granular, and formant-preserving stretch algorithms remain deferred and are not advertised as runtime presets.
 
 ---
 
@@ -117,11 +117,12 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 - Stopped host segments do not enter sequenced engines or consume onset identity. Their effect state remains frozen until playback resumes, while output gain and bypass remain valid for live monitoring; free-clock mode remains continuously running.
 - Scheduler calls are bounded below the fixed 64-segment stack capacity. Offline or pathological blocks are split into additional allocation-free chunks instead of collapsing later step boundaries.
 - `SliceEngine` and `LoopEngine` pin absolute positions in `RealtimeRingBuffer` history on trigger. Preallocated snapshots are filled incrementally under a per-scheduler-chunk frame budget; playback reads uncopied frames directly from protected history without onset latency.
-- `LoopEngine::trigger()` preserves its post-capture timing contract, then playback reads the frozen window with interpolation and wrap smoothing. Slice history retains every 16-step offset down to the 20 BPM preparation floor.
+- `LoopEngine::trigger()` preserves its post-capture timing contract, then playback reads the frozen window with interpolation and wrap smoothing. Its 12-second prepared history covers the complete four-beat user-slot range at the 20 BPM floor; the eight-beat maximum-tail preset documents the same cap. Slice history retains every 16-step offset down to 20 BPM.
 - `Envelope` processing applies per-step amplitude curves using scheduler phase.
 - FX1 and FX2 host delay, reverb, bitcrush, pitch-color, and tone-filter paths.
 - `FilterEngine` is used both as the dedicated FILTER lane and as an internal tone shaper for FX presets.
 - Filter cutoff/resonance changes are submitted as one deduplicated update. Filter-type coefficients stay outside the per-sample modulation path, and Comb history uses generation-tagged preallocated storage for constant-time logical resets.
+- FILTER presets 12-20 apply bounded per-preset cutoff/resonance tuning, so their alternate-color names represent distinct processing rather than duplicate type aliases.
 - Final global mixing applies dry/wet, mix mode, and output gain after lane processing.
 - Input waveform samples are pushed into `waveformTap`; processed output samples are pushed into `processedWaveformTap`. `PluginEditor::timerCallback` pops both streams and feeds `WaveformDisplay` as two stacked waveform lanes while the Sequencer is visible.
 - Hidden editors and non-Sequencer pages discard queued tap samples on the UI consumer side, and leaving the Sequencer clears retained display history. Returning therefore starts from current audio instead of replaying a stale FIFO backlog.

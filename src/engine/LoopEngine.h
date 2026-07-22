@@ -10,6 +10,8 @@ namespace zikada {
 class LoopEngine
 {
 public:
+    static constexpr double MaximumLoopSeconds = 12.0;
+
     LoopEngine() = default;
 
     void prepare(double sampleRate, int maxBlockSize);
@@ -31,6 +33,7 @@ public:
     [[nodiscard]] int getCaptureFramesThisChunkForTesting() const { return captureFramesThisChunk; }
     [[nodiscard]] int getCaptureBudgetForTesting() const { return captureBudgetFrames; }
     [[nodiscard]] int getPendingCaptureFramesForTesting() const { return snapshotPending ? loopLengthSamples - captureProgress : 0; }
+    [[nodiscard]] int getLoopLengthSamplesForTesting() const { return loopLengthSamples; }
 #endif
 
 private:

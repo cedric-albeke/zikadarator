@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "engine/EnvelopeShape.h"
+#include "engine/FilterPresetTuning.h"
 #include "PluginEditor.h"
 #include "engine/MixUtils.h"
 
@@ -332,7 +333,8 @@ void configureFilterForStep(FilterEngine& filterEngine, int presetIndex, const U
         default: filterEngine.setFilterType(FilterEngine::FilterType::LowPass24); break;
     }
 
-    filterEngine.setParameters(slotData.filterCutoff, slotData.filterResonance);
+    const auto tuning = getFilterPresetTuning(presetIndex, slotData);
+    filterEngine.setParameters(tuning.cutoff, tuning.resonance);
     filterEngine.setEnabled(true);
 }
 
@@ -1246,6 +1248,7 @@ void PluginProcessor::processSegment(float* leftChannel,
     const auto fx1Slot      = getSlotDataForStep(kFX1Lane,      fx1Step);
     const auto filterSlot   = getSlotDataForStep(kFilterLane,   filterStep);
     const auto fx2Slot      = getSlotDataForStep(kFX2Lane,      fx2Step);
+    const auto filterTuning = getFilterPresetTuning(filterStep.presetIndex, filterSlot);
 
     const double beatSeconds = getBeatSeconds(bpm);
     const double stepDurationSeconds = beatSeconds * blockPpqPerStep;
@@ -1375,8 +1378,8 @@ void PluginProcessor::processSegment(float* leftChannel,
             const float resonanceMod = modValues[static_cast<int>(ModulationTarget::FilterResonance)];
             const float volumeMod = modValues[static_cast<int>(ModulationTarget::Volume)];
             const float panMod = modValues[static_cast<int>(ModulationTarget::Pan)];
-            const float modCutoff = filterSlot.filterCutoff * std::pow(2.0f, cutoffMod * 3.0f);
-            const float modResonance = juce::jlimit(0.1f, 10.0f, filterSlot.filterResonance * std::pow(2.0f, resonanceMod * 1.5f));
+            const float modCutoff = filterTuning.cutoff * std::pow(2.0f, cutoffMod * 3.0f);
+            const float modResonance = juce::jlimit(0.1f, 10.0f, filterTuning.resonance * std::pow(2.0f, resonanceMod * 1.5f));
             const float modVolume = juce::jlimit(0.0f, 2.0f, filterSlot.volume * (1.0f + volumeMod));
             const float modPan = juce::jlimit(-1.0f, 1.0f, filterSlot.pan + panMod);
             filterEngine.setParameters(modCutoff, modResonance);

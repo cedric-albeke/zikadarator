@@ -70,11 +70,11 @@ Expected results:
 
 ## Known Limitations
 
-- Pitch/time/stretch/grain/vinyl style families are intentionally not advertised in the alpha UI until real DSP exists.
+- Production pitch-shift, time-stretch, grain, vinyl/scratch, true phaser, and tonal-quantization families are intentionally not advertised in the runtime UI until dedicated DSP exists. The current ring-buffer algorithm is labeled only as experimental pitch color.
 - Lane processors are still orchestrated in `PluginProcessor.cpp`; a cleaner lane-processor split remains planned.
 - Ableton Live 12 manual audio acceptance still needs a documented pass after the next installed build is tested in-session. Do not replace the system VST3 while Live is open with an unsaved project.
 - The signal display now shows two stacked rolling waveform lanes over one musical 16-step window with display-only normalization. The next step is stronger per-effect visual annotation so loop/reverse/stutter actions read more explicitly during playback.
-- Advanced pitch/time/grain preset families remain deferred until a real library is integrated.
+- Advanced pitch/time/grain preset families remain deferred until a production-capable engine is integrated. Runtime names and icons currently map only to implemented Delay, Filter, Comb/Notch, Tremolo, Distortion, Pitch Color, Bitcrush, Ring Mod, and Space paths.
 
 ## Next Tasks
 

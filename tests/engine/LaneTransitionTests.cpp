@@ -1,5 +1,6 @@
 #include "engine/DelayEngine.h"
 #include "engine/FilterEngine.h"
+#include "engine/FilterPresetTuning.h"
 #include "engine/LoopEngine.h"
 #include "engine/MixUtils.h"
 
@@ -162,6 +163,21 @@ void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<voi
         require(rms(left) > 0.01f, "pending loop capture must still render immediately from pinned history");
     }});
 
+    tests.push_back({"LoopEngine retains the full four-beat user range at minimum tempo", []
+    {
+        constexpr double sampleRate = 1000.0;
+        LoopEngine loop;
+        loop.prepare(sampleRate, 32);
+        loop.setLoopParameters(12.0f, 1.0f, false, 1.0f);
+
+        require(loop.getLoopLengthSamplesForTesting() == 12000,
+                "four beats at 20 BPM should fit without silent duration truncation");
+
+        loop.setLoopParameters(30.0f, 1.0f, false, 1.0f);
+        require(loop.getLoopLengthSamplesForTesting() == 12000,
+                "loop duration should clamp at the documented twelve-second maximum");
+    }});
+
     tests.push_back({"DelayEngine interpolates fractional delay times", []
     {
         constexpr double sampleRate = 48000.0;
@@ -308,6 +324,27 @@ void addLaneTransitionTests(std::vector<std::pair<std::string, std::function<voi
         for (int i = 0; i < 16; ++i)
             requireNear(filter.processSampleLeft(0.0f), 0.0f, 0.0001f,
                         "logical comb reset should hide samples from the previous generation");
+    }});
+
+    tests.push_back({"Filter preset variants apply distinct bounded tunings", []
+    {
+        UserSlotData slot;
+        slot.filterCutoff = 2000.0f;
+        slot.filterResonance = 1.0f;
+
+        const auto standard = getFilterPresetTuning(5, slot);
+        const auto dark = getFilterPresetTuning(18, slot);
+        const auto narrow = getFilterPresetTuning(19, slot);
+
+        requireNear(standard.cutoff, 2000.0f, 0.0001f, "primary filter presets should preserve slot cutoff");
+        require(dark.cutoff < standard.cutoff, "Low Deep must tune darker than the primary low-pass preset");
+        require(narrow.resonance > standard.resonance, "Band Narrow must tune more resonantly than the primary preset");
+
+        slot.filterCutoff = 20000.0f;
+        slot.filterResonance = 10.0f;
+        const auto extreme = getFilterPresetTuning(17, slot);
+        require(extreme.cutoff <= 20000.0f && extreme.resonance <= 10.0f,
+                "preset tuning must stay inside FilterEngine parameter bounds");
     }});
 }
 

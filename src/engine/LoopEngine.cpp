@@ -10,7 +10,7 @@ namespace zikada {
 void LoopEngine::prepare(double newSampleRate, int maxBlockSize)
 {
     sampleRate = newSampleRate;
-    maxLoopSamples = juce::jmax(1, static_cast<int>(std::ceil(sampleRate * 4.0)));
+    maxLoopSamples = juce::jmax(1, static_cast<int>(std::ceil(sampleRate * MaximumLoopSeconds)));
     historySizeSamples = maxLoopSamples + juce::jmax(1, maxBlockSize);
     bufferL.prepare(historySizeSamples);
     bufferR.prepare(historySizeSamples);

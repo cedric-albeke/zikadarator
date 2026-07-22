@@ -346,16 +346,36 @@ struct PresetIcons
     {
         int base = fx / 2;
         int var = fx % 2;
+        if (fx == 8)
+        {
+            drawFilterPresetIcon(g, 6, bounds, c);
+            return;
+        }
+        if (fx == 9)
+        {
+            drawFilterPresetIcon(g, 5, bounds, c);
+            return;
+        }
+        if (fx == 14)
+        {
+            drawIconPitch(g, bounds, c, 0);
+            return;
+        }
+        if (fx == 15)
+        {
+            drawIconBitcrush(g, bounds, c, 1);
+            return;
+        }
         switch (base)
         {
             case 0: drawIconDelay(g, bounds, c, var); break;
             case 1: drawIconReverb(g, bounds, c, var); break;
             case 2: drawIconChorus(g, bounds, c, var); break;
             case 3: drawIconFlanger(g, bounds, c, var); break;
-            case 4: drawIconPhaser(g, bounds, c, var); break;
+            case 4: drawFilterPresetIcon(g, var == 0 ? 6 : 5, bounds, c); break;
             case 5: drawIconTremolo(g, bounds, c, var); break;
             case 6: drawIconDistortion(g, bounds, c, var); break;
-            case 7: drawIconGrain(g, bounds, c, var); break;
+            case 7: drawIconPitch(g, bounds, c, var); break;
             default: break;
         }
         drawVariationBadge(g, bounds, var, c);
@@ -364,18 +384,18 @@ struct PresetIcons
     static void drawFx2PresetIcon(juce::Graphics& g, int fx,
                                   juce::Rectangle<float> bounds, juce::Colour c)
     {
-        int base = fx / 2;
         int var = fx % 2;
-        switch (base)
+        switch (fx)
         {
-            case 0: drawIconBitcrush(g, bounds, c, var); break;
-            case 1: drawIconPitch(g, bounds, c, var); break;
-            case 2: drawIconVinyl(g, bounds, c, var); break;
-            case 3: drawIconStretch(g, bounds, c, var); break;
-            case 4: drawIconRingMod(g, bounds, c, var); break;
-            case 5: drawIconTonalizer(g, bounds, c, var); break;
-            case 6: drawIconChaos(g, bounds, c, var); break;
-            case 7: drawIconSpace(g, bounds, c, var); break;
+            case 0: case 1: drawIconBitcrush(g, bounds, c, var); break;
+            case 2: case 3: case 4: drawIconPitch(g, bounds, c, var); break;
+            case 5: case 6: case 7: drawIconDelay(g, bounds, c, var); break;
+            case 8: case 9: drawIconRingMod(g, bounds, c, var); break;
+            case 10: drawFilterPresetIcon(g, 4, bounds, c); break;
+            case 11: drawFilterPresetIcon(g, 0, bounds, c); break;
+            case 12: drawIconBitcrush(g, bounds, c, 1); break;
+            case 13: drawIconPitch(g, bounds, c, 1); break;
+            case 14: case 15: drawIconSpace(g, bounds, c, var); break;
             default: break;
         }
         drawVariationBadge(g, bounds, var, c);

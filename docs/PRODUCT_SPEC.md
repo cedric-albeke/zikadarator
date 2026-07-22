@@ -33,7 +33,7 @@ Unlike simple on/off step sequencers, each step selects *which variant* of an ef
 ### 3. LOOP — Stutter & Repeat
 - **Function**: Micro-looping and stutter effects per step
 - **Engine model**: Dedicated micro-loop engine with captured audio history, retrigger, reverse, and variable playback rate
-- **Implemented presets**: Forward 1/16, 1/8, 1/4, 1/2; Reverse 1/16, 1/8, 1/4, 1/2; Speed x2/x4; Slow x1/2/x1/4; Reverse x2/x4; Tail 4x/8x
+- **Implemented presets**: Forward 1/16, 1/8, 1/4, 1/2; Reverse 1/16, 1/8, 1/4, 1/2; Speed x2/x4; Slow x1/2/x1/4; Reverse x2/x4; Tail 4 Beat; Tail Max (eight-beat request capped at 12 seconds)
 - **User controls**: LEN, RATE, REV, FADE, MIX, VOL, PAN
 - **Visual contract**: Each LOOP preset icon must depict its audible behavior with waveform windows, direction arrows, chopped speed markers, or long-tail blocks.
 - **Creative use**: Build tension with rhythmic stutters before drops
@@ -51,7 +51,7 @@ Unlike simple on/off step sequencers, each step selects *which variant* of an ef
 
 ### 5. FX1 — Primary Multi-Effect
 - **Function**: First dedicated FX lane
-- **Effect types** (selectable per step):
+- **Long-term effect catalog** (not all entries are V1 runtime presets):
   1. **Delay** — Stereo delay with feedback, filter, pitch
   2. **Reverb** — Plate/hall with size, damp, width
   3. **Distortion** — Drive with multi-band EQ, mono/stereo modes
@@ -62,6 +62,9 @@ Unlike simple on/off step sequencers, each step selects *which variant* of an ef
   8. **ChaosSynth** — Synthetic textures with FM/AM modulation
   9. **Stretch** — Time-stretch with formant preservation
   10. **RingMod** — Ring modulation with LFO
+
+- **Current V1 runtime families**: delay, reverb, short-delay chorus/flanger, Comb/Notch sweeps, tremolo, distortion, experimental pitch color, bitcrush, ring modulation, filter tone focus, and reverb/space combinations.
+- **Deferred catalog entries**: production granular, tonal quantization, stereo phaser, vinyl/scratch, ChaosSynth, and formant-preserving stretch require dedicated DSP before they may appear as runtime labels.
 
 ### 6. FILTER — Frequency Shaping
 - **Function**: Per-step filter + formant effects
