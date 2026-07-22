@@ -72,6 +72,7 @@ The source guard in `scripts/source-smoke-tests.mjs` checks the most important i
 - Dedicated lane processor classes are still deferred; orchestration still lives mostly in `PluginProcessor.cpp`.
 - Ableton Live 12 manual acceptance needs to be repeated after each installed VST3 build. If Live is open with an unsaved set, build and pluginval the artifact but do not force-replace the system VST3.
 - Alpha factory presets are intentionally limited to implemented DSP paths.
+- macOS release CI must sign and verify VST3/AU/Standalone bundles before staging. Verify staged copies before building ZIP/PKG, sign/notarize the final PKG, and create checked SHA-256 plus signing/notarization metadata before any upload. Windows-only syntax checks do not close the real macOS runner gate.
 - The signal display now has stacked rolling input/output waveform lanes over the current 16-step musical loop span with display-only normalization, but it still needs richer per-effect visual annotation during playback.
 
 ## Alpha Factory Bank

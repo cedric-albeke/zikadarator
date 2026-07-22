@@ -77,6 +77,7 @@ const headerPanelHeader = read("src/ui/panels/HeaderPanel.h");
 const headerPanel = read("src/ui/panels/HeaderPanel.cpp");
 const windowsPackageScript = read("scripts/package-windows-release.ps1");
 const windowsWorkflow = read(".github/workflows/build-windows-vst3.yml");
+const macosWorkflow = read(".github/workflows/build-macos-packages.yml");
 const windowsInstallerScript = read("packaging/windows/ZIKADARATOR.iss");
 const abletonLogScanScript = read("scripts/ableton-log-scan.ps1");
 const processBlock = extractFunction(
@@ -271,6 +272,46 @@ assertBefore(
 );
 assertContains(windowsInstallerScript, 'Source: "{#MySourceDir}\\ZIKADARATOR.vst3\\*"', "Windows installer must consume the canonical root-level VST3 package layout");
 assertContains(windowsInstallerScript, 'Source: "{#MySourceDir}\\ZIKADARATOR.exe"', "Windows installer must consume the canonical root-level standalone package layout");
+assertContains(macosWorkflow, "MACOS_SIGNING_ENABLED: ${{ secrets.MACOS_CERTIFICATE != '' }}", "macOS CI must derive a non-secret job-level signing condition");
+assertContains(macosWorkflow, "if: env.MACOS_SIGNING_ENABLED == 'true'", "macOS signing steps must use the non-secret job-level condition");
+if (macosWorkflow.includes("if: env.MACOS_CERTIFICATE != ''")) {
+  fail("macOS CI must not condition signing directly on a step-local secret environment variable");
+}
+assertBefore(
+  macosWorkflow,
+  "name: Import macOS signing identities and sign plugin bundles",
+  "name: Stage macOS package contents",
+  "macOS plugin bundles must be signed before ZIP and installer staging",
+);
+assertBefore(
+  macosWorkflow,
+  "name: Stage macOS package contents",
+  "name: Verify staged signed macOS bundles",
+  "macOS CI must verify the copied staging payload",
+);
+assertBefore(
+  macosWorkflow,
+  "name: Verify staged signed macOS bundles",
+  "name: Build macOS ZIP package",
+  "macOS packages must be built only after staged bundle verification",
+);
+assertBefore(
+  macosWorkflow,
+  "name: Sign and notarize final macOS installer",
+  "name: Create macOS build manifest and checksums",
+  "macOS checksums must cover the final signed/notarized installer",
+);
+assertBefore(
+  macosWorkflow,
+  "name: Create macOS build manifest and checksums",
+  "name: Upload macOS VST3 artifact",
+  "macOS release metadata must exist before artifacts are uploaded",
+);
+assertContains(macosWorkflow, "codesign --verify --deep --strict", "macOS CI must verify signed plugin bundles before staging");
+assertContains(macosWorkflow, "pkgutil --check-signature", "macOS CI must verify the final installer signature");
+assertContains(macosWorkflow, "xcrun stapler validate", "macOS CI must validate the notarization ticket on the final installer");
+assertContains(macosWorkflow, "NOTARIZATION_STATUS", "macOS release metadata must distinguish signing from notarization");
+assertContains(macosWorkflow, "shasum -a 256 -c SHA256SUMS.txt", "macOS CI must verify final package checksums before upload");
 if (processSegment.includes("sequencerState.getStepData") || processSegment.includes("sequencerState.getUserSlot")) {
   fail("processSegment must not read mutable SequencerState directly on the audio thread");
 }

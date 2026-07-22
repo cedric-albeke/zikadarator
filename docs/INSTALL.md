@@ -27,11 +27,11 @@ Installed paths:
 
 ## macOS
 
-### Recommended: Unsigned installer package
+### Recommended: Installer package
 
 1. Download `ZIKADARATOR-macos-installer`.
-2. In Finder, **right-click** the `.pkg` and choose **Open**.
-3. Approve the warning dialog.
+2. Check the included `BUILD-INFO.txt` for signing and notarization status.
+3. For an unsigned tester build, in Finder **right-click** the `.pkg`, choose **Open**, and approve the warning.
 4. Complete the installer.
 
 Installed paths:

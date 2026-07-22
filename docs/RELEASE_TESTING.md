@@ -19,6 +19,8 @@ Use this checklist before sharing a build with external testers.
 - `ZIKADARATOR-macos-au`
 - `ZIKADARATOR-macos-zip`
 - `ZIKADARATOR-macos-installer`
+- `BUILD-INFO.txt` identifies signing and notarization status, version, commit, and build date.
+- `SHA256SUMS.txt` verifies the final ZIP and PKG after any installer signing/notarization.
 
 ## Validation checklist
 
@@ -87,6 +89,10 @@ Expected scanner result:
 
 ### macOS
 
+- Signed builds pass `codesign --verify --deep --strict` both before and after staging.
+- Signed installers pass `pkgutil --check-signature`.
+- Notarized installers pass `xcrun stapler validate` on the final uploaded PKG.
+- `shasum -a 256 -c SHA256SUMS.txt` passes after all signing and notarization steps.
 - PKG installs without path mistakes
 - VST3 lands in `/Library/Audio/Plug-Ins/VST3`
 - AU lands in `/Library/Audio/Plug-Ins/Components`
