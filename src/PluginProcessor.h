@@ -76,9 +76,13 @@ public:
     double getCurrentPpqPerStep() const { return currentPpqPerStep; }
     double getCurrentSampleRate() const { return sampleRate; }
     int getCurrentStep() const { return currentStep; }
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    int getScratchCapacityForTesting() const { return scratchCapacitySamples; }
+    int getLastProcessChunkCountForTesting() const { return lastProcessChunkCountForTesting; }
+#endif
 
 private:
-    void ensureScratchBuffers(int numSamples);
+    void prepareScratchBuffers(int maxSamples);
     void processSegment(float* leftChannel,
                         float* rightChannel,
                         const float* dryLeft,
@@ -100,7 +104,17 @@ private:
     PluginState state;
     PresetManager presetManager;
     SequencerState sequencerState;
+    std::atomic<float>* dryWetParameter{nullptr};
+    std::atomic<float>* outputGainParameter{nullptr};
+    std::atomic<float>* mixModeParameter{nullptr};
+    std::atomic<float>* bypassParameter{nullptr};
+    std::atomic<float>* clockSourceParameter{nullptr};
+    std::atomic<float>* tempoParameter{nullptr};
+    std::atomic<float>* stepResolutionParameter{nullptr};
     std::array<std::array<std::atomic<float>*, SequencerState::NumSteps>, SequencerState::NumLanes> stepActiveParameters{};
+    std::array<std::atomic<float>*, SequencerState::NumLanes> laneMixParameters{};
+    std::array<std::atomic<float>*, SequencerState::NumLanes> laneMuteParameters{};
+    std::array<std::atomic<float>*, SequencerState::NumLanes> laneSoloParameters{};
     SequencerEngine sequencerEngine;
     SliceEngine sliceEngine;
     LoopEngine loopEngine;
@@ -128,6 +142,10 @@ private:
     double sampleRate{44100.0};
     double ppqPosition{0.0};
     double ppqPerStep{0.5};
+    int scratchCapacitySamples{0};
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    int lastProcessChunkCountForTesting{0};
+#endif
     std::vector<float> dryLeftBuffer;
     std::vector<float> dryRightBuffer;
     std::vector<float> monoRightBuffer;

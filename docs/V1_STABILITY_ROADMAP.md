@@ -61,11 +61,12 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - StepGrid drag-to-paint now interpolates across skipped mouse events, copies active presets, erases from inactive sources, synchronizes APVTS gates with complete host gestures, clears overwritten chains, and creates one undo boundary per gesture. Host-enabled blank sources normalize to preset 1, Shift+Drag is reserved for tie drawing, and click-only selection remains non-destructive.
 - Hidden waveform consumers now discard queued tap samples and clear retained display history in both page/visibility directions; 16,384-sample fixed UI buffers keep draining bounded at high sample rates. Lock-free operation guards and tap generations make reprepare safe against concurrent audio/UI access and invalidate old-rate display history. The CRT monitor now owns a region-limited 30 Hz animation timer.
 - Custom-drawn header and preset actions now expose stable accessible names, help, deterministic global focus order, and Space/Enter parity. Knobs expose native slider roles, ranged values, visible focus, keyboard operation, and complete host gestures. StepGrid is one named keyboard-navigable group without 96 duplicate child focus stops; child keys cannot trigger grid edits, and Footer controls have purpose-specific names.
+- `processBlock()` now uses only prepare-time scratch capacity: oversized host buffers are split into bounded chunks without vector growth, while cached atomic pointers replace per-block lane-ID construction and APVTS lookup. A 4097-after-64 regression verifies unchanged capacity, exact chunk count, and complete dry output.
 
 ## Open V1 Gates
 
 1. Add discoverable keyboard commands for advanced StepGrid tie-chain editing and preset cycling.
-2. Fix the remaining DSP/state defects: possible audio-thread scratch growth, absolute host loop/seek retrigger identity, loop-history limits, and any DSP labels that still overstate implemented behavior.
+2. Fix the remaining DSP/state defects: absolute host loop/seek/restart trigger identity, stopped-transport onset handling, negative PPQ, serialized snapshot writers, bounded LOOP/SLICE trigger capture, invalid sample-rate normalization, filter coefficient update cost, loop-history limits, and any DSP labels that still overstate implemented behavior.
 3. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
 4. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.
 5. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.

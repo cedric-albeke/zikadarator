@@ -123,13 +123,13 @@ const editorVisibility = extractFunction(editor, "void PluginEditor::visibilityC
 const headerPanelConstructor = extractFunction(headerPanel, "HeaderPanel::HeaderPanel()");
 
 [
-  ["ParameterIDs::dryWet", "processBlock must read/apply global Dry/Wet"],
-  ["ParameterIDs::outputGain", "processBlock must read/apply Output Gain"],
-  ["ParameterIDs::mixMode", "processBlock must read/apply Mix Mode"],
-  ["ParameterIDs::bypass", "processBlock must read/apply Bypass"],
-  ["ParameterIDs::clockSource", "processBlock must read Clock Source"],
-  ["ParameterIDs::tempo", "processBlock must read Free Tempo"],
-  ["ParameterIDs::stepResolution", "processBlock must read Step Resolution"],
+  ["dryWetParameter", "processBlock must read/apply cached global Dry/Wet"],
+  ["outputGainParameter", "processBlock must read/apply cached Output Gain"],
+  ["mixModeParameter", "processBlock must read/apply cached Mix Mode"],
+  ["bypassParameter", "processBlock must read/apply cached Bypass"],
+  ["clockSourceParameter", "processBlock must read cached Clock Source"],
+  ["tempoParameter", "processBlock must read cached Free Tempo"],
+  ["stepResolutionParameter", "processBlock must read cached Step Resolution"],
   ["sequencerEngine.setStepResolution", "processBlock must push step resolution into SequencerEngine"],
   ["stepScheduler.makeHostSegments", "processBlock must split work with StepScheduler"],
   ["processSegment(", "processBlock must dispatch segment processing"],
@@ -147,6 +147,12 @@ if (processBlock.includes("getActiveEditor(")) {
 
 if (processBlock.includes("Logger::writeToLog")) {
   fail("processBlock must not write logs from the audio thread");
+}
+if (processBlock.includes("getRawParameterValue") || processBlock.includes("getLaneMixID")) {
+  fail("processBlock must not construct parameter IDs or search APVTS on the audio thread");
+}
+if (processBlock.includes("resize(") || processBlock.includes("assign(")) {
+  fail("processBlock must not resize scratch storage on the audio thread");
 }
 assertContains(editor, "ZIKADARATOR_DEBUG_LOG", "editor file logging must be opt-in for release builds");
 assertContains(processor, "ZIKADARATOR_DEBUG_LOG", "processor file logging must be opt-in for release builds");
@@ -168,7 +174,11 @@ assertContains(processorHeader, "dryLeftBuffer", "processor must own reusable dr
 assertContains(processorHeader, "wetLeftBuffer", "processor must own reusable wet scratch buffers");
 assertContains(processorHeader, "laneInputLeftBuffer", "processor must own reusable per-lane input scratch buffers");
 assertContains(processorHeader, "monoRightBuffer", "processor must own reusable mono right-side scratch");
-assertContains(processorHeader, "ensureScratchBuffers", "processor must expose scratch-buffer sizing helper");
+assertContains(processorHeader, "prepareScratchBuffers", "processor must expose prepare-time scratch sizing");
+assertContains(processorHeader, "scratchCapacitySamples", "processor must retain a fixed prepared scratch capacity");
+assertContains(processBlock, "blockOffset += scratchCapacitySamples", "oversized host blocks must be processed in fixed-capacity chunks");
+assertContains(processorHeader, "laneMixParameters", "processor must cache lane parameter pointers before realtime processing");
+assertContains(processorTests, "oversized host blocks use fixed scratch chunks without growth", "processor tests must cover oversized host blocks without scratch growth");
 assertContains(processBlock, "monoRightBuffer.data()", "mono processing must avoid aliasing left/right pointers");
 assertContains(processSegment, "0.5f * (outLeft + outRight)", "mono processing must fold rendered stereo output to mono");
 assertContains(processBlock, "sequencerState.getSnapshot()", "processBlock must capture a sequencer snapshot for audio rendering");
@@ -475,7 +485,7 @@ assertContains(workspace, "standaloneDeviceViewport.setViewedComponent(standalon
 assertContains(workspace, "standaloneDeviceViewport.setBounds(deviceInner);", "standalone device viewport must stay inside the device panel");
 assertContains(parameterIDs, 'juce::StringArray{"1/16", "1/8", "1/4", "1/2"}, 1', "step resolution choices must include 1/16 while defaulting to 1/8");
 assertContains(processor, "case 0: return 0.25; // 1/16 note", "processor must map step resolution index 0 to 1/16");
-assertContains(processBlock, "juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1))", "processBlock must clamp four step resolution choices and default to 1/8");
+assertContains(processBlock, "loadParameter(stepResolutionParameter, 1.0f)", "processBlock must read cached step resolution with a 1/8 fallback");
 assertContains(sequencerEngine, "case 0: stepDuration *= 0.25; break;", "SequencerEngine must support 1/16 timing");
 assertContains(processorHeader, "processedWaveformTap", "processor must own a processed-output waveform tap");
 assertContains(processorHeader, "getCurrentPpqPerStep", "processor must expose current musical step duration to the UI waveform");
@@ -514,7 +524,7 @@ assertContains(waveformDisplay, "Colours::neonGreen.withAlpha(0.35f)", "playhead
 assertContains(waveformDisplay, "Colours::neonGreen.withAlpha(0.45f)", "playhead shadow lines must be visible");
 assertContains(waveformDisplay, "Colours::white10.withAlpha(0.15f)", "waveform lane must have quarter-amplitude grid lines");
 assertContains(waveformDisplay, "colour.withAlpha(0.88f)", "waveform stroke must be crisp and bright");
-assertContains(processBlock, "processedWaveformTap.pushFromAudioThread(leftChannel, numSamples)", "processBlock must publish processed output waveform samples");
+assertContains(processBlock, "processedWaveformTap.pushFromAudioThread(leftChannel, chunkSamples)", "processBlock must publish every processed output chunk to the waveform tap");
 if (stepGridTimer.includes("\n    repaint();")) {
   fail("StepGrid timer must not repaint the whole grid on every animation tick");
 }

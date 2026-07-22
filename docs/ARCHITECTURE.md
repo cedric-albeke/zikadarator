@@ -127,7 +127,8 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 
 - No `getActiveEditor()` calls from `processBlock`.
 - No `juce::Logger::writeToLog` calls from `processBlock`.
-- No `std::vector<float>` allocation inside `processBlock`; processor scratch buffers are owned and resized outside normal segment work.
+- No `std::vector<float>` allocation or growth inside `processBlock`; processor scratch buffers are sized in `prepareToPlay`, and oversized host blocks are processed in bounded chunks against that fixed capacity.
+- Realtime parameter access uses constructor-cached atomic pointers; `processBlock` does not construct parameter IDs or search APVTS.
 - `juce::AbstractFifo` is acceptable for UI telemetry, but not for audio history semantics.
 
 ### Modulation System (Layer 3)

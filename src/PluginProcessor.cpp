@@ -132,23 +132,6 @@ float getLoopSlotSmooth(const UserSlotData& slotData)
     return juce::jlimit(0.0f, 1.0f, slotData.delayFeedback);
 }
 
-float getParameterValue(const juce::AudioProcessorValueTreeState& apvts,
-                        const juce::String& parameterID,
-                        float fallback)
-{
-    if (auto* parameter = apvts.getRawParameterValue(parameterID))
-        return parameter->load();
-
-    return fallback;
-}
-
-int getChoiceIndex(const juce::AudioProcessorValueTreeState& apvts,
-                   const juce::String& parameterID,
-                   int fallback)
-{
-    return juce::roundToInt(getParameterValue(apvts, parameterID, static_cast<float>(fallback)));
-}
-
 double getPpqPerStepForResolution(int resolutionIndex)
 {
     switch (resolutionIndex)
@@ -723,10 +706,24 @@ PluginProcessor::PluginProcessor()
       state(*this)
 {
     auto& apvts = state.getValueTreeState();
+    dryWetParameter = apvts.getRawParameterValue(ParameterIDs::dryWet);
+    outputGainParameter = apvts.getRawParameterValue(ParameterIDs::outputGain);
+    mixModeParameter = apvts.getRawParameterValue(ParameterIDs::mixMode);
+    bypassParameter = apvts.getRawParameterValue(ParameterIDs::bypass);
+    clockSourceParameter = apvts.getRawParameterValue(ParameterIDs::clockSource);
+    tempoParameter = apvts.getRawParameterValue(ParameterIDs::tempo);
+    stepResolutionParameter = apvts.getRawParameterValue(ParameterIDs::stepResolution);
+
     for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
+    {
+        laneMixParameters[static_cast<size_t>(lane)] = apvts.getRawParameterValue(getLaneMixID(lane));
+        laneMuteParameters[static_cast<size_t>(lane)] = apvts.getRawParameterValue(getLaneMuteID(lane));
+        laneSoloParameters[static_cast<size_t>(lane)] = apvts.getRawParameterValue(getLaneSoloID(lane));
+
         for (int step = 0; step < SequencerState::NumSteps; ++step)
             stepActiveParameters[static_cast<size_t>(lane)][static_cast<size_t>(step)] =
                 apvts.getRawParameterValue(getStepActiveID(lane, step));
+    }
 
     debugProcessorLog("constructed processor=" + juce::String::toHexString(static_cast<juce::int64>(reinterpret_cast<std::uintptr_t>(this))));
 }
@@ -738,47 +735,49 @@ PluginProcessor::~PluginProcessor()
 
 void PluginProcessor::prepareToPlay(double newSampleRate, int samplesPerBlock)
 {
+    constexpr int minimumPreparedBlockSize = 64;
+    const int preparedBlockSize = juce::jmax(minimumPreparedBlockSize, samplesPerBlock);
     sampleRate = newSampleRate;
-    sequencerEngine.prepare(newSampleRate, samplesPerBlock);
-    sliceEngine.prepare(newSampleRate, samplesPerBlock);
-    loopEngine.prepare(newSampleRate, samplesPerBlock);
-    filterEngine.prepare(newSampleRate, samplesPerBlock);
-    fx1DelayEngine.prepare(newSampleRate, samplesPerBlock);
-    fx1ReverbEngine.prepare(newSampleRate, samplesPerBlock);
-    fx1BitcrushEngine.prepare(newSampleRate, samplesPerBlock);
-    fx1PitchEngine.prepare(newSampleRate, samplesPerBlock);
-    fx1ToneFilter.prepare(newSampleRate, samplesPerBlock);
-    fx2DelayEngine.prepare(newSampleRate, samplesPerBlock);
-    fx2ReverbEngine.prepare(newSampleRate, samplesPerBlock);
-    fx2BitcrushEngine.prepare(newSampleRate, samplesPerBlock);
-    fx2PitchEngine.prepare(newSampleRate, samplesPerBlock);
-    fx2ToneFilter.prepare(newSampleRate, samplesPerBlock);
+    sequencerEngine.prepare(newSampleRate, preparedBlockSize);
+    sliceEngine.prepare(newSampleRate, preparedBlockSize);
+    loopEngine.prepare(newSampleRate, preparedBlockSize);
+    filterEngine.prepare(newSampleRate, preparedBlockSize);
+    fx1DelayEngine.prepare(newSampleRate, preparedBlockSize);
+    fx1ReverbEngine.prepare(newSampleRate, preparedBlockSize);
+    fx1BitcrushEngine.prepare(newSampleRate, preparedBlockSize);
+    fx1PitchEngine.prepare(newSampleRate, preparedBlockSize);
+    fx1ToneFilter.prepare(newSampleRate, preparedBlockSize);
+    fx2DelayEngine.prepare(newSampleRate, preparedBlockSize);
+    fx2ReverbEngine.prepare(newSampleRate, preparedBlockSize);
+    fx2BitcrushEngine.prepare(newSampleRate, preparedBlockSize);
+    fx2PitchEngine.prepare(newSampleRate, preparedBlockSize);
+    fx2ToneFilter.prepare(newSampleRate, preparedBlockSize);
     modulationEngine.prepare(newSampleRate);
-    gainPanEngine.prepare(newSampleRate, samplesPerBlock);
+    gainPanEngine.prepare(newSampleRate, preparedBlockSize);
     waveformTap.prepare(static_cast<int>(newSampleRate * 2.0));
     processedWaveformTap.prepare(static_cast<int>(newSampleRate * 2.0));
-    ensureScratchBuffers(samplesPerBlock);
+    prepareScratchBuffers(preparedBlockSize);
     lastEffectiveSteps.fill(-1);
 }
 
-void PluginProcessor::ensureScratchBuffers(int numSamples)
+void PluginProcessor::prepareScratchBuffers(int maxSamples)
 {
-    const auto requiredSize = static_cast<size_t>(juce::jmax(0, numSamples));
-    auto ensureSize = [requiredSize](std::vector<float>& buffer)
+    scratchCapacitySamples = juce::jmax(1, maxSamples);
+    const auto requiredSize = static_cast<size_t>(scratchCapacitySamples);
+    auto prepare = [requiredSize](std::vector<float>& buffer)
     {
-        if (buffer.size() < requiredSize)
-            buffer.resize(requiredSize, 0.0f);
+        buffer.assign(requiredSize, 0.0f);
     };
 
-    ensureSize(dryLeftBuffer);
-    ensureSize(dryRightBuffer);
-    ensureSize(monoRightBuffer);
-    ensureSize(wetLeftBuffer);
-    ensureSize(wetRightBuffer);
-    ensureSize(sliceLeftBuffer);
-    ensureSize(sliceRightBuffer);
-    ensureSize(laneInputLeftBuffer);
-    ensureSize(laneInputRightBuffer);
+    prepare(dryLeftBuffer);
+    prepare(dryRightBuffer);
+    prepare(monoRightBuffer);
+    prepare(wetLeftBuffer);
+    prepare(wetRightBuffer);
+    prepare(sliceLeftBuffer);
+    prepare(sliceRightBuffer);
+    prepare(laneInputLeftBuffer);
+    prepare(laneInputRightBuffer);
 }
 
 void PluginProcessor::releaseResources() {}
@@ -804,27 +803,25 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     if (numSamples <= 0 || buffer.getNumChannels() <= 0)
         return;
 
-    ensureScratchBuffers(numSamples);
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    lastProcessChunkCountForTesting = 0;
+#endif
 
-    auto* leftChannel = buffer.getWritePointer(0);
-    const bool hasRightChannel = buffer.getNumChannels() > 1;
-    auto* rightChannel = hasRightChannel ? buffer.getWritePointer(1) : monoRightBuffer.data();
+    if (scratchCapacitySamples <= 0)
+        return;
 
-    if (! hasRightChannel)
-        std::copy(leftChannel, leftChannel + numSamples, rightChannel);
+    const auto loadParameter = [](const std::atomic<float>* parameter, float fallback)
+    {
+        return parameter != nullptr ? parameter->load() : fallback;
+    };
 
-    std::copy(leftChannel, leftChannel + numSamples, dryLeftBuffer.begin());
-    std::copy(rightChannel, rightChannel + numSamples, dryRightBuffer.begin());
-    waveformTap.pushFromAudioThread(dryLeftBuffer.data(), numSamples);
-
-    auto& apvts = state.getValueTreeState();
-    const float globalDryWet = juce::jlimit(0.0f, 1.0f, getParameterValue(apvts, ParameterIDs::dryWet, 100.0f) / 100.0f);
-    const float outputGain = std::pow(10.0f, getParameterValue(apvts, ParameterIDs::outputGain, 0.0f) / 20.0f);
-    const int globalMixMode = juce::jlimit(0, 5, getChoiceIndex(apvts, ParameterIDs::mixMode, 0));
-    const bool bypassed = getParameterValue(apvts, ParameterIDs::bypass, 0.0f) > 0.5f;
-    const int clockSource = juce::jlimit(0, 1, getChoiceIndex(apvts, ParameterIDs::clockSource, 0));
-    const float freeTempo = juce::jlimit(20.0f, 300.0f, getParameterValue(apvts, ParameterIDs::tempo, 120.0f));
-    const int stepResolutionIndex = juce::jlimit(0, 3, getChoiceIndex(apvts, ParameterIDs::stepResolution, 1));
+    const float globalDryWet = juce::jlimit(0.0f, 1.0f, loadParameter(dryWetParameter, 100.0f) / 100.0f);
+    const float outputGain = std::pow(10.0f, loadParameter(outputGainParameter, 0.0f) / 20.0f);
+    const int globalMixMode = juce::jlimit(0, 5, juce::roundToInt(loadParameter(mixModeParameter, 0.0f)));
+    const bool bypassed = loadParameter(bypassParameter, 0.0f) > 0.5f;
+    const int clockSource = juce::jlimit(0, 1, juce::roundToInt(loadParameter(clockSourceParameter, 0.0f)));
+    const float freeTempo = juce::jlimit(20.0f, 300.0f, loadParameter(tempoParameter, 120.0f));
+    const int stepResolutionIndex = juce::jlimit(0, 3, juce::roundToInt(loadParameter(stepResolutionParameter, 1.0f)));
     const double blockPpqPerStep = getPpqPerStepForResolution(stepResolutionIndex);
     ppqPerStep = blockPpqPerStep;
     currentPpqPerStep = blockPpqPerStep;
@@ -873,84 +870,94 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     sliceEngine.setTempo(bpm);
 
-    StepScheduler::Segment segments[64]{};
-    const int segmentCount = stepScheduler.makeHostSegments({sampleRate,
-                                                             bpm,
-                                                             blockPpqPerStep,
-                                                             blockStartPpq,
-                                                             numSamples,
-                                                             blockIsPlaying},
-                                                            segments,
-                                                            static_cast<int>(std::size(segments)));
-    if (segmentCount <= 0)
-    {
-        processedWaveformTap.pushFromAudioThread(leftChannel, numSamples);
-        return;
-    }
-
-    currentStep = segments[segmentCount - 1].stepIndex;
-
-    if (useFreeClock)
-        ppqPosition = blockStartPpq + ((bpm / 60.0) / sampleRate) * static_cast<double>(numSamples);
-
-    if (bypassed)
-    {
-        processedWaveformTap.pushFromAudioThread(leftChannel, numSamples);
-        return;
-    }
-
-    auto sequencerSnapshot = sequencerState.getSnapshot();
-    for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
-        for (int step = 0; step < SequencerState::NumSteps; ++step)
-            if (const auto* activeParameter = stepActiveParameters[static_cast<size_t>(lane)][static_cast<size_t>(step)])
-                sequencerSnapshot.grid[static_cast<size_t>(lane)][static_cast<size_t>(step)].active =
-                    activeParameter->load() > 0.5f;
-
     float laneMix[6] = {};
     bool laneMuted[6] = {};
     bool laneSoloed[6] = {};
     bool anySolo = false;
 
-    for (int lane = 0; lane < 6; ++lane)
+    auto sequencerSnapshot = sequencerState.getSnapshot();
+    if (!bypassed)
     {
-        if (auto* p = state.getValueTreeState().getRawParameterValue(getLaneMixID(lane)))
-            laneMix[lane] = p->load() / 100.0f;
-        else
-            laneMix[lane] = 1.0f;
-
-        if (auto* p = state.getValueTreeState().getRawParameterValue(getLaneMuteID(lane)))
-            laneMuted[lane] = p->load() > 0.5f;
-
-        if (auto* p = state.getValueTreeState().getRawParameterValue(getLaneSoloID(lane)))
+        for (int lane = 0; lane < SequencerState::NumLanes; ++lane)
         {
-            laneSoloed[lane] = p->load() > 0.5f;
-            if (laneSoloed[lane]) anySolo = true;
+            for (int step = 0; step < SequencerState::NumSteps; ++step)
+                if (const auto* activeParameter = stepActiveParameters[static_cast<size_t>(lane)][static_cast<size_t>(step)])
+                    sequencerSnapshot.grid[static_cast<size_t>(lane)][static_cast<size_t>(step)].active =
+                        activeParameter->load() > 0.5f;
+
+            laneMix[lane] = loadParameter(laneMixParameters[static_cast<size_t>(lane)], 100.0f) / 100.0f;
+            laneMuted[lane] = loadParameter(laneMuteParameters[static_cast<size_t>(lane)], 0.0f) > 0.5f;
+            laneSoloed[lane] = loadParameter(laneSoloParameters[static_cast<size_t>(lane)], 0.0f) > 0.5f;
+            anySolo = anySolo || laneSoloed[lane];
         }
     }
 
-    for (int i = 0; i < segmentCount; ++i)
+    const bool hasRightChannel = buffer.getNumChannels() > 1;
+    const double safeSampleRate = sampleRate > 0.0 ? sampleRate : 44100.0;
+    const double ppqPerSample = (bpm / 60.0) / safeSampleRate;
+
+    for (int blockOffset = 0; blockOffset < numSamples; blockOffset += scratchCapacitySamples)
     {
-        const auto& segment = segments[i];
-        processSegment(leftChannel + segment.startSample,
-                       rightChannel + segment.startSample,
-                       dryLeftBuffer.data() + segment.startSample,
-                       dryRightBuffer.data() + segment.startSample,
-                       segment.numSamples,
-                       hasRightChannel,
-                       segment,
-                       sequencerSnapshot,
-                       bpm,
-                       blockPpqPerStep,
-                       laneMix,
-                       laneMuted,
-                       laneSoloed,
-                       anySolo,
-                       globalMixMode,
-                       globalDryWet,
-                       outputGain);
+        const int chunkSamples = juce::jmin(scratchCapacitySamples, numSamples - blockOffset);
+        auto* leftChannel = buffer.getWritePointer(0, blockOffset);
+        auto* rightChannel = hasRightChannel ? buffer.getWritePointer(1, blockOffset)
+                                             : monoRightBuffer.data();
+
+        if (!hasRightChannel)
+            std::copy(leftChannel, leftChannel + chunkSamples, rightChannel);
+
+        std::copy(leftChannel, leftChannel + chunkSamples, dryLeftBuffer.begin());
+        std::copy(rightChannel, rightChannel + chunkSamples, dryRightBuffer.begin());
+        waveformTap.pushFromAudioThread(dryLeftBuffer.data(), chunkSamples);
+
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+        ++lastProcessChunkCountForTesting;
+#endif
+
+        const double chunkStartPpq = blockStartPpq + static_cast<double>(blockOffset) * ppqPerSample;
+        StepScheduler::Segment segments[64]{};
+        const int segmentCount = stepScheduler.makeHostSegments({safeSampleRate,
+                                                                 bpm,
+                                                                 blockPpqPerStep,
+                                                                 chunkStartPpq,
+                                                                 chunkSamples,
+                                                                 blockIsPlaying},
+                                                                segments,
+                                                                static_cast<int>(std::size(segments)));
+
+        if (segmentCount > 0)
+            currentStep = segments[segmentCount - 1].stepIndex;
+
+        if (!bypassed)
+        {
+            for (int i = 0; i < segmentCount; ++i)
+            {
+                const auto& segment = segments[i];
+                processSegment(leftChannel + segment.startSample,
+                               rightChannel + segment.startSample,
+                               dryLeftBuffer.data() + segment.startSample,
+                               dryRightBuffer.data() + segment.startSample,
+                               segment.numSamples,
+                               hasRightChannel,
+                               segment,
+                               sequencerSnapshot,
+                               bpm,
+                               blockPpqPerStep,
+                               laneMix,
+                               laneMuted,
+                               laneSoloed,
+                               anySolo,
+                               globalMixMode,
+                               globalDryWet,
+                               outputGain);
+            }
+        }
+
+        processedWaveformTap.pushFromAudioThread(leftChannel, chunkSamples);
     }
 
-    processedWaveformTap.pushFromAudioThread(leftChannel, numSamples);
+    if (useFreeClock)
+        ppqPosition = blockStartPpq + ppqPerSample * static_cast<double>(numSamples);
 }
 
 void PluginProcessor::processSegment(float* leftChannel,

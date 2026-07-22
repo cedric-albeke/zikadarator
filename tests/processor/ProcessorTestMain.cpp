@@ -1503,6 +1503,42 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         processor.processBlock(stereoBuffer2, midi);
     }});
 
+    tests.push_back({"oversized host blocks use fixed scratch chunks without growth", []
+    {
+        PluginProcessor processor;
+        processor.prepareToPlay(48000.0, 64);
+        setParameter(processor, ParameterIDs::clockSource, 1.0f);
+        setParameter(processor, ParameterIDs::dryWet, 0.0f);
+
+        const auto preparedCapacity = processor.getScratchCapacityForTesting();
+        if (preparedCapacity < 64)
+            throw std::runtime_error("processor did not prepare its declared scratch capacity");
+
+        constexpr int oversizedBlock = 4097;
+        juce::AudioBuffer<float> buffer(2, oversizedBlock);
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
+            for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+                buffer.setSample(channel, sample, 0.1f + 0.00001f * static_cast<float>(sample));
+
+        juce::MidiBuffer midi;
+        processor.processBlock(buffer, midi);
+
+        if (processor.getScratchCapacityForTesting() != preparedCapacity)
+            throw std::runtime_error("oversized host block grew processor scratch storage on the audio thread");
+
+        const int expectedChunks = (oversizedBlock + static_cast<int>(preparedCapacity) - 1)
+                                 / static_cast<int>(preparedCapacity);
+        if (processor.getLastProcessChunkCountForTesting() != expectedChunks)
+            throw std::runtime_error("oversized host block was not split at the prepared scratch boundary");
+
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
+            for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+                requireNear(buffer.getSample(channel, sample),
+                            0.1f + 0.00001f * static_cast<float>(sample),
+                            0.00001f,
+                            "chunked dry processing changed oversized host audio");
+    }});
+
     tests.push_back({"invalid host state is ignored without corrupting current state", []
     {
         PluginProcessor processor;
