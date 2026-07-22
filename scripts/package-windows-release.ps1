@@ -66,6 +66,12 @@ function Write-PackageChecksums {
         @{ Label = "installer/assets/setup-icon.ico"; Path = Join-Path $PackagePath "installer/assets/setup-icon.ico" },
         @{ Label = "installer/assets/wizard-large.bmp"; Path = Join-Path $PackagePath "installer/assets/wizard-large.bmp" },
         @{ Label = "installer/assets/wizard-small.bmp"; Path = Join-Path $PackagePath "installer/assets/wizard-small.bmp" },
+        @{ Label = "installer/assets/button-back.bmp"; Path = Join-Path $PackagePath "installer/assets/button-back.bmp" },
+        @{ Label = "installer/assets/button-next.bmp"; Path = Join-Path $PackagePath "installer/assets/button-next.bmp" },
+        @{ Label = "installer/assets/button-install.bmp"; Path = Join-Path $PackagePath "installer/assets/button-install.bmp" },
+        @{ Label = "installer/assets/button-finish.bmp"; Path = Join-Path $PackagePath "installer/assets/button-finish.bmp" },
+        @{ Label = "installer/assets/button-cancel.bmp"; Path = Join-Path $PackagePath "installer/assets/button-cancel.bmp" },
+        @{ Label = "installer/assets/button-browse.bmp"; Path = Join-Path $PackagePath "installer/assets/button-browse.bmp" },
         @{ Label = "README.txt"; Path = Join-Path $PackagePath "README.txt" }
     )
 
@@ -216,12 +222,9 @@ Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/ZIKADARATO
           -Destination (Join-Path $installerDir "ZIKADARATOR-Setup.iss") -Force
 $installerAssetsDir = Join-Path $installerDir "assets"
 New-Item -ItemType Directory -Force -Path $installerAssetsDir | Out-Null
-Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/assets/setup-icon.ico") `
-          -Destination $installerAssetsDir -Force
-Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/assets/wizard-large.bmp") `
-          -Destination $installerAssetsDir -Force
-Copy-Item -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/assets/wizard-small.bmp") `
-          -Destination $installerAssetsDir -Force
+Get-ChildItem -LiteralPath (Join-Path $script:RepoRoot "packaging/windows/assets") -File | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination $installerAssetsDir -Force
+}
 
 @"
 @echo off

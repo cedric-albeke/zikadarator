@@ -104,6 +104,46 @@ $smallGraphics.DrawImage($logo, 4, 4, 47, 47)
 $smallGraphics.DrawRectangle($greenPen, 1, 1, 52, 52)
 Save-Bitmap -Bitmap $small -Name "wizard-small.bmp"
 
+function New-ButtonBitmap {
+    param(
+        [string] $Name,
+        [string] $Caption,
+        [int] $Width,
+        [bool] $Primary
+    )
+
+    $height = 36
+    $bitmap = New-BrandBitmap -Width $Width -Height $height
+    $graphics = New-BrandGraphics -Bitmap $bitmap
+    if ($Primary) {
+        $graphics.Clear($green)
+        $textBrush = New-Object System.Drawing.SolidBrush($background)
+        $borderPen = New-Object System.Drawing.Pen($cyan, 1)
+    } else {
+        $graphics.Clear($surface)
+        $textBrush = New-Object System.Drawing.SolidBrush($white)
+        $borderPen = New-Object System.Drawing.Pen($muted, 1)
+    }
+
+    $graphics.DrawRectangle($borderPen, 0, 0, $Width - 1, $height - 1)
+    $font = New-Object System.Drawing.Font($brandFont, 10, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
+    $graphics.DrawString($Caption, $font, $textBrush, (New-Object System.Drawing.RectangleF(0, 0, $Width, $height)), $centered)
+    Save-Bitmap -Bitmap $bitmap -Name $Name
+
+    $font.Dispose()
+    $textBrush.Dispose()
+    $borderPen.Dispose()
+    $graphics.Dispose()
+    $bitmap.Dispose()
+}
+
+New-ButtonBitmap -Name "button-back.bmp" -Caption "<  BACK" -Width 92 -Primary $false
+New-ButtonBitmap -Name "button-next.bmp" -Caption "NEXT  >" -Width 112 -Primary $true
+New-ButtonBitmap -Name "button-install.bmp" -Caption "INSTALL  >" -Width 132 -Primary $true
+New-ButtonBitmap -Name "button-finish.bmp" -Caption "FINISH" -Width 112 -Primary $true
+New-ButtonBitmap -Name "button-cancel.bmp" -Caption "CANCEL" -Width 92 -Primary $false
+New-ButtonBitmap -Name "button-browse.bmp" -Caption "BROWSE" -Width 92 -Primary $false
+
 $iconBitmap = New-Object System.Drawing.Bitmap(256, 256, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
 $iconGraphics = [System.Drawing.Graphics]::FromImage($iconBitmap)
 $iconGraphics.Clear([System.Drawing.Color]::Transparent)
