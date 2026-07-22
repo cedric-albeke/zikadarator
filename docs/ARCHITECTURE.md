@@ -118,7 +118,9 @@ INPUT → SLICE → LOOP → ENVELOPE → FX1 → FILTER → FX2 → MIX → OUT
 - FX1 and FX2 host delay, reverb, bitcrush, pitch-color, and tone-filter paths.
 - `FilterEngine` is used both as the dedicated FILTER lane and as an internal tone shaper for FX presets.
 - Final global mixing applies dry/wet, mix mode, and output gain after lane processing.
-- Input waveform samples are pushed into `waveformTap`; processed output samples are pushed into `processedWaveformTap`. `PluginEditor::timerCallback` pops both streams and feeds `WaveformDisplay` as two stacked waveform lanes.
+- Input waveform samples are pushed into `waveformTap`; processed output samples are pushed into `processedWaveformTap`. `PluginEditor::timerCallback` pops both streams and feeds `WaveformDisplay` as two stacked waveform lanes while the Sequencer is visible.
+- Hidden editors and non-Sequencer pages discard queued tap samples on the UI consumer side, and leaving the Sequencer clears retained display history. Returning therefore starts from current audio instead of replaying a stale FIFO backlog.
+- Tap reconfiguration rejects new producer/consumer operations and waits for active operations before resizing storage, preventing host reprepare from racing an open editor. A generation counter invalidates retained display history after sample-rate or tap resets.
 - `WaveformDisplay` draws rolling min/max waveform bins for input and output over the current 16-step musical loop span, with display-only normalization. It is a UI diagnostic path only and must not feed back into DSP.
 
 ### Realtime Rules
@@ -176,7 +178,7 @@ Inline SVG strings are parsed via `juce::parseXML()` → `juce::Drawable::create
 
 ### Design Principles
 - **Vector-based**: All UI drawn via `juce::Graphics` (no raster assets needed)
-- **60fps animations**: Smooth playhead, waveform updates, parameter transitions
+- **Bounded animations**: Editor, waveform, and CRT timers use a stable 30 Hz cadence with region-limited repaints
 - **Immediate feedback**: Every interaction has a visual response within 1 frame
 - **Keyboard + mouse**: Scroll wheel cycles presets, normal drag copies/erases steps, Shift+Drag draws ties, and right-click deletes or trims
 - **Resizable**: Editor scales from 900x600 to 2400x1600 while preserving a fixed 3:2 aspect ratio

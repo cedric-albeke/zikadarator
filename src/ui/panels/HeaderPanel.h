@@ -8,7 +8,8 @@
 
 namespace zikada {
 
-class HeaderPanel : public juce::Component
+class HeaderPanel : public juce::Component,
+                    private juce::Timer
 {
 public:
     enum class Page
@@ -19,6 +20,7 @@ public:
     };
 
     HeaderPanel();
+    ~HeaderPanel() override;
 
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
@@ -39,6 +41,9 @@ public:
     std::function<void()> onPresetPreviousRequested;
     std::function<void()> onPresetNextRequested;
     std::function<void()> onPresetMenuRequested;
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    std::function<void()> onFxDisplayAnimationFrameForTesting;
+#endif
 
 private:
     juce::Image logoImage;
@@ -67,6 +72,7 @@ private:
     double fxDisplayLastPulseMs{0.0};
     bool presetDirty{false};
 
+    void timerCallback() override;
     void drawFxCrtDisplay(juce::Graphics& g);
 };
 

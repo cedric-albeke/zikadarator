@@ -44,6 +44,7 @@ function extractFunction(source, signature) {
 const processor = read("src/PluginProcessor.cpp");
 const processorHeader = read("src/PluginProcessor.h");
 const editor = read("src/PluginEditor.cpp");
+const editorHeader = read("src/PluginEditor.h");
 const sidebar = read("src/ui/panels/SidebarPanel.cpp");
 const footer = read("src/ui/panels/FooterPanel.cpp");
 const workspace = read("src/ui/panels/WorkspacePanel.cpp");
@@ -65,6 +66,7 @@ const loopEngine = read("src/engine/LoopEngine.cpp");
 const loopEngineHeader = read("src/engine/LoopEngine.h");
 const waveformDisplayHeader = read("src/ui/components/WaveformDisplay.h");
 const waveformDisplay = read("src/ui/components/WaveformDisplay.cpp");
+const waveformTap = read("src/engine/WaveformTap.h");
 const headerPanelHeader = read("src/ui/panels/HeaderPanel.h");
 const headerPanel = read("src/ui/panels/HeaderPanel.cpp");
 const windowsPackageScript = read("scripts/package-windows-release.ps1");
@@ -113,6 +115,10 @@ const stepGridConstructor = extractFunction(
 );
 const stepGridMouseDown = extractFunction(stepGrid, "void StepGrid::mouseDown(const juce::MouseEvent& e)");
 const stepGridMouseDrag = extractFunction(stepGrid, "void StepGrid::mouseDrag(const juce::MouseEvent& e)");
+const editorTimer = extractFunction(editor, "void PluginEditor::timerCallback()");
+const editorSetPage = extractFunction(editor, "void PluginEditor::setPage(Page page)");
+const editorVisibility = extractFunction(editor, "void PluginEditor::visibilityChanged()");
+const headerPanelConstructor = extractFunction(headerPanel, "HeaderPanel::HeaderPanel()");
 
 [
   ["ParameterIDs::dryWet", "processBlock must read/apply global Dry/Wet"],
@@ -290,6 +296,10 @@ assertContains(headerPanelHeader, "setFxDisplayState", "header must expose the C
 assertContains(headerPanelHeader, "setFxDisplayPlayhead", "header must expose the CRT playhead pulse API");
 assertContains(headerPanelHeader, "fxDisplayBounds", "header must reserve stable bounds for the CRT FX monitor");
 assertContains(headerPanel, "drawFxCrtDisplay", "header must draw a dedicated CRT-style FX monitor");
+assertContains(headerPanelHeader, "private juce::Timer", "CRT monitor must own its animation cadence");
+assertContains(headerPanelHeader, "timerCallback", "CRT monitor must expose a timer callback");
+assertContains(headerPanelConstructor, "startTimerHz(30)", "CRT monitor must animate at a stable 30 Hz cadence");
+assertContains(headerPanel, "repaint(fxDisplayBounds.expanded", "CRT timer must repaint only the monitor bounds");
 assertContains(headerPanel, "FX MON", "CRT FX monitor must be labeled as a live FX monitor");
 assertContains(headerPanel, "scanLineY", "CRT FX monitor must include scanline motion");
 assertContains(headerPanel, "phosphorPath", "CRT FX monitor must include a triggered phosphor waveform");
@@ -443,7 +453,27 @@ assertContains(sequencerEngine, "case 0: stepDuration *= 0.25; break;", "Sequenc
 assertContains(processorHeader, "processedWaveformTap", "processor must own a processed-output waveform tap");
 assertContains(processorHeader, "getCurrentPpqPerStep", "processor must expose current musical step duration to the UI waveform");
 assertContains(editor, "getProcessedWaveformTap().popForUi", "editor must read processed waveform samples from the processor");
+assertContains(editorTimer, "discardWaveformTaps", "editor must drain waveform taps when the sequencer is not visible");
+assertContains(editorSetPage, "clearWaveformHistory", "page changes must clear stale waveform display history");
+assertContains(editorVisibility, "clearWaveformHistory", "both editor visibility transitions must clear stale waveform state");
+if (/if\s*\(\s*!showSequencer\s*\)\s*clearWaveformHistory/.test(editorSetPage)) {
+  fail("waveform history must clear on entry to the Sequencer as well as exit");
+}
+assertContains(editorHeader, "std::array<float, 16384> inputWaveformScratch", "input waveform UI drain must stay ahead of common high sample rates");
+assertContains(editorHeader, "std::array<float, 16384> outputWaveformScratch", "output waveform UI drain must stay ahead of common high sample rates");
 assertContains(editor, "setVisibleSampleCount", "editor must sync waveform visible window to the 16-step musical loop span");
+assertContains(waveformDisplayHeader, "clearHistory", "waveform display must expose a lifecycle reset");
+assertContains(waveformDisplayHeader, "hasRetainedSamples", "waveform lifecycle must be directly regression-testable");
+assertContains(waveformDisplay, "if (playheadPos.load() == nextPosition)", "unchanged playhead positions must not trigger continuous waveform repaints");
+assertContains(waveformTap, "activeOperations", "waveform tap reconfiguration must wait for active producer/consumer operations");
+assertContains(waveformTap, "reconfiguring", "waveform tap operations must reject access during reconfiguration");
+assertContains(waveformTap, "is_always_lock_free", "waveform tap audio-thread atomics must be lock-free on supported targets");
+assertContains(waveformTap, "getGeneration", "waveform tap reconfiguration must expose a display-history generation");
+assertContains(editorTimer, "synchronizeWaveformTapGenerations", "editor must invalidate waveform history after tap reconfiguration");
+assertContains(processorTests, "hidden waveform consumers discard stale tap samples", "processor tests must cover stale waveform FIFO discard");
+assertContains(processorTests, "waveform tap tolerates reprepare during UI consumption", "processor tests must cover waveform reprepare against a live UI consumer");
+assertContains(processorTests, "waveform display clears retained history when hidden", "processor tests must cover waveform history reset");
+assertContains(processorTests, "CRT monitor advances independently of state changes", "processor tests must cover autonomous CRT timer frames");
 assertContains(waveformDisplayHeader, "pushInputSamples", "waveform display must expose an input waveform feed");
 assertContains(waveformDisplayHeader, "pushOutputSamples", "waveform display must expose a processed-output waveform feed");
 assertContains(waveformDisplayHeader, "setVisibleSampleCount", "waveform display must support a musical visible sample window");

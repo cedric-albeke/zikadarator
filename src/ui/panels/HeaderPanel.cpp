@@ -123,6 +123,23 @@ HeaderPanel::HeaderPanel()
     setRedoEnabled(false);
     setPresetStepEnabled(false, false);
     setPresetDisplay(currentPresetName, currentPresetMeta, false);
+    startTimerHz(30);
+}
+
+HeaderPanel::~HeaderPanel()
+{
+    stopTimer();
+}
+
+void HeaderPanel::timerCallback()
+{
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    if (onFxDisplayAnimationFrameForTesting)
+        onFxDisplayAnimationFrameForTesting();
+#endif
+
+    if (isShowing() && !fxDisplayBounds.isEmpty())
+        repaint(fxDisplayBounds.expanded(8));
 }
 
 void HeaderPanel::setFxDisplayState(int lane, int step, int presetIndex, const juce::String& presetLabel)

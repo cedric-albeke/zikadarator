@@ -21,6 +21,8 @@ public:
     void pushOutputSamples(const float* samples, int numSamples);
     void setPlayheadPosition(float normalizedPosition);
     void setVisibleSampleCount(int sampleCount);
+    void clearHistory();
+    [[nodiscard]] bool hasRetainedSamples() const noexcept;
 
     static constexpr int numSlices = 16;
 
@@ -40,6 +42,7 @@ private:
 
     void timerCallback() override;
     void pushLaneSamples(WaveLane& lane, const float* samples, int numSamples);
+    static void resetLane(WaveLane& lane);
     void rebuildDisplayBins(WaveLane& lane);
     void drawWaveLane(juce::Graphics& g,
                       juce::Rectangle<float> bounds,

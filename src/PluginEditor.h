@@ -11,6 +11,7 @@
 #include "ui/components/WaveformDisplay.h"
 
 #include <array>
+#include <cstdint>
 #include <vector>
 
 namespace zikada {
@@ -39,6 +40,9 @@ private:
     };
 
     void timerCallback() override;
+    void discardWaveformTaps();
+    void clearWaveformHistory();
+    void synchronizeWaveformTapGenerations();
     void layoutEditorCanvas(juce::Rectangle<int> logicalBounds);
     void setPage(Page page);
     void refreshSequencerFromState();
@@ -81,8 +85,10 @@ private:
     bool runningUnderWineCached{false};
     bool wineSafeRendererApplied{false};
     int instanceId{0};
-    std::array<float, 2048> inputWaveformScratch{};
-    std::array<float, 2048> outputWaveformScratch{};
+    std::array<float, 16384> inputWaveformScratch{};
+    std::array<float, 16384> outputWaveformScratch{};
+    std::uint64_t inputWaveformGeneration{0};
+    std::uint64_t outputWaveformGeneration{0};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

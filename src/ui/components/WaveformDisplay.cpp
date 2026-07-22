@@ -136,7 +136,11 @@ void WaveformDisplay::pushLaneSamples(WaveLane& lane, const float* samples, int 
 
 void WaveformDisplay::setPlayheadPosition(float normalizedPosition)
 {
-    playheadPos = juce::jlimit(0.0f, 1.0f, normalizedPosition);
+    const float nextPosition = juce::jlimit(0.0f, 1.0f, normalizedPosition);
+    if (playheadPos.load() == nextPosition)
+        return;
+
+    playheadPos = nextPosition;
     needsRepaint = true;
 }
 
@@ -150,6 +154,28 @@ void WaveformDisplay::setVisibleSampleCount(int sampleCount)
     rebuildDisplayBins(inputLane);
     rebuildDisplayBins(outputLane);
     needsRepaint = true;
+}
+
+void WaveformDisplay::clearHistory()
+{
+    resetLane(inputLane);
+    resetLane(outputLane);
+    playheadPos = 0.0f;
+    needsRepaint = true;
+}
+
+bool WaveformDisplay::hasRetainedSamples() const noexcept
+{
+    return inputLane.samplesAvailable > 0 || outputLane.samplesAvailable > 0;
+}
+
+void WaveformDisplay::resetLane(WaveLane& lane)
+{
+    lane.displayMins.fill(0.0f);
+    lane.displayMaxes.fill(0.0f);
+    lane.writePosition = 0;
+    lane.samplesAvailable = 0;
+    lane.displayGain = 1.0f;
 }
 
 void WaveformDisplay::timerCallback()

@@ -302,8 +302,13 @@ void PluginEditor::timerCallback()
         }
     }
 
-    if (currentPage != Page::Sequencer)
+    synchronizeWaveformTapGenerations();
+
+    if (currentPage != Page::Sequencer || !isShowing())
+    {
+        discardWaveformTaps();
         return;
+    }
 
     const bool isPlaying = processorRef.isPlaying();
     const int  step      = processorRef.getCurrentStep();
@@ -356,6 +361,31 @@ void PluginEditor::timerCallback()
     }
 }
 
+void PluginEditor::discardWaveformTaps()
+{
+    processorRef.getWaveformTap().discardAllForUi();
+    processorRef.getProcessedWaveformTap().discardAllForUi();
+}
+
+void PluginEditor::clearWaveformHistory()
+{
+    discardWaveformTaps();
+    sequencerPanel.getWaveformDisplay().clearHistory();
+}
+
+void PluginEditor::synchronizeWaveformTapGenerations()
+{
+    const auto nextInputGeneration = processorRef.getWaveformTap().getGeneration();
+    const auto nextOutputGeneration = processorRef.getProcessedWaveformTap().getGeneration();
+    if (nextInputGeneration == inputWaveformGeneration
+        && nextOutputGeneration == outputWaveformGeneration)
+        return;
+
+    inputWaveformGeneration = nextInputGeneration;
+    outputWaveformGeneration = nextOutputGeneration;
+    clearWaveformHistory();
+}
+
 void PluginEditor::parentHierarchyChanged()
 {
     AudioProcessorEditor::parentHierarchyChanged();
@@ -367,6 +397,7 @@ void PluginEditor::parentHierarchyChanged()
 void PluginEditor::visibilityChanged()
 {
     AudioProcessorEditor::visibilityChanged();
+    clearWaveformHistory();
     if (isShowing())
         wineSafeRendererApplied = false;
 
@@ -454,6 +485,8 @@ void PluginEditor::setPage(Page page)
     footerPanel.setVisible(showSequencer);
     sidebarPanel.setVisible(showSequencer);
     workspacePanel.setVisible(!showSequencer);
+
+    clearWaveformHistory();
 
     if (page == Page::Presets)
         workspacePanel.setMode(WorkspacePanel::Mode::Presets);

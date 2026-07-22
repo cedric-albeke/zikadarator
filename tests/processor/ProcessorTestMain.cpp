@@ -1,8 +1,11 @@
 #include "PluginProcessor.h"
+#include "engine/WaveformTap.h"
 #include "state/ParameterIDs.h"
 #include "ui/components/Knob.h"
 #include "ui/components/StepGrid.h"
 #include "ui/components/StepCell.h"
+#include "ui/components/WaveformDisplay.h"
+#include "ui/panels/HeaderPanel.h"
 #include "ui/panels/WorkspacePanel.h"
 
 #include <cmath>
@@ -655,6 +658,144 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
             panel.setMode(WorkspacePanel::Mode::Settings);
             requireVisibleWorkspaceControlsContained(panel, "settings", width, height);
         }
+    }});
+
+    tests.push_back({"hidden waveform consumers discard stale tap samples", []
+    {
+        WaveformTap tap;
+        tap.prepare(16);
+
+        const std::array<float, 8> staleSamples{1.0f, 2.0f, 3.0f, 4.0f,
+                                                 5.0f, 6.0f, 7.0f, 8.0f};
+        tap.pushFromAudioThread(staleSamples.data(), static_cast<int>(staleSamples.size()));
+        if (tap.discardAllForUi() != static_cast<int>(staleSamples.size()))
+            throw std::runtime_error("waveform tap did not discard every stale sample");
+
+        std::array<float, 8> destination{};
+        if (tap.popForUi(destination.data(), static_cast<int>(destination.size())) != 0)
+            throw std::runtime_error("discarded waveform samples remained readable");
+
+        const std::array<float, 4> freshSamples{11.0f, 12.0f, 13.0f, 14.0f};
+        tap.pushFromAudioThread(freshSamples.data(), static_cast<int>(freshSamples.size()));
+        const int copied = tap.popForUi(destination.data(), static_cast<int>(destination.size()));
+        if (copied != static_cast<int>(freshSamples.size()))
+            throw std::runtime_error("waveform tap lost fresh samples after discarding stale data");
+        for (int i = 0; i < copied; ++i)
+            requireNear(destination[static_cast<size_t>(i)], freshSamples[static_cast<size_t>(i)], 0.001f,
+                        "waveform tap returned stale data after discard");
+    }});
+
+    tests.push_back({"waveform tap tolerates reprepare during UI consumption", []
+    {
+        WaveformTap tap;
+        tap.prepare(128);
+        std::atomic<bool> keepConsuming{true};
+        std::atomic<bool> reprepareInProgress{false};
+        std::atomic<int> consumerIterations{0};
+        std::atomic<int> producerIterations{0};
+        std::atomic<int> consumerIterationsDuringReprepare{0};
+        std::atomic<int> producerIterationsDuringReprepare{0};
+
+        std::thread consumer([&]
+        {
+            std::array<float, 32> destination{};
+            while (keepConsuming.load())
+            {
+                tap.popForUi(destination.data(), static_cast<int>(destination.size()));
+                tap.discardAllForUi();
+                consumerIterations.fetch_add(1);
+                if (reprepareInProgress.load())
+                    consumerIterationsDuringReprepare.fetch_add(1);
+            }
+        });
+
+        const std::array<float, 32> samples{0.25f};
+        std::thread producer([&]
+        {
+            while (keepConsuming.load())
+            {
+                tap.pushFromAudioThread(samples.data(), static_cast<int>(samples.size()));
+                producerIterations.fetch_add(1);
+                if (reprepareInProgress.load())
+                    producerIterationsDuringReprepare.fetch_add(1);
+            }
+        });
+
+        auto waitForIterations = [&](int minimumConsumerIterations, int minimumProducerIterations)
+        {
+            const double deadline = juce::Time::getMillisecondCounterHiRes() + 2000.0;
+            while ((consumerIterations.load() < minimumConsumerIterations
+                    || producerIterations.load() < minimumProducerIterations)
+                   && juce::Time::getMillisecondCounterHiRes() < deadline)
+                std::this_thread::yield();
+
+            return consumerIterations.load() >= minimumConsumerIterations
+                && producerIterations.load() >= minimumProducerIterations;
+        };
+
+        if (!waitForIterations(100, 100))
+        {
+            keepConsuming = false;
+            consumer.join();
+            producer.join();
+            throw std::runtime_error("waveform reprepare test could not start producer and consumer work");
+        }
+
+        const auto initialGeneration = tap.getGeneration();
+        reprepareInProgress = true;
+        for (int iteration = 0; iteration < 500; ++iteration)
+        {
+            tap.prepare(64 + iteration % 193);
+            if (iteration % 10 == 0)
+                std::this_thread::yield();
+        }
+        reprepareInProgress = false;
+
+        keepConsuming = false;
+        consumer.join();
+        producer.join();
+
+        if (consumerIterationsDuringReprepare.load() <= 0
+            || producerIterationsDuringReprepare.load() <= 0)
+            throw std::runtime_error("waveform reprepare test did not overlap producer and consumer work");
+        if (tap.getGeneration() != initialGeneration + 500)
+            throw std::runtime_error("waveform tap generation did not track every reprepare");
+
+        tap.reset();
+        const std::array<float, 4> freshSamples{21.0f, 22.0f, 23.0f, 24.0f};
+        tap.pushFromAudioThread(freshSamples.data(), static_cast<int>(freshSamples.size()));
+        std::array<float, 4> destination{};
+        const int copied = tap.popForUi(destination.data(), static_cast<int>(destination.size()));
+        if (copied != static_cast<int>(freshSamples.size()))
+            throw std::runtime_error("waveform tap stopped working after concurrent reprepare");
+        for (int i = 0; i < copied; ++i)
+            requireNear(destination[static_cast<size_t>(i)], freshSamples[static_cast<size_t>(i)], 0.001f,
+                        "waveform tap corrupted data after concurrent reprepare");
+    }});
+
+    tests.push_back({"waveform display clears retained history when hidden", []
+    {
+        auto display = std::make_unique<WaveformDisplay>();
+        const std::array<float, 4> samples{0.25f, -0.5f, 0.75f, -1.0f};
+        display->pushInputSamples(samples.data(), static_cast<int>(samples.size()));
+        display->pushOutputSamples(samples.data(), static_cast<int>(samples.size()));
+        if (!display->hasRetainedSamples())
+            throw std::runtime_error("waveform display did not retain pushed samples");
+
+        display->clearHistory();
+        if (display->hasRetainedSamples())
+            throw std::runtime_error("waveform display retained stale history after being cleared");
+    }});
+
+    tests.push_back({"CRT monitor advances independently of state changes", []
+    {
+        HeaderPanel header;
+        int animationFrames = 0;
+        header.onFxDisplayAnimationFrameForTesting = [&animationFrames] { ++animationFrames; };
+
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(150);
+        if (animationFrames < 2)
+            throw std::runtime_error("CRT monitor did not produce autonomous animation frames");
     }});
 
     tests.push_back({"step chain badge stays inside the painted cell", []
