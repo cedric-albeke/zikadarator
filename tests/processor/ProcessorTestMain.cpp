@@ -1410,6 +1410,8 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         if (handler->getTitle().isEmpty() || handler->getDescription().isEmpty()
             || handler->getHelp().isEmpty())
             throw std::runtime_error("sequencer grid accessibility guidance is incomplete");
+        if (!handler->getHelp().contains("Page Up") || !handler->getHelp().contains("Shift+Right"))
+            throw std::runtime_error("sequencer grid does not announce its advanced keyboard commands");
 
         grid.setSelectedStep(0, 0);
         const auto before = processor.getSequencerState().getStepData(0, 0);
@@ -1418,6 +1420,62 @@ void addProcessorTests(std::vector<std::pair<std::string, std::function<void()>>
         const auto after = processor.getSequencerState().getStepData(0, 0);
         if (after.active != before.active || after.presetIndex != before.presetIndex)
             throw std::runtime_error("child-bubbled key modified the selected sequencer step");
+    }});
+
+    tests.push_back({"sequencer grid keyboard commands cycle presets and resize ties", []
+    {
+        PluginProcessor processor;
+        auto& state = processor.getSequencerState();
+
+        StepData source;
+        source.active = true;
+        source.presetIndex = 1;
+        state.setStepData(1, 2, source);
+        setParameter(processor, getStepActiveID(1, 2), 1.0f);
+
+        StepData blocker;
+        blocker.active = true;
+        blocker.presetIndex = 7;
+        state.setStepData(1, 4, blocker);
+        setParameter(processor, getStepActiveID(1, 4), 1.0f);
+
+        StepGrid grid(processor.getPluginState().getValueTreeState(), state);
+        grid.setSelectedStep(1, 2);
+
+        int undoBoundaries = 0;
+        int presetChanges = 0;
+        int chainChanges = 0;
+        grid.onStepPresetEditStarting = [&undoBoundaries] { ++undoBoundaries; };
+        grid.onStepPresetChanged = [&presetChanges](int, int, int) { ++presetChanges; };
+        grid.onChainChanged = [&chainChanges](int, int, int) { ++chainChanges; };
+
+        if (!grid.handleKeyCommandForTesting(juce::KeyPress(juce::KeyPress::pageUpKey))
+            || state.getStepData(1, 2).presetIndex != 2)
+            throw std::runtime_error("Page Up did not advance the selected step preset");
+        if (!grid.handleKeyCommandForTesting(juce::KeyPress(juce::KeyPress::pageDownKey))
+            || state.getStepData(1, 2).presetIndex != 1)
+            throw std::runtime_error("Page Down did not restore the selected step preset");
+
+        const auto shiftRight = juce::KeyPress(juce::KeyPress::rightKey,
+                                                juce::ModifierKeys::shiftModifier, 0);
+        const auto shiftLeft = juce::KeyPress(juce::KeyPress::leftKey,
+                                               juce::ModifierKeys::shiftModifier, 0);
+        if (!grid.handleKeyCommandForTesting(shiftRight)
+            || state.getStepData(1, 2).chainLength != 2)
+            throw std::runtime_error("Shift+Right did not extend the selected tie");
+
+        grid.setSelectedStep(1, 3);
+        if (!grid.handleKeyCommandForTesting(shiftLeft)
+            || state.getStepData(1, 2).chainLength != 1)
+            throw std::runtime_error("Shift+Left did not shorten a tie from its consumed step");
+
+        grid.setSelectedStep(1, 2);
+        grid.handleKeyCommandForTesting(shiftRight);
+        grid.handleKeyCommandForTesting(shiftRight);
+        if (state.getStepData(1, 2).chainLength != 2)
+            throw std::runtime_error("keyboard tie extension overwrote an active step");
+        if (undoBoundaries != 5 || presetChanges != 2 || chainChanges != 3)
+            throw std::runtime_error("keyboard step edits did not preserve callback and undo boundaries");
     }});
 
     tests.push_back({"visible footer controls expose purpose-specific accessible names", []

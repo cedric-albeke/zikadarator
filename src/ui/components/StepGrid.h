@@ -43,6 +43,10 @@ public:
     bool isStepConsumedByChain(int lane, int step) const;
     void removeChainAt(int lane, int step);
 
+#if defined(ZIKADA_ENABLE_TEST_HOOKS)
+    bool handleKeyCommandForTesting(const juce::KeyPress& key) { return handleKeyCommand(key); }
+#endif
+
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
 
     std::function<void(int lane, int step)> onStepSelected;
@@ -109,6 +113,9 @@ private:
     void selectStepAndNotify(int lane, int step);
     bool moveSelectionBy(int laneDelta, int stepDelta);
     bool toggleSelectedStep();
+    bool handleKeyCommand(const juce::KeyPress& key);
+    bool cycleSelectedPreset(int direction);
+    bool resizeSelectedChain(int delta);
     void updateAccessibilityDescription();
     void drawKeyboardFocusRing(juce::Graphics& g);
     void drawPlayheadRail(juce::Graphics& g);

@@ -42,6 +42,7 @@ node scripts\source-smoke-tests.mjs
 - `LoopEngine` has frozen trigger snapshots, loop-wrap smoothing, trigger-edge smoothing, and rounded loop-duration sample counts. Keep the snapshot/discontinuity regression tests in `LaneTransitionTests.cpp` when changing playback.
 - `WaveformDisplay` has two stacked rolling min/max waveform lanes, a visible sample window synced to the current 16-step musical loop span, and display-only normalization through `displayGain`.
 - `StepGrid::timerCallback()` must not repaint the whole grid. It only repaints tied/chain-consumed cells for chain animation.
+- StepGrid keyboard parity is part of the V1 contract: Page Up/Down cycles presets and Shift+Left/Right resizes ties. Keep these commands in accessibility help, preserve one undo boundary per edit, resolve consumed steps to their chain root, and never extend a tie across an active step.
 
 ## Realtime Constraints
 

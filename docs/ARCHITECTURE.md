@@ -187,7 +187,7 @@ Inline SVG strings are parsed via `juce::parseXML()` → `juce::Drawable::create
 - **Vector-based**: All UI drawn via `juce::Graphics` (no raster assets needed)
 - **Bounded animations**: Editor, waveform, and CRT timers use a stable 30 Hz cadence with region-limited repaints
 - **Immediate feedback**: Every interaction has a visual response within 1 frame
-- **Keyboard + mouse**: Scroll wheel cycles presets, normal drag copies/erases steps, Shift+Drag draws ties, and right-click deletes or trims
+- **Keyboard + mouse**: Scroll wheel or Page Up/Down cycles presets; arrow keys navigate; Space/Enter toggles; Shift+Left/Right resizes ties; normal drag copies/erases steps; Shift+Drag draws ties; and right-click deletes or trims
 - **Resizable**: Editor scales from 900x600 to 2400x1600 while preserving a fixed 3:2 aspect ratio
 - **Standalone integration**: Audio device, sample rate, buffer size, and MIDI routing are embedded inside the Settings tab via JUCE standalone host APIs
 - **Preset access**: Header dropdown and browser both read from the same metadata-backed preset ordering

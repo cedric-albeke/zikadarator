@@ -391,6 +391,9 @@ assertContains(stepGrid, "onStepPresetEditStarting", "step grid preset cycling m
 assertContains(stepGrid, "onStepPresetChanged", "step grid preset cycling must notify the editor");
 assertContains(stepGrid, "setWantsKeyboardFocus(true)", "step grid must be keyboard focusable");
 assertContains(stepGrid, "grabKeyboardFocus()", "step grid must take focus when clicked");
+assertContains(stepGrid, "juce::KeyPress::pageUpKey", "step grid must expose keyboard preset cycling");
+assertContains(stepGrid, "shiftDown && code == juce::KeyPress::rightKey", "step grid must expose keyboard tie resizing");
+assertContains(stepGrid, "Page Up or Page Down changes its preset", "step grid must announce advanced keyboard commands");
 assertContains(stepGridHeader, "keyPressed", "step grid must handle keyboard navigation");
 assertContains(stepGrid, "moveSelectionBy", "step grid must expose arrow-key selection movement");
 assertContains(stepGrid, "toggleSelectedStep", "step grid must expose keyboard activation for the selected step");

@@ -68,14 +68,14 @@ This is the current priority map for getting ZIKADARATOR to a stable V1.
 - LOOP and SLICE trigger capture is incremental and allocation-free: each scheduler chunk copies at most 2,048 frames (or the chunk size for larger offline chunks), while uncopied playback reads immediately from pinned, overwrite-protected ring history. SLICE retention now covers all 16 offsets at 20 BPM.
 - FILTER modulation now combines cutoff/resonance into one deduplicated coefficient update, keeps filter-type work out of the per-sample path, and skips unused second-stage updates for 12 dB modes. Comb delay parameters are cached, and generation-tagged storage makes Comb enter/leave resets constant-time without exposing stale audio.
 - LOOP now prepares 12 seconds of history, covering four user-controlled beats at the supported 20 BPM floor. The maximum tail explicitly documents its 12-second cap. Runtime FX labels and icons now match implemented Comb/Notch, Delay, Filter, Pitch Color, Bitcrush, Ring Mod, and Space paths; alternate FILTER slots have distinct bounded tunings.
+- StepGrid advanced keyboard parity is complete: Page Up/Down cycles the selected effect preset, Shift+Left/Right resizes ties from either their root or a consumed step, active-step collisions are protected, and the full command set is exposed through accessibility help.
 
 ## Open V1 Gates
 
-1. Add discoverable keyboard commands for advanced StepGrid tie-chain editing and preset cycling.
-2. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
-3. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.
-4. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.
-5. Move product/plugin/package metadata from `0.1.0` to `1.0.0` only after the gates above pass, then publish signed artifacts where credentials are available.
+1. Run a fresh Windows Release build through CTest, pluginval level 5, the CI-style package path, installer smoke, and Ableton Live 12 manual audio acceptance.
+2. Reorder macOS signing before staging, then run the macOS validation/package workflow on a real macOS runner.
+3. Decide and document the V1 factory-preset scope. The current alpha bank contains eight presets while the original product spec promises 50.
+4. Move product/plugin/package metadata from `0.1.0` to `1.0.0` only after the gates above pass, then publish signed artifacts where credentials are available.
 
 ## Release Hardening
 

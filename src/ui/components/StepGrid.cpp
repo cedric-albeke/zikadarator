@@ -45,7 +45,7 @@ StepGrid::StepGrid(juce::AudioProcessorValueTreeState& state, SequencerState& se
     setMouseClickGrabsKeyboardFocus(true);
     setExplicitFocusOrder(200);
     setTitle("Sequencer grid");
-    setHelpText("Use arrow keys to select a step, then Space or Enter to toggle it.");
+    setHelpText("Arrow keys select a step. Space or Enter toggles it. Page Up or Page Down changes its preset. Shift+Left or Shift+Right resizes its tie.");
     updateAccessibilityDescription();
     setupGrid();
 }
@@ -769,6 +769,76 @@ bool StepGrid::toggleSelectedStep()
     return true;
 }
 
+bool StepGrid::cycleSelectedPreset(int direction)
+{
+    if (selectedLane < 0 || selectedLane >= numLanes || selectedStep < 0 || selectedStep >= numSteps)
+        selectStepAndNotify(0, 0);
+
+    cyclePresetAt(selectedLane, selectedStep, direction);
+    return true;
+}
+
+bool StepGrid::resizeSelectedChain(int delta)
+{
+    if (selectedLane < 0 || selectedLane >= numLanes || selectedStep < 0 || selectedStep >= numSteps)
+    {
+        selectStepAndNotify(0, 0);
+        return true;
+    }
+
+    const int lane = selectedLane;
+    const int root = findChainRoot(lane, selectedStep);
+    auto data = sequencerState.getStepData(lane, root);
+    if (!data.active || data.presetIndex <= 0)
+        return true;
+
+    const int maximumLength = numSteps - root;
+    const int nextLength = juce::jlimit(1, maximumLength, data.chainLength + delta);
+    if (nextLength == data.chainLength)
+        return true;
+
+    if (nextLength > data.chainLength)
+    {
+        const auto& nextData = sequencerState.getStepData(lane, root + data.chainLength);
+        if (nextData.active && nextData.presetIndex > 0)
+            return true;
+    }
+
+    if (onStepPresetEditStarting)
+        onStepPresetEditStarting();
+
+    data.chainLength = nextLength;
+    sequencerState.setStepData(lane, root, data);
+    selectStepAndNotify(lane, root);
+    refreshChainVisuals(lane);
+    refreshLane(lane);
+
+    if (onChainChanged)
+        onChainChanged(lane, root, nextLength);
+
+    return true;
+}
+
+bool StepGrid::handleKeyCommand(const juce::KeyPress& key)
+{
+    const int code = key.getKeyCode();
+    const bool shiftDown = key.getModifiers().isShiftDown();
+
+    if (shiftDown && code == juce::KeyPress::leftKey)  return resizeSelectedChain(-1);
+    if (shiftDown && code == juce::KeyPress::rightKey) return resizeSelectedChain(1);
+    if (code == juce::KeyPress::pageUpKey)             return cycleSelectedPreset(1);
+    if (code == juce::KeyPress::pageDownKey)           return cycleSelectedPreset(-1);
+    if (code == juce::KeyPress::leftKey)               return moveSelectionBy(0, -1);
+    if (code == juce::KeyPress::rightKey)              return moveSelectionBy(0, 1);
+    if (code == juce::KeyPress::upKey)                 return moveSelectionBy(-1, 0);
+    if (code == juce::KeyPress::downKey)               return moveSelectionBy(1, 0);
+    if (code == juce::KeyPress::homeKey)               return moveSelectionBy(0, -(selectedStep >= 0 ? selectedStep : 0));
+    if (code == juce::KeyPress::endKey)                return moveSelectionBy(0, numSteps - 1 - (selectedStep >= 0 ? selectedStep : 0));
+    if (code == juce::KeyPress::spaceKey || code == juce::KeyPress::returnKey)
+        return toggleSelectedStep();
+    return false;
+}
+
 void StepGrid::drawKeyboardFocusRing(juce::Graphics& g)
 {
     if (! hasKeyboardFocus(false)
@@ -1063,16 +1133,7 @@ bool StepGrid::keyPressed(const juce::KeyPress& key)
     if (!hasKeyboardFocus(false))
         return false;
 
-    const int code = key.getKeyCode();
-    if (code == juce::KeyPress::leftKey)   return moveSelectionBy(0, -1);
-    if (code == juce::KeyPress::rightKey)  return moveSelectionBy(0, 1);
-    if (code == juce::KeyPress::upKey)     return moveSelectionBy(-1, 0);
-    if (code == juce::KeyPress::downKey)   return moveSelectionBy(1, 0);
-    if (code == juce::KeyPress::homeKey)   return moveSelectionBy(0, -(selectedStep >= 0 ? selectedStep : 0));
-    if (code == juce::KeyPress::endKey)    return moveSelectionBy(0, numSteps - 1 - (selectedStep >= 0 ? selectedStep : 0));
-    if (code == juce::KeyPress::spaceKey || code == juce::KeyPress::returnKey)
-        return toggleSelectedStep();
-    return false;
+    return handleKeyCommand(key);
 }
 
 void StepGrid::focusGained(juce::Component::FocusChangeType cause)
@@ -1146,7 +1207,7 @@ void StepGrid::setStepChainLength(int lane, int step, int length)
         return;
 
     auto data = sequencerState.getStepData(lane, step);
-    data.chainLength = juce::jlimit(1, numSteps, length);
+    data.chainLength = juce::jlimit(1, numSteps - step, length);
     sequencerState.setStepData(lane, step, data);
     refreshChainVisuals(lane);
     if (onChainChanged)
